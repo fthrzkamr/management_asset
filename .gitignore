@@ -1,0 +1,19 @@
+# Database Configuration
+dist/config/config.php
+
+# Database Dumps
+*.sql
+
+# Uploaded Files (Assets photos, etc)
+uploads/
+
+# Temporary and Logs
+tmp/
+*.log
+.system_generated/
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Reference - PPX Routing System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8f9fa; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header h1 { font-size: 2em; margin-bottom: 10px; }
+        .card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card h2 { color: #333; border-bottom: 3px solid #667eea; padding-bottom: 10px; margin-bottom: 15px; }
+        .flow { background: #e7f3ff; border-left: 4px solid #2196F3; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .flow-title { font-weight: bold; color: #1976D2; margin-bottom: 8px; }
+        .flow-steps { font-family: 'Courier New', monospace; color: #555; line-height: 1.8; }
+        .arrow { color: #2196F3; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { padding: 12px; text-align: left; border: 1px solid #ddd; }
+        th { background: #667eea; color: white; font-weight: 600; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; }
+        .badge-success { background: #28a745; color: white; }
+        .badge-info { background: #17a2b8; color: white; }
+        .badge-warning { background: #ffc107; color: #333; }
+        .badge-primary { background: #007bff; color: white; }
+        .alert { padding: 15px; border-radius: 6px; margin: 15px 0; }
+        .alert-info { background: #d1ecf1; border-left: 4px solid #17a2b8; color: #0c5460; }
+        .alert-success { background: #d4edda; border-left: 4px solid #28a745; color: #155724; }
+        .alert-warning { background: #fff3cd; border-left: 4px solid #ffc107; color: #856404; }
+        .btn { display: inline-block; padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; margin: 5px; transition: all 0.3s; }
+        .btn:hover { background: #5568d3; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; }
+        .stat-card { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 8px; text-align: center; }
+        .stat-number { font-size: 2.5em; font-weight: bold; margin-bottom: 5px; }
+        .stat-label { font-size: 0.9em; opacity: 0.9; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: 'Courier New', monospace; color: #c7254e; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 PPX Routing System - Quick Reference</h1>
+            <p>Panduan Cepat Sistem Routing Approval yang Fleksibel & Database-Driven</p>
+        </div>
+
+        <div class="alert alert-success">
+            <strong>✅ STATUS: SISTEM SIAP PRODUKSI</strong><br>
+            Semua modul telah dibuat, routing dikonfigurasi, dan validasi lengkap telah dilakukan.
+        </div>
+
+        <div class="grid">
+            <div class="stat-card">
+                <div class="stat-number">10</div>
+                <div class="stat-label">Routing Aktif</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">7</div>
+                <div class="stat-label">Divisi Tercakup</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">6</div>
+                <div class="stat-label">Modul Dashboard</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🔄 Alur Approval per Divisi</h2>
+            
+            <div class="flow">
+                <div class="flow-title">📦 Gudang / Bisnis / Operasional (ID: 2, 4, 17)</div>
+                <div class="flow-steps">
+                    Submit <span class="arrow">→</span> Status: <span class="badge badge-warning">Finance</span> <span class="arrow">→</span> 
+                    Manager Operasional Approve <span class="arrow">→</span> <span class="badge badge-success">Selesai</span>
+                </div>
+                <small>Dashboard: <code>z_approval_ppx_operasional</code> | Skip Leader: <span class="badge badge-info">Ya</span></small>
+            </div>
+
+            <div class="flow">
+                <div class="flow-title">👥 IT / HR / GA (ID: 1, 6, 7)</div>
+                <div class="flow-steps">
+                    Submit <span class="arrow">→</span> Status: <span class="badge badge-warning">Leader</span> <span class="arrow">→</span> 
+                    HR Approve <span class="arrow">→</span> <span class="badge badge-success">Selesai</span>
+                </div>
+                <small>Dashboard: <code>z_approval_ppx_hr</code> | Skip Leader: <span class="badge badge-warning">Tidak</span></small>
+            </div>
+
+            <div class="flow">
+                <div class="flow-title">💰 Finance AP Cibinong (ID: 9, Cabang: Cibinong)</div>
+                <div class="flow-steps">
+                    Submit <span class="arrow">→</span> Status: <span class="badge badge-warning">Manager</span> <span class="arrow">→</span> 
+                    Manager Finance Approve <span class="arrow">→</span> <span class="badge badge-success">Selesai</span>
+                </div>
+                <small>Dashboard: <code>z_approval_ppx_finance</code> | Skip Leader: <span class="badge badge-warning">Tidak</span></small>
+            </div>
+
+            <div class="flow">
+                <div class="flow-title">🏢 Finance AP Bekasi/Medan/Surabaya (ID: 9, Cabang lain)</div>
+                <div class="flow-steps">
+                    Submit <span class="arrow">→</span> Status: <span class="badge badge-warning">Kacab</span> <span class="arrow">→</span> 
+                    Kacab [Cabang] Approve <span class="arrow">→</span> <span class="badge badge-success">Selesai</span>
+                </div>
+                <small>Dashboard: <code>z_approval_ppx_kacab</code> | Skip Leader: <span class="badge badge-warning">Tidak</span></small>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>🎮 Cara Menggunakan Management UI</h2>
+            
+            <div class="alert alert-info">
+                <strong>📍 Akses:</strong><br>
+                Menu: <strong>Routing Approval PPX</strong> atau <strong>PPX Management → Management Routing Approval</strong><br>
+                URL: <code>http://localhost/asset_dfm/z_master_ppx_routing/dashboard.php</code><br>
+                <strong>Permission:</strong> Super Admin atau Manager Finance
+            </div>
+
+            <h3>✨ Tambah Routing Baru</h3>
+            <ol>
+                <li>Klik tombol <strong>"Tambah Routing"</strong></li>
+                <li>Isi form dengan data routing:
+                    <ul>
+                        <li><strong>Divisi:</strong> Pilih divisi target</li>
+                        <li><strong>Cabang:</strong> Isi cabang spesifik atau kosongkan untuk semua cabang</li>
+                        <li><strong>Status Awal:</strong> Status saat PPX disubmit (Leader/Kacab/Manager/Finance/HR/Direktur)</li>
+                        <li><strong>Approver Role:</strong> Role yang akan approve (hr/kacab/manag_finance/manag_operasional/ga)</li>
+                        <li><strong>Skip Leader:</strong> Ya = langsung ke approver, Tidak = melalui Leader</li>
+                        <li><strong>Status Routing:</strong> Aktif/Nonaktif</li>
+                    </ul>
+                </li>
+                <li>Klik <strong>"Simpan"</strong></li>
+            </ol>
+
+            <h3>✏️ Edit Routing</h3>
+            <p>Klik icon <strong>pensil</strong> pada routing yang ingin diubah, edit data, lalu klik "Update"</p>
+
+            <h3>🗑️ Hapus Routing</h3>
+            <p>Klik icon <strong>tong sampah</strong>, konfirmasi penghapusan. <span class="badge badge-warning">Perhatian:</span> Divisi tanpa routing akan menggunakan fallback logic!</p>
+        </div>
+
+        <div class="card">
+            <h2>📋 Konfigurasi Routing Saat Ini</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Divisi</th>
+                        <th>Cabang</th>
+                        <th>Status Awal</th>
+                        <th>Approver</th>
+                        <th>Skip Leader</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>IT</td><td>Semua</td><td>Leader</td><td>hr</td><td>Tidak</td></tr>
+                    <tr><td>HR</td><td>Semua</td><td>Leader</td><td>hr</td><td>Tidak</td></tr>
+                    <tr><td>GA</td><td>Semua</td><td>Leader</td><td>hr</td><td>Tidak</td></tr>
+                    <tr><td>Gudang</td><td>Semua</td><td>Finance</td><td>manag_operasional</td><td>Ya</td></tr>
+                    <tr><td>Bisnis</td><td>Semua</td><td>Finance</td><td>manag_operasional</td><td>Ya</td></tr>
+                    <tr><td>Operasional</td><td>Semua</td><td>Finance</td><td>manag_operasional</td><td>Ya</td></tr>
+                    <tr><td>Finance AP</td><td>Cibinong</td><td>Manager</td><td>manag_finance</td><td>Tidak</td></tr>
+                    <tr><td>Finance AP</td><td>Bekasi</td><td>Kacab</td><td>kacab</td><td>Tidak</td></tr>
+                    <tr><td>Finance AP</td><td>Medan</td><td>Kacab</td><td>kacab</td><td>Tidak</td></tr>
+                    <tr><td>Finance AP</td><td>Surabaya</td><td>Kacab</td><td>kacab</td><td>Tidak</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2>🧪 Testing & Validation</h2>
+            <p>Jalankan automated test untuk memastikan sistem berjalan dengan baik:</p>
+            <a href="test_routing.php" class="btn" target="_blank">🚀 Run Test Routing</a>
+            <br><br>
+            <p><strong>Test mencakup:</strong></p>
+            <ul>
+                <li>✅ Struktur database dan tabel</li>
+                <li>✅ Konfigurasi routing yang ada</li>
+                <li>✅ Query simulation untuk berbagai divisi/cabang</li>
+                <li>✅ Validasi status enum</li>
+                <li>✅ Pengecekan file module</li>
+                <li>✅ Deteksi duplikasi routing</li>
+                <li>✅ Deteksi invalid references</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>⚡ Quick Tips</h2>
+            <div class="alert alert-info">
+                <strong>💡 Prioritas Routing:</strong><br>
+                Routing dengan cabang spesifik lebih prioritas daripada global (NULL cabang).<br>
+                Contoh: Finance AP Cibinong akan pakai routing "Finance AP + Cibinong", bukan "Finance AP + NULL"
+            </div>
+            
+            <div class="alert alert-warning">
+                <strong>⚠️ Fallback Logic:</strong><br>
+                Jika divisi tidak punya routing, sistem akan cek:<br>
+                1. Cabang user → Kacab ada? → Status: Kacab, jika tidak → Status: Leader<br>
+                2. Default → Status: Leader
+            </div>
+
+            <div class="alert alert-success">
+                <strong>✅ Best Practices:</strong><br>
+                • Test routing baru di development dulu<br>
+                • Backup database sebelum modifikasi routing kritis<br>
+                • Nonaktifkan routing lama dulu, monitor, baru hapus<br>
+                • Dokumentasikan setiap perubahan routing
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📚 Dokumentasi Lengkap</h2>
+            <p>Untuk panduan detail, baca file:</p>
+            <a href="README.md" class="btn">📖 Baca README Lengkap</a>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; color: #999; font-size: 0.9em;">
+            <p>PPX Routing System v1.0 | Database-Driven & Flexible</p>
+            <p>Dibuat dengan ❤️ untuk kemudahan management approval</p>
+        </div>
+    </div>
+</body>
+</html>

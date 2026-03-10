@@ -1,0 +1,30 @@
+<?php
+  if (session_status() === PHP_SESSION_NONE) {
+      $session_lifetime = 28800;
+      ini_set('session.gc_maxlifetime', $session_lifetime);
+      session_set_cookie_params($session_lifetime);
+      session_start();
+  }
+
+  // Database Connection
+  $dbhost = "localhost";
+  $dbuser = "your_username";
+  $dbpass = "your_password";
+  $dbname = "your_db_name";
+
+  $conn = mysqli_connect($dbhost, $dbuser, $dbpass, $dbname);
+
+  if (!$conn) {
+      die("Tidak dapat terhubung ke database: " . mysqli_connect_error());
+  }
+
+  mysqli_set_charset($conn, 'utf8mb4');
+
+  // Define BASE_URL globally
+  if (!defined('BASE_URL')) {
+      $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+      $host = $_SERVER['HTTP_HOST'];
+      $path = '/asset_dfm';
+      define('BASE_URL', $protocol . '://' . $host . $path);
+  }
+?>
