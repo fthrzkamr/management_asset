@@ -265,13 +265,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
         
-        // TRANSITION LOGIC: Bypass routing for requests made in March 2026
-        $current_date = date('Y-m');
-        if ($current_date === '2026-03') {
-            $initial_status = 'Finance';
-            error_log("PPX Insert: March 2026 Transition - Bypassing routing and setting status to Finance");
-        }
-        
         // Safety fallback if status is still empty
         if (empty($initial_status)) {
             $initial_status = 'Leader';

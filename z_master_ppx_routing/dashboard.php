@@ -7,10 +7,8 @@ $auth = new AuthHelper($conn);
 if (!$auth->isLoggedIn()) { header("Location: ../login.php"); exit(); }
 $auth->requirePermission('ppx_routing', 'read');
 
-// Cek kolom request_type (migration mungkin belum jalan)
-$col_chk = mysqli_query($conn,
-    "SELECT 1 FROM information_schema.columns
-     WHERE table_schema=DATABASE() AND table_name='ppx_approval_routing' AND column_name='request_type'");
+// Cek kolom request_type (dengan SHOW COLUMNS agar lebih robust)
+$col_chk = mysqli_query($conn, "SHOW COLUMNS FROM ppx_approval_routing LIKE 'request_type'");
 $has_rt = ($col_chk && mysqli_num_rows($col_chk) > 0);
 $sel_rt  = $has_rt ? ', par.request_type' : ', NULL AS request_type';
 
@@ -37,7 +35,7 @@ while($r = mysqli_fetch_assoc($rq)) $roles_list[] = $r['nama_role'];
 
 // Daftar cabang aktif
 $cabang_list = [];
-$cq = mysqli_query($conn, "SELECT nama_cabang FROM master_cabang WHERE is_active=1 ORDER BY nama_cabang");
+$cq = mysqli_query($conn, "SELECT nama_cabang FROM master_cabang ORDER BY nama_cabang");
 if ($cq) while($c = mysqli_fetch_assoc($cq)) $cabang_list[] = $c['nama_cabang'];
 
 $status_options = ['Leader','Kacab','HR','Asmen Finance','Manager','Operasional','Finance','Direktur'];
@@ -198,8 +196,9 @@ $layout_dir = realpath(__DIR__ . '/../layouts');
                                             <i class="fas fa-edit fa-xs"></i>
                                         </button>
                                         <a href="process.php?action=delete&id=<?= $r['id'] ?>"
-                                           class="btn btn-xs btn-outline-danger"
-                                           onclick="return confirm('Hapus routing ini?')" title="Hapus">
+                                           class="btn btn-xs btn-outline-danger btn-delete-confirm"
+                                           data-message="Hapus routing untuk divisi <?= htmlspecialchars($r['nama_divisi']) ?> di cabang <?= htmlspecialchars($r['cabang'] ?: 'Semua') ?>?"
+                                           title="Hapus">
                                             <i class="fas fa-trash fa-xs"></i>
                                         </a>
                                     </td>
@@ -235,7 +234,7 @@ $layout_dir = realpath(__DIR__ . '/../layouts');
                         <i class="fas fa-info-circle"></i>
                         Jika ada dua routing untuk divisi yang sama — satu Semua dan satu Regular — maka rule yang lebih
                         spesifik (Regular / Anggaran Bulanan) akan <strong>diprioritaskan</strong>.
-                        Contoh: untuk Divisi Finance AP di Puri, buat dua routing: satu <em>Semua</em> (ke HR) dan
+                        Contoh: untuk Divisi Finance AP di Jakarta, buat dua routing: satu <em>Semua</em> (ke HR) dan
                         satu <em>Regular</em> (ke Asmen Finance). Maka PPX Regular ke Asmen, PPX Anggaran ke HR.
                     </p>
                 </div>
@@ -344,6 +343,8 @@ $layout_dir = realpath(__DIR__ . '/../layouts');
         </div>
     </div>
 </div>
+
+<?php if ($layout_dir) include $layout_dir . '/confirm_modal.php'; ?>
 
 <script src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js"></script>
 <script>

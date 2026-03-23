@@ -25,31 +25,16 @@ $jumlah          = (int)($_POST['jumlah'] ?? 1);
 $satuan          = mysqli_real_escape_string($conn, $_POST['satuan'] ?? 'unit');
 $tanggal_pengadaan = !empty($_POST['tanggal_pengadaan']) ? $_POST['tanggal_pengadaan'] : null;
 
-// Parsing nilai rupiah - hapus semua kecuali angka
-$nilai_raw = preg_replace('/[^0-9]/', '', $_POST['nilai_pengadaan_satuan'] ?? '0');
-$nilai_satuan = floatval($nilai_raw);
 
-$total_raw = preg_replace('/[^0-9]/', '', $_POST['total_nilai_pengadaan'] ?? '0');
-$total_nilai = floatval($total_raw);
-
-if ($total_nilai <= 0) {
-    $total_nilai = $jumlah * $nilai_satuan;
-}
-
-// TAMBAHAN: Angka penyusutan dan nilai buku
-$angka_penyusutan = floatval($_POST['angka_penyusutan'] ?? 0);
-$nilai_buku_raw = preg_replace('/[^0-9]/', '', $_POST['nilai_buku'] ?? '0');
-$nilai_buku = floatval($nilai_buku_raw);
-
-// Jika nilai buku kosong, hitung otomatis
-if ($nilai_buku <= 0) {
-    $nilai_buku = $total_nilai - ($total_nilai * $angka_penyusutan / 100);
-}
 
 $user_pemakai   = !empty($_POST['user']) ? mysqli_real_escape_string($conn, $_POST['user']) : null;
-$kondisi        = mysqli_real_escape_string($conn, $_POST['kondisi'] ?? 'Baik');
-$informasi_barang = mysqli_real_escape_string($conn, $_POST['informasi_barang'] ?? 'Baru');
+$kondisi        = mysqli_real_escape_string($conn, $_POST['kondisi'] ?? 'Baru');
 $keterangan     = !empty($_POST['keterangan']) ? mysqli_real_escape_string($conn, $_POST['keterangan']) : null;
+
+// New fields
+$nilai_pengadaan_satuan = (float)($_POST['nilai_pengadaan_satuan'] ?? 0);
+$total_nilai_pengadaan  = (float)($_POST['total_nilai_pengadaan'] ?? 0);
+$informasi_barang       = mysqli_real_escape_string($conn, $_POST['informasi_barang'] ?? '');
 
 // User info dari session
 $user_info      = (int)$_SESSION['id_user'];
@@ -164,18 +149,18 @@ $kode_aset = "{$kode_kategori}-{$tahun}{$new_no}-{$kode_lokasi}";
 
 // --- Insert ke tabel asset_dfm
 $sql = "INSERT INTO asset_dfm (
-            kode_aset, kategori_aset, lokasi, lokasi_detail, nama_aset, merk, spesifikasi,
-            jumlah, satuan, tanggal_pengadaan, nilai_pengadaan_satuan, total_nilai_pengadaan,
-            angka_penyusutan, nilai_buku, foto_asset,
-            user, kondisi, informasi_barang, keterangan, user_info, created_at, updated_at
-        ) VALUES (
-            '$kode_aset', '$kategori_nama', '$lokasi_nama', '$lokasi_detail', '$nama_aset', '$merk', '$spesifikasi',
-            '$jumlah', '$satuan', " . ($tanggal_pengadaan ? "'$tanggal_pengadaan'" : "NULL") . ",
-            0, 0, 0, 0,
-            " . ($foto_asset ? "'$foto_asset'" : "NULL") . ",
-            " . ($user_pemakai ? "'$user_pemakai'" : "NULL") . ", '$kondisi', '$informasi_barang', " . ($keterangan ? "'$keterangan'" : "NULL") . ",
-            '$user_info', '$created_at', '$updated_at'
-        )";
+    kode_aset, kategori_aset, lokasi, lokasi_detail, nama_aset, merk, spesifikasi,
+    jumlah, satuan, tanggal_pengadaan, foto_asset,
+    user, kondisi, keterangan, user_info, created_at, updated_at,
+    nilai_pengadaan_satuan, total_nilai_pengadaan, informasi_barang
+) VALUES (
+    '$kode_aset', '$kategori_nama', '$lokasi_nama', '$lokasi_detail', '$nama_aset', '$merk', '$spesifikasi',
+    '$jumlah', '$satuan', " . ($tanggal_pengadaan ? "'$tanggal_pengadaan'" : "NULL") . ",
+    " . ($foto_asset ? "'$foto_asset'" : "NULL") . ",
+    " . ($user_pemakai ? "'$user_pemakai'" : "NULL") . ", '$kondisi', " . ($keterangan ? "'$keterangan'" : "NULL") . ",
+    '$user_info', '$created_at', '$updated_at',
+    '$nilai_pengadaan_satuan', '$total_nilai_pengadaan', '$informasi_barang'
+)";
 
 $insert = mysqli_query($conn, $sql);
 

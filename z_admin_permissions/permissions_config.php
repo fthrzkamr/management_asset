@@ -51,6 +51,12 @@ $PERMISSION_MODULES = [
         'group' => 'Laporan',
         'actions' => ['read'],
     ],
+    'report_ppx_all' => [
+        'label' => 'Laporan PPX (Regular & Monthly)',
+        'icon'  => 'fa-solid fa-file-invoice-dollar',
+        'group' => 'Laporan',
+        'actions' => ['read', 'export'],
+    ],
     'approval_ppx_leader' => [
         'label' => 'Approval PPX (Leader)',
         'icon'  => 'fas fa-check-circle',

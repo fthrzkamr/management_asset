@@ -13,11 +13,7 @@ if (!$auth->isLoggedIn() || (!$auth->isSuperAdmin() && !$auth->isManagerFinance(
 }
 
 // ── Cek apakah kolom request_type sudah ada di tabel ──
-$col_check = mysqli_query($conn,
-    "SELECT COLUMN_NAME FROM information_schema.columns
-     WHERE table_schema = DATABASE()
-     AND table_name = 'ppx_approval_routing'
-     AND column_name = 'request_type'");
+$col_check = mysqli_query($conn, "SHOW COLUMNS FROM ppx_approval_routing LIKE 'request_type'");
 $has_rt_col = ($col_check && mysqli_num_rows($col_check) > 0);
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
@@ -124,7 +120,7 @@ try {
                           skip_leader = ?, is_active = ?, request_type = ?, updated_at = NOW()
                       WHERE id = ?";
             $stmt = mysqli_prepare($conn, $query);
-            mysqli_stmt_bind_param($stmt, 'issssiiis',
+            mysqli_stmt_bind_param($stmt, 'issssiisi',
                 $divisi_id, $cabang, $initial_status, $final_status, $approver_role,
                 $skip_leader, $is_active, $request_type, $id
             );

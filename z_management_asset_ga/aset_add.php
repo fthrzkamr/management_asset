@@ -186,6 +186,22 @@ $qLokasi = mysqli_query($conn, "SELECT id_lokasi, lokasi_asset FROM lokasi_asset
                                             </div>
                                         </div>
 
+                                        <!-- Harga Satuan -->
+                                        <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                                            <div class="form-group">
+                                                <label for="nilai_pengadaan_satuan" class="font-weight-bold">Harga Satuan (Rp)</label>
+                                                <input type="number" name="nilai_pengadaan_satuan" id="nilai_pengadaan_satuan" class="form-control" placeholder="Contoh: 500000" oninput="calculateTotal()">
+                                            </div>
+                                        </div>
+
+                                        <!-- Total Harga -->
+                                        <div class="col-12 col-sm-6 col-lg-4 mb-3">
+                                            <div class="form-group">
+                                                <label for="total_nilai_pengadaan" class="font-weight-bold">Total Harga (Rp)</label>
+                                                <input type="number" name="total_nilai_pengadaan" id="total_nilai_pengadaan" class="form-control" readonly placeholder="Otomatis" oninput="calculateTotal()">
+                                            </div>
+                                        </div>
+
                                          <!-- Kondisi -->
                                          <div class="col-12 col-md-4 mb-3">
                                              <div class="form-group">
@@ -201,32 +217,27 @@ $qLokasi = mysqli_query($conn, "SELECT id_lokasi, lokasi_asset FROM lokasi_asset
                                              </div>
                                          </div>
 
-                                         <!-- Informasi Barang (Baru/Second) -->
-                                         <div class="col-12 col-md-4 mb-3">
-                                            <div class="form-group">
-                                                <label for="informasi_barang" class="font-weight-bold">Informasi Barang <span class="text-danger">*</span></label>
-                                                <select name="informasi_barang" id="informasi_barang" class="form-control" required>
-                                                    <option value="Baru" selected>Baru</option>
-                                                    <option value="Second">Second</option>
-                                                </select>
-                                            </div>
+                                         <!-- Kondisi Barang (Acquisition) -->
+                                         <div class="col-12 col-md-8 mb-3">
+                                             <div class="form-group">
+                                                 <label for="informasi_barang" class="font-weight-bold">Kondisi Barang <span class="text-danger">*</span></label>
+                                                 <select name="informasi_barang" id="informasi_barang" class="form-control" required>
+                                                     <option value="Baru" selected>Baru</option>
+                                                     <option value="Second">Second</option>
+                                                 </select>
+                                                 <small class="text-muted">Status barang saat pengadaan</small>
+                                             </div>
                                          </div>
 
                                          <!-- User -->
-                                         <div class="col-12 col-md-4 mb-3">
+                                         <div class="col-12 col-md-6 mb-3">
                                              <div class="form-group">
                                                  <label for="user" class="font-weight-bold">User/Penanggung Jawab</label>
                                                  <input type="text" name="user" id="user" class="form-control" placeholder="Nama penanggung jawab aset">
                                              </div>
                                          </div>
 
-                                         <!-- Financial Fields Hidden - Nanti dihapus dari DB, sementara dihilangkan dari UI -->
-                                         <div class="d-none">
-                                            <input type="hidden" name="nilai_pengadaan_satuan" value="0">
-                                            <input type="hidden" name="total_nilai_pengadaan" value="0">
-                                            <input type="hidden" name="angka_penyusutan" value="0">
-                                            <input type="hidden" name="nilai_buku" value="0">
-                                         </div>
+
 
                                         <!-- Keterangan -->
                                         <div class="col-12 mb-3">
@@ -306,6 +317,15 @@ $qLokasi = mysqli_query($conn, "SELECT id_lokasi, lokasi_asset FROM lokasi_asset
                 }
             });
         });
+
+        function calculateTotal() {
+            const qty = parseFloat(document.getElementById('jumlah').value) || 0;
+            const price = parseFloat(document.getElementById('nilai_pengadaan_satuan').value) || 0;
+            document.getElementById('total_nilai_pengadaan').value = qty * price;
+        }
+
+        // Also trigger on qty change
+        document.getElementById('jumlah').addEventListener('input', calculateTotal);
     </script>
 </body>
 

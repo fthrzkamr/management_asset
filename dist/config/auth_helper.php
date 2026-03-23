@@ -482,7 +482,7 @@ class AuthHelper
     // COMPATIBILITY METHODS - UPDATED TO USE PERMISSIONS
     public function canApprove()
     {
-        return $this->canApproveAsset() || $this->canApproveRenovasi() || $this->canApprovePPX() || $this->canApproveService();
+        return $this->canApproveAsset() || $this->canApproveRenovasi() || $this->canApprovePPX() || $this->canApproveService() || $this->hasPermission('approval_ppx_asmen', 'approve');
     }
 
     public function canViewFinancialData()

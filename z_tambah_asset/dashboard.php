@@ -23,9 +23,18 @@ $sort_column = isset($_GET['sort']) ? $_GET['sort'] : 'created_at';
 $sort_order = isset($_GET['order']) && $_GET['order'] == 'asc' ? 'ASC' : 'DESC';
 
 // Allowed columns for sorting (security)
-$allowed_sort = ['user','kode_aset', 'nama_aset', 'kategori_aset', 'lokasi', 'merk', 'jumlah', 'kondisi', 'total_nilai_pengadaan', 'created_at'];
+$allowed_sort = ['user','kode_aset', 'nama_aset', 'kategori_aset', 'lokasi', 'merk', 'jumlah', 'kondisi', 'created_at'];
 if (!in_array($sort_column, $allowed_sort)) {
    $sort_column = 'created_at';
+}
+
+// Fetch Cabang List
+$cabang_list = [];
+$q_cabg = mysqli_query($conn, "SELECT nama_cabang FROM master_cabang ORDER BY id_cabang ASC");
+if ($q_cabg) {
+   while ($row_c = mysqli_fetch_assoc($q_cabg)) {
+      $cabang_list[] = $row_c['nama_cabang'];
+   }
 }
 
 // Search functionality
@@ -37,6 +46,7 @@ $where_clause = '';
 if (!empty($search)) {
    $search_sql = "(kode_aset LIKE '%$search%' 
                    OR nama_aset LIKE '%$search%' 
+                   OR `user` LIKE '%$search%'
                    OR kategori_aset LIKE '%$search%' 
                    OR lokasi LIKE '%$search%' 
                    OR merk LIKE '%$search%')";
@@ -45,7 +55,7 @@ if (!empty($search)) {
 
 // Tambahan Filter Cabang dari Navbar Dropdown
 $filter_cabang = isset($_GET['cabang']) ? mysqli_real_escape_string($conn, $_GET['cabang']) : '';
-if (!empty($filter_cabang)) {
+if (!empty($filter_cabang) && $filter_cabang !== 'Semua Cabang') {
    $cab_sql = "lokasi LIKE '%$filter_cabang%'";
    if (empty($where_clause)) {
       $where_clause = "WHERE " . $cab_sql;
@@ -62,7 +72,7 @@ $total_pages = ceil($total_records / $limit);
 // Main query with pagination and sorting
 $query = mysqli_query($conn, "
    SELECT kode_aset, `user`, nama_aset, kategori_aset, lokasi, merk, 
-         jumlah, satuan, kondisi, total_nilai_pengadaan
+         jumlah, satuan, kondisi
    FROM asset_dfm 
    $where_clause
    ORDER BY $sort_column $sort_order
@@ -163,41 +173,44 @@ function getSortIcon($column, $current_sort, $current_order)
                         <div class="row mb-3">
                            <div class="col-md-6">
                               <form method="GET" action="">
-                                 <div class="d-flex">
-                                    <div style="flex:1;">
-                                       <div class="input-group">
-                                          <input type="text" name="search" class="form-control" placeholder="Cari asset..." value="<?= htmlspecialchars($search) ?>">
-                                          <!-- Preserve sort parameters & cabang -->
-                                          <?php if (isset($_GET['cabang'])): ?>
-                                             <input type="hidden" name="cabang" value="<?= htmlspecialchars($_GET['cabang']) ?>">
-                                          <?php endif; ?>
-                                          <?php if (isset($_GET['sort'])): ?>
-                                             <input type="hidden" name="sort" value="<?= htmlspecialchars($_GET['sort']) ?>">
-                                          <?php endif; ?>
-                                          <?php if (isset($_GET['order'])): ?>
-                                             <input type="hidden" name="order" value="<?= htmlspecialchars($_GET['order']) ?>">
-                                          <?php endif; ?>
-                                          <div class="input-group-append">
-                                             <button type="submit" class="btn btn-outline-secondary">
-                                                <i class="fas fa-search"></i>
-                                             </button>
-                                             <?php if (!empty($search)): ?>
-                                                <a href="dashboard.php" class="btn btn-outline-danger">
-                                                   <i class="fas fa-times"></i>
-                                                </a>
-                                             <?php endif; ?>
-                                          </div>
-                                       </div>
-                                    </div>
-
-                                    <div style="margin-left:10px; width:120px;">
-                                       <select name="limit" class="form-control form-control-sm" onchange="this.form.submit()">
-                                          <?php foreach([5,10,25,50,100] as $l): ?>
-                                             <option value="<?= $l ?>" <?= $l == $limit ? 'selected' : '' ?>><?= $l ?></option>
-                                          <?php endforeach; ?>
-                                       </select>
-                                    </div>
-                                 </div>
+                                 <div class="d-flex flex-column flex-sm-row">
+                                     <div class="flex-grow-1 d-flex align-items-center mb-2 mb-sm-0">
+                                        <select name="cabang" class="form-control form-control-sm mr-2" style="max-width: 150px;" onchange="this.form.submit()">
+                                           <option value="">Semua Cabang</option>
+                                           <?php foreach($cabang_list as $cbg): ?>
+                                              <option value="<?= htmlspecialchars($cbg) ?>" <?= $filter_cabang === $cbg ? 'selected' : '' ?>>
+                                                 <?= htmlspecialchars($cbg) ?>
+                                              </option>
+                                           <?php endforeach; ?>
+                                        </select>
+                                        <div class="input-group input-group-sm">
+                                           <input type="text" name="search" class="form-control" placeholder="Cari asset..." value="<?= htmlspecialchars($search) ?>">
+                                           <?php if (isset($_GET['sort'])): ?>
+                                              <input type="hidden" name="sort" value="<?= htmlspecialchars($_GET['sort']) ?>">
+                                           <?php endif; ?>
+                                           <?php if (isset($_GET['order'])): ?>
+                                              <input type="hidden" name="order" value="<?= htmlspecialchars($_GET['order']) ?>">
+                                           <?php endif; ?>
+                                           <div class="input-group-append">
+                                              <button type="submit" class="btn btn-outline-secondary">
+                                                 <i class="fas fa-search"></i>
+                                              </button>
+                                              <?php if (!empty($search)): ?>
+                                                 <a href="dashboard.php" class="btn btn-outline-danger">
+                                                    <i class="fas fa-times"></i>
+                                                 </a>
+                                              <?php endif; ?>
+                                           </div>
+                                        </div>
+                                     </div>
+                                     <div class="ml-0 ml-sm-2" style="max-width: 80px;">
+                                        <select name="limit" class="form-control form-control-sm" onchange="this.form.submit()">
+                                           <?php foreach([5,10,25,50,100] as $l): ?>
+                                              <option value="<?= $l ?>" <?= $l == $limit ? 'selected' : '' ?>><?= $l ?></option>
+                                           <?php endforeach; ?>
+                                        </select>
+                                     </div>
+                                  </div>
                               </form>
                            </div>
                            <div class="col-md-6 text-right">
@@ -263,12 +276,7 @@ function getSortIcon($column, $current_sort, $current_order)
                                           Kondisi <?= getSortIcon('kondisi', $sort_column, $sort_order) ?>
                                        </a>
                                     </th>
-                                    <th>
-                                       <a href="<?= getSortUrl('total_nilai_pengadaan', $sort_column, $sort_order) ?>" class="text-dark text-decoration-none">
-                                          Total Nilai <?= getSortIcon('total_nilai_pengadaan', $sort_column, $sort_order) ?>
-                                       </a>
-                                    </th>
-                                    <th class="text-center action-col">Action</th>
+                                     <th class="text-center action-col">Action</th>
                                  </tr>
                               </thead>
                               <tbody>
@@ -308,7 +316,7 @@ function getSortIcon($column, $current_sort, $current_order)
                                        }
                                        echo "<td><span class='badge {$kondisi_class}'>" . htmlspecialchars($row['kondisi']) . "</span></td>";
 
-                                       echo "<td class='text-right'><strong>Rp " . number_format($row['total_nilai_pengadaan'], 0, ',', '.') . "</strong></td>";
+
                                        echo "<td class='text-center action-col'>
                                                 <div class='action-buttons'>
                                                    <a href='#viewModal' 
@@ -328,7 +336,7 @@ function getSortIcon($column, $current_sort, $current_order)
                                        echo "</tr>";
                                     }
                                  } else {
-                                    echo "<tr><td colspan='10' class='text-center py-4'>";
+                                     echo "<tr><td colspan='9' class='text-center py-4'>";
                                     echo "<i class='fas fa-inbox fa-3x text-muted mb-3'></i><br>";
                                     echo "<span class='text-muted'>Tidak ada data yang ditemukan</span>";
                                     if (!empty($search)) {
@@ -454,7 +462,7 @@ function getSortIcon($column, $current_sort, $current_order)
                                           min="1" max="<?= $total_pages ?>"
                                           value="<?= $page ?>"
                                           placeholder="<?= $page ?>">
-                                       <div class="input-group-append">
+                                       </div><div class="input-group-append">
                                           <button type="submit" class="btn btn-outline-secondary">Go</button>
                                        </div>
                                     </div>

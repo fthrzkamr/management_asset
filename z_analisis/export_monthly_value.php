@@ -65,7 +65,7 @@ function monthLabel($ym)
     return $d ? $d->format('M') : $ym;
 }
 
-$title     = "Laporan: Total Nilai Aset per Bulan - $year";
+$title     = "Laporan: Total Nilai Pengadaan Aset per Bulan - $year";
 $company   = "Asset DFM";
 $generated = date('d M Y H:i');
 ?>
@@ -99,7 +99,7 @@ $generated = date('d M Y H:i');
         <tr>
             <td style="border:1px solid #e6eefc; background:#ffffff; border-radius:6px; width:25%;">
                 <div style="font-size:13px; color:#0b5ed7; font-weight:700;"><?= htmlspecialchars(fmtRpDisplay($grand)) ?></div>
-                <div style="font-size:11px; color:#555;">Grand Total (12 bulan)</div>
+                <div style="font-size:11px; color:#555;">Total Nilai Pengadaan (12 bulan)</div>
             </td>
             <td style="border:1px solid #e6eefc; background:#ffffff; border-radius:6px; width:25%;">
                 <div style="font-size:13px; color:#0b5ed7; font-weight:700;"><?= htmlspecialchars(fmtRpDisplay($avg)) ?></div>
@@ -121,7 +121,7 @@ $generated = date('d M Y H:i');
         <thead>
             <tr>
                 <th style="background:#0b5ed7; color:#fff; border:1px solid #0a53bf; text-align:left;">Bulan</th>
-                <th style="background:#0b5ed7; color:#fff; border:1px solid #0a53bf; text-align:right;">Total (Rp)</th>
+                <th style="background:#0b5ed7; color:#fff; border:1px solid #0a53bf; text-align:right;">Total Nilai</th>
                 <th style="background:#0b5ed7; color:#fff; border:1px solid #0a53bf; text-align:left;">Visual</th>
             </tr>
         </thead>
@@ -137,7 +137,7 @@ $generated = date('d M Y H:i');
                 <tr>
                     <td style="background:<?= $rowBg ?>; font-weight:600;"><?= htmlspecialchars($label) ?></td>
                     <!-- numeric cell: Excel-friendly -->
-                    <td style="background:<?= $rowBg ?>; text-align:right; mso-number-format:'#,##0'; font-weight:700; color:#0b5ed7;"><?= $val ?></td>
+                    <td style="background:<?= $rowBg ?>; text-align:right; mso-number-format:'\#\,\#\#0'; font-weight:700; color:#0b5ed7;"><?= fmtRpDisplay($val) ?></td>
                     <td style="background:<?= $rowBg ?>;">
                         <!-- progress bar sederhana (tabel agar aman) -->
                         <table border="0" cellpadding="0" cellspacing="0" style="width:100%; height:14px; background:#eef5ff; border-radius:8px;">
@@ -151,7 +151,7 @@ $generated = date('d M Y H:i');
             <?php endforeach; ?>
             <tr>
                 <td style="background:#e9f2ff; font-weight:700;">TOTAL</td>
-                <td style="background:#e9f2ff; text-align:right; mso-number-format:'#,##0'; font-weight:700;"><?= (int)$grand ?></td>
+                <td style="background:#e9f2ff; text-align:right; mso-number-format:'\#\,\#\#0'; font-weight:700;"><?= fmtRpDisplay($grand) ?></td>
                 <td style="background:#e9f2ff;">
                     <table border="0" cellpadding="0" cellspacing="0" style="width:100%; height:14px; background:#eef5ff; border-radius:8px;">
                         <tr>
@@ -164,7 +164,7 @@ $generated = date('d M Y H:i');
     </table>
 
     <div style="font-size:12px; color:#444; margin-top:10px;">
-        Catatan: Angka dalam Rupiah (Rp). Sel kolom angka disimpan sebagai <i>numeric</i> agar dapat diolah langsung di Excel.
+        Catatan: Angka menunjukkan jumlah unit aset yang ditambahkan pada bulan tersebut.
     </div>
 </body>
 

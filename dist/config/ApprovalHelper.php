@@ -11,7 +11,7 @@
  */
 class ApprovalHelper {
     private $conn;
-    private $HO_NAME_KEYWORD = 'puri';
+    private $HO_NAME_KEYWORD = 'jakarta';
 
     // Cache aturan divisi agar tidak query berulang
     // Format: [id_divisi]['specific'][id_cabang][id_routing_step]
@@ -165,7 +165,7 @@ class ApprovalHelper {
     }
 
     // ────────────────────────────────────────────────────────────────────────────
-    // Cek apakah cabang adalah HO (Puri)
+    // Cek apakah cabang adalah HO (Jakarta)
     // ────────────────────────────────────────────────────────────────────────────
     private function isHOBranch($id_cabang) {
         if ($id_cabang === 'CAB001') return true;

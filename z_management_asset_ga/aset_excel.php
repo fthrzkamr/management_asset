@@ -20,8 +20,6 @@ $query = mysqli_query($conn, "
         jumlah,
         satuan,
         tanggal_pengadaan,
-        nilai_pengadaan_satuan,
-        total_nilai_pengadaan,
         user,
         kondisi,
         keterangan
@@ -95,8 +93,6 @@ if (!$query) {
                 <th width="5%">Jumlah</th>
                 <th width="5%">Satuan</th>
                 <th width="10%">Tgl Pengadaan</th>
-                <th width="12%">Nilai Satuan</th>
-                <th width="12%">Total Nilai</th>
                 <th width="10%">User/PJ</th>
                 <th width="8%">Kondisi</th>
                 <th width="15%">Keterangan</th>
@@ -110,9 +106,7 @@ if (!$query) {
             while ($row = mysqli_fetch_assoc($query)) {
                 // Format tanggal
                 $tgl_pengadaan = $row['tanggal_pengadaan'] ? date('d-m-Y', strtotime($row['tanggal_pengadaan'])) : '-';
-                
-                // Hitung total keseluruhan
-                $total_keseluruhan += $row['total_nilai_pengadaan'];
+
                 
                 echo "<tr>";
                 echo "<td class='center'>" . $no++ . "</td>";
@@ -126,8 +120,6 @@ if (!$query) {
                 echo "<td class='center'>" . number_format($row['jumlah'], 0, ',', '.') . "</td>";
                 echo "<td class='center'>" . htmlspecialchars($row['satuan']) . "</td>";
                 echo "<td class='center'>" . $tgl_pengadaan . "</td>";
-                echo "<td class='right'>" . number_format($row['nilai_pengadaan_satuan'], 0, ',', '.') . "</td>";
-                echo "<td class='right'>" . number_format($row['total_nilai_pengadaan'], 0, ',', '.') . "</td>";
                 echo "<td>" . htmlspecialchars($row['user'] ?: '-') . "</td>";
                 echo "<td class='center'>" . htmlspecialchars($row['kondisi']) . "</td>";
                 echo "<td>" . htmlspecialchars($row['keterangan'] ?: '-') . "</td>";
@@ -135,12 +127,7 @@ if (!$query) {
             }
             ?>
             
-            <!-- Total Row -->
-            <tr style="background-color: #f0f0f0; font-weight: bold;">
-                <td colspan="12" class="right">TOTAL KESELURUHAN:</td>
-                <td class="right"><?= number_format($total_keseluruhan, 0, ',', '.') ?></td>
-                <td colspan="3"></td>
-            </tr>
+
         </tbody>
     </table>
 

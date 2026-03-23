@@ -6,7 +6,7 @@ include('../dist/config/auth_helper.php');
 
 $auth = new AuthHelper($conn);
 
-if (!$auth->isLoggedIn() || !$auth->canApprove()) {
+if (!$auth->isLoggedIn() || !$auth->checkAccess('approval_ppx_asmen', 'approve')) {
     $_SESSION['error'] = 'Anda tidak memiliki akses untuk melakukan tindakan ini!';
     header("Location: dashboard.php");
     exit();
@@ -46,9 +46,9 @@ if ($ppx['status'] !== 'Asmen Finance') {
 }
 
 // Tentukan status baru
-$new_status = ($action === 'approve') ? 'Uang Muka' : 'Revisi';
+$new_status = ($action === 'approve') ? 'Selesai' : 'Revisi';
 
-// Override dengan final_status jika approve
+// Override dengan final_status jika approve (jika di routing diset khusus)
 if ($action === 'approve') {
     $rt_val = isset($ppx['request_type']) ? mysqli_real_escape_string($conn, $ppx['request_type']) : 'Regular';
     $cab_val = mysqli_real_escape_string($conn, $ppx['cabang'] ?? '');
@@ -63,11 +63,7 @@ if ($action === 'approve') {
     $r_route = mysqli_query($conn, $q_route);
     if ($r_route && $row = mysqli_fetch_assoc($r_route)) {
         if (!empty($row['final_status'])) {
-            if ($row['final_status'] === 'Asmen Finance') {
-                $new_status = 'Selesai';
-            } else {
-                $new_status = $row['final_status'];
-            }
+            $new_status = ($row['final_status'] === 'Asmen Finance') ? 'Selesai' : $row['final_status'];
         }
     }
 }
@@ -83,7 +79,7 @@ while ($c = mysqli_fetch_assoc($col_r)) $found_cols[] = $c['column_name'];
 $setParts = ["status = ?"];
 $params   = [$new_status];
 
-if ($new_status === 'Uang Muka') {
+if ($new_status === 'Selesai' || $new_status === 'Uang Muka') {
     if (in_array('created_at_asmen', $found_cols)) {
         $setParts[] = "created_at_asmen = NOW()";
     }
@@ -110,7 +106,7 @@ call_user_func_array([$stmt, 'bind_param'], $refs);
 
 if (mysqli_stmt_execute($stmt)) {
     if ($action === 'approve') {
-        $_SESSION['success'] = 'Pengajuan PPX berhasil disetujui. Status berubah ke Uang Muka — menunggu proses transfer oleh GA/Finance.';
+        $_SESSION['success'] = 'Pengajuan PPX berhasil disetujui. Status berubah menjadi Selesai.';
     } else {
         $_SESSION['success'] = 'Pengajuan dikembalikan untuk revisi.';
     }

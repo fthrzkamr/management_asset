@@ -1,6 +1,6 @@
 <?php
 // filepath: z_approval_ppx_asmen/dashboard.php
-// Approval PPX oleh Asmen Finance — khusus PPX Regular dari divisi Finance AP & Finance di Puri
+// Approval PPX oleh Asmen Finance — khusus PPX Regular dari divisi Finance AP & Finance di Jakarta
 require_once __DIR__ . '/../dist/config/config.php';
 require_once __DIR__ . '/../dist/config/auth_helper.php';
 
@@ -264,6 +264,8 @@ unset($_SESSION['success'], $_SESSION['error']);
     </div>
 </div>
 
+<?php if ($layout_dir && file_exists($layout_dir . '/confirm_modal.php')) include $layout_dir . '/confirm_modal.php'; ?>
+
 <?php if ($layout_dir && file_exists($layout_dir . '/footer_js.php')) include $layout_dir . '/footer_js.php'; ?>
 <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js"></script>
@@ -281,12 +283,16 @@ $(document).ready(function() {
 });
 
 function processAction(no_ppx, action) {
-    let label = action === 'approve' ? 'MENYETUJUI' : 'MENGEMBALIKAN KE REVISI';
-    if (confirm('Anda akan ' + label + ' pengajuan PPX: ' + no_ppx + '\n\nLanjutkan?')) {
+    var isApprove = action === 'approve';
+    var title = isApprove ? 'Konfirmasi Setujui' : 'Konfirmasi Revisi';
+    var label = isApprove ? 'MENYETUJUI' : 'MENGEMBALIKAN KE REVISI';
+    var message = 'Anda akan ' + label + ' pengajuan PPX: <strong>' + no_ppx + '</strong>\n\nLanjutkan?';
+    
+    showConfirm(title, message, function() {
         $('#no_pengajuan_input').val(no_ppx);
         $('#action_input').val(action);
         $('#approveForm').submit();
-    }
+    }, null, isApprove ? 'confirm' : 'delete');
 }
 </script>
 

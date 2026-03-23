@@ -29,31 +29,16 @@ $jumlah          = (int)($_POST['jumlah'] ?? 1);
 $satuan          = mysqli_real_escape_string($conn, $_POST['satuan'] ?? 'unit');
 $tanggal_pengadaan = !empty($_POST['tanggal_pengadaan']) ? $_POST['tanggal_pengadaan'] : null;
 
-// Parsing nilai rupiah - hapus semua kecuali angka
-$nilai_raw = preg_replace('/[^0-9]/', '', $_POST['nilai_pengadaan_satuan'] ?? '0');
-$nilai_satuan = floatval($nilai_raw);
 
-$total_raw = preg_replace('/[^0-9]/', '', $_POST['total_nilai_pengadaan'] ?? '0');
-$total_nilai = floatval($total_raw);
-
-if ($total_nilai <= 0) {
-    $total_nilai = $jumlah * $nilai_satuan;
-}
-
-// TAMBAHAN: Angka penyusutan dan nilai buku
-$angka_penyusutan = floatval($_POST['angka_penyusutan'] ?? 0);
-$nilai_buku_raw = preg_replace('/[^0-9]/', '', $_POST['nilai_buku'] ?? '0');
-$nilai_buku = floatval($nilai_buku_raw);
-
-// Jika nilai buku kosong, hitung otomatis
-if ($nilai_buku <= 0) {
-    $nilai_buku = $total_nilai - ($total_nilai * $angka_penyusutan / 100);
-}
 
 $user_pemakai   = !empty($_POST['user']) ? mysqli_real_escape_string($conn, $_POST['user']) : null;
-$kondisi        = mysqli_real_escape_string($conn, $_POST['kondisi'] ?? 'Baik');
-$informasi_barang = mysqli_real_escape_string($conn, $_POST['informasi_barang'] ?? 'Baru');
+$kondisi        = mysqli_real_escape_string($conn, $_POST['kondisi'] ?? 'Baru');
 $keterangan     = !empty($_POST['keterangan']) ? mysqli_real_escape_string($conn, $_POST['keterangan']) : null;
+
+// New fields
+$nilai_pengadaan_satuan = (float)($_POST['nilai_pengadaan_satuan'] ?? 0);
+$total_nilai_pengadaan  = (float)($_POST['total_nilai_pengadaan'] ?? 0);
+$informasi_barang       = mysqli_real_escape_string($conn, $_POST['informasi_barang'] ?? '');
 
 // Update user_info dengan user yang sedang melakukan edit
 $user_info      = (int)$_SESSION['id_user'];
@@ -140,15 +125,13 @@ $sql = "UPDATE asset_dfm SET
             jumlah = '$jumlah',
             satuan = '$satuan',
             tanggal_pengadaan = " . ($tanggal_pengadaan ? "'$tanggal_pengadaan'" : "NULL") . ",
-            nilai_pengadaan_satuan = '$nilai_satuan',
-            total_nilai_pengadaan = '$total_nilai',
-            angka_penyusutan = '$angka_penyusutan',
-            nilai_buku = '$nilai_buku',
             foto_asset = '" . mysqli_real_escape_string($conn, $foto_asset) . "',
             user = " . ($user_pemakai ? "'$user_pemakai'" : "NULL") . ",
             kondisi = '$kondisi',
-            informasi_barang = '$informasi_barang',
             keterangan = " . ($keterangan ? "'$keterangan'" : "NULL") . ",
+            nilai_pengadaan_satuan = '$nilai_pengadaan_satuan',
+            total_nilai_pengadaan = '$total_nilai_pengadaan',
+            informasi_barang = '$informasi_barang',
             user_info = '$user_info',
             updated_at = '$updated_at'
         WHERE kode_aset = '$kode_aset_lama'";

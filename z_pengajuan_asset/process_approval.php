@@ -82,23 +82,23 @@ try {
     }
     
     // Validasi hak approval berdasarkan approval_level dan role:
-    // Level 1: GA Puri approve pengajuan dari GA Surabaya (approval_level = 2 dan belum ada approved_by_ga)
-    // Level 2: Manager HR/Koordinator HR approve pengajuan yang sudah di-approve GA Puri
+    // Level 1: GA Jakarta approve pengajuan dari GA Surabaya (approval_level = 2 dan belum ada approved_by_ga)
+    // Level 2: Manager HR/Koordinator HR approve pengajuan yang sudah di-approve GA Jakarta
     // Level 1 (standard): HR/GA/IT approve langsung untuk pengajuan biasa (approval_level = 1)
     
     $current_user_role = strtolower($auth->getUserRole());
-    $is_ga_puri = ($auth->isGA() && strtolower($cabang_pengaju) != 'surabaya'); // GA tapi bukan Surabaya berarti Puri
+    $is_ga_jakarta = ($auth->isGA() && strtolower($cabang_pengaju) != 'surabaya'); // GA tapi bukan Surabaya berarti Jakarta
     $is_manager_hr = ($auth->isHr() || $current_user_role == 'koordinator'); // HR atau Koordinator HR
     
     if ($approval_level == 2) {
         // Pengajuan dari GA Surabaya - butuh 2 level approval
         if ($approved_by_ga == null) {
-            // Level 1: Harus di-approve oleh GA Puri
-            if (!$is_ga_puri) {
-                throw new Exception('Pengajuan dari GA Surabaya harus di-approve oleh GA Puri terlebih dahulu!');
+            // Level 1: Harus di-approve oleh GA Jakarta
+            if (!$is_ga_jakarta) {
+                throw new Exception('Pengajuan dari GA Surabaya harus di-approve oleh GA Jakarta terlebih dahulu!');
             }
         } else {
-            // Level 2: Sudah di-approve GA Puri, sekarang butuh Manager HR
+            // Level 2: Sudah di-approve GA Jakarta, sekarang butuh Manager HR
             if (!$is_manager_hr) {
                 throw new Exception('Pengajuan ini harus di-approve oleh Manager HR!');
             }
@@ -117,14 +117,14 @@ try {
         $approval_date = date('Y-m-d H:i:s');
         
         if ($approval_level == 2 && $approved_by_ga == null) {
-            // Level 1: GA Puri approve - masih Pending, tunggu Manager HR
+            // Level 1: GA Jakarta approve - masih Pending, tunggu Manager HR
             $new_status = 'Pending';
-            $status_message = 'disetujui oleh GA Puri, menunggu Manager HR';
+            $status_message = 'disetujui oleh GA Jakarta, menunggu Manager HR';
             
             $update_query = "UPDATE asset_request 
                             SET approved_by_ga = ?, 
                                 approved_at_ga = ?, 
-                                catatan_approval = CONCAT(IFNULL(catatan_approval, ''), '\n[GA Puri] ', ?),
+                                catatan_approval = CONCAT(IFNULL(catatan_approval, ''), '\n[GA Jakarta] ', ?),
                                 updated_at = NOW() 
                             WHERE no_pengajuan = ?";
             

@@ -194,6 +194,24 @@ if (!empty($asset['foto_asset'])) {
                                             </div>
                                         </div>
 
+                                        <!-- Harga Satuan -->
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="nilai_pengadaan_satuan">Harga Satuan (Rp)</label>
+                                                <input type="number" name="nilai_pengadaan_satuan" id="nilai_pengadaan_satuan" class="form-control" 
+                                                    value="<?= (float)$asset['nilai_pengadaan_satuan'] ?>" oninput="calculateTotal()">
+                                            </div>
+                                        </div>
+
+                                        <!-- Total Harga -->
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label for="total_nilai_pengadaan">Total Harga (Rp)</label>
+                                                <input type="number" name="total_nilai_pengadaan" id="total_nilai_pengadaan" class="form-control" 
+                                                    value="<?= (float)$asset['total_nilai_pengadaan'] ?>" readonly oninput="calculateTotal()">
+                                            </div>
+                                        </div>
+
                                          <!-- User -->
                                          <div class="col-md-4">
                                              <div class="form-group">
@@ -219,24 +237,19 @@ if (!empty($asset['foto_asset'])) {
                                              </div>
                                          </div>
 
-                                         <!-- Informasi Barang (Baru/Second) -->
-                                         <div class="col-md-4">
-                                            <div class="form-group">
-                                                <label for="informasi_barang">Informasi Barang <span class="text-danger">*</span></label>
-                                                <select name="informasi_barang" id="informasi_barang" class="form-control" required>
-                                                    <option value="Baru" <?= ($asset['informasi_barang'] == 'Baru') ? 'selected' : '' ?>>Baru</option>
-                                                    <option value="Second" <?= ($asset['informasi_barang'] == 'Second') ? 'selected' : '' ?>>Second</option>
-                                                </select>
-                                            </div>
+                                         <!-- Kondisi Barang (Acquisition) -->
+                                         <div class="col-md-8">
+                                             <div class="form-group">
+                                                 <label for="informasi_barang">Kondisi Barang <span class="text-danger">*</span></label>
+                                                 <select name="informasi_barang" id="informasi_barang" class="form-control" required>
+                                                     <option value="Baru" <?= ($asset['informasi_barang'] == 'Baru') ? 'selected' : '' ?>>Baru</option>
+                                                     <option value="Second" <?= ($asset['informasi_barang'] == 'Second') ? 'selected' : '' ?>>Second</option>
+                                                 </select>
+                                                 <small class="text-muted">Status barang saat pengadaan</small>
+                                             </div>
                                          </div>
 
-                                         <!-- Financial Fields Hidden -->
-                                         <div class="d-none">
-                                            <input type="hidden" name="nilai_pengadaan_satuan" value="<?= $asset['nilai_pengadaan_satuan'] ?>">
-                                            <input type="hidden" name="total_nilai_pengadaan" value="<?= $asset['total_nilai_pengadaan'] ?>">
-                                            <input type="hidden" name="angka_penyusutan" value="<?= $asset['angka_penyusutan'] ?>">
-                                            <input type="hidden" name="nilai_buku" value="<?= $asset['nilai_buku'] ?>">
-                                         </div>
+
 
                                         <!-- TAMBAHAN: Foto Asset Saat Ini -->
                                         <div class="col-md-6">
@@ -405,6 +418,14 @@ if (!empty($asset['foto_asset'])) {
         $('#imageModal').modal('show');
     }
 
+    function calculateTotal() {
+        const qty = parseFloat(document.getElementById('jumlah').value) || 0;
+        const price = parseFloat(document.getElementById('nilai_pengadaan_satuan').value) || 0;
+        document.getElementById('total_nilai_pengadaan').value = qty * price;
+    }
+
+    // Trigger calculation initial
+    document.getElementById('jumlah').addEventListener('input', calculateTotal);
 </script>
 
 </html>

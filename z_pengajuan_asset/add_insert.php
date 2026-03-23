@@ -53,8 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $role_pengaju = $user_data['nama_role'];
         
         // Tentukan approval_level berdasarkan cabang dan role:
-        // GA Surabaya -> approval_level = 2 (butuh 2 level: GA Puri -> Manager HR)
-        // GA Puri atau role lain -> approval_level = 1 (langsung HR/GA Puri)
+        // GA Surabaya -> approval_level = 2 (butuh 2 level: GA Jakarta -> Manager HR)
+        // GA Jakarta atau role lain -> approval_level = 1 (langsung HR/GA Jakarta)
         $approval_level = 1;
         if (strtolower($role_pengaju) == 'ga' && strtolower($cabang_pengaju) == 'surabaya') {
             $approval_level = 2;

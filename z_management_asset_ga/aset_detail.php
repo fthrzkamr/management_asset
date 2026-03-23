@@ -120,71 +120,7 @@ if (!empty($asset['foto_asset'])) {
             </div>
         </div>
 
-        <!-- Spesifikasi & Nilai -->
-        <div class="card mb-3">
-            <div class="card-header bg-success text-white">
-                <h6 class="mb-0">
-                    <i class="fas fa-calculator"></i> Nilai & Penyusutan Asset
-                </h6>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <table class="table table-borderless table-sm">
-                            <tr>
-                                <td width="50%"><strong>Nilai Satuan</strong></td>
-                                <td>: Rp <?= number_format($asset['nilai_pengadaan_satuan'], 0, ',', '.') ?></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Total Nilai Pengadaan</strong></td>
-                                <td>: <strong class="text-primary">Rp <?= number_format($asset['total_nilai_pengadaan'], 0, ',', '.') ?></strong></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Angka Penyusutan</strong></td>
-                                <td>: <span class="badge badge-warning"><?= number_format($asset['angka_penyusutan'] ?? 0, 2) ?>%</span></td>
-                            </tr>
-                            <tr>
-                                <td><strong>Nilai Buku Saat Ini</strong></td>
-                                <td>: <strong class="text-success">Rp <?= number_format($asset['nilai_buku'] ?? 0, 0, ',', '.') ?></strong></td>
-                            </tr>
-                        </table>
-                    </div>
-                    <div class="col-md-6">
-                        <!-- Progress Bar Penyusutan -->
-                        <?php 
-                        $persentase_penyusutan = $asset['angka_penyusutan'] ?? 0;
-                        $progress_class = '';
-                        if ($persentase_penyusutan <= 25) $progress_class = 'bg-success';
-                        elseif ($persentase_penyusutan <= 50) $progress_class = 'bg-warning';
-                        elseif ($persentase_penyusutan <= 75) $progress_class = 'bg-orange';
-                        else $progress_class = 'bg-danger';
-                        ?>
-                        <div class="mb-3">
-                            <label class="form-label"><strong>Status Penyusutan</strong></label>
-                            <div class="progress" style="height: 25px;">
-                                <div class="progress-bar <?= $progress_class ?>" role="progressbar" 
-                                     style="width: <?= $persentase_penyusutan ?>%;" 
-                                     aria-valuenow="<?= $persentase_penyusutan ?>" 
-                                     aria-valuemin="0" aria-valuemax="100">
-                                    <?= number_format($persentase_penyusutan, 1) ?>%
-                                </div>
-                            </div>
-                            <small class="text-muted">
-                                <?php if ($persentase_penyusutan <= 25): ?>
-                                    Kondisi Sangat Baik
-                                <?php elseif ($persentase_penyusutan <= 50): ?>
-                                    Kondisi Baik
-                                <?php elseif ($persentase_penyusutan <= 75): ?>
-                                    Perlu Perhatian
-                                <?php else: ?>
-                                    Perlu Penggantian
-                                <?php endif; ?>
-                            </small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+
 
         <!-- Spesifikasi & Keterangan -->
         <div class="card mb-3">
@@ -254,35 +190,7 @@ if (!empty($asset['foto_asset'])) {
             </div>
         </div>
 
-        <!-- Ringkasan Finansial -->
-        <div class="card mt-3">
-            <div class="card-header bg-warning text-dark">
-                <h6 class="mb-0">
-                    <i class="fas fa-chart-pie"></i> Ringkasan Finansial
-                </h6>
-            </div>
-            <div class="card-body">
-                <?php 
-                $nilai_awal = $asset['total_nilai_pengadaan'];
-                $nilai_sekarang = $asset['nilai_buku'] ?? 0;
-                $penyusutan_rupiah = $nilai_awal - $nilai_sekarang;
-                ?>
-                <div class="row text-center">
-                    <div class="col-12 mb-2">
-                        <small class="text-muted">Nilai Awal</small>
-                        <div class="h6 text-primary">Rp <?= number_format($nilai_awal, 0, ',', '.') ?></div>
-                    </div>
-                    <div class="col-12 mb-2">
-                        <small class="text-muted">Penyusutan</small>
-                        <div class="h6 text-danger">- Rp <?= number_format($penyusutan_rupiah, 0, ',', '.') ?></div>
-                    </div>
-                    <div class="col-12">
-                        <small class="text-muted">Nilai Sekarang</small>
-                        <div class="h5 text-success font-weight-bold">Rp <?= number_format($nilai_sekarang, 0, ',', '.') ?></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+
     </div>
 </div>
 

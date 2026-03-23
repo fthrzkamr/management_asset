@@ -81,6 +81,8 @@ $status = mysqli_real_escape_string($conn, $_POST['status'] ?? $existing['status
 $request_type = $existing['request_type'] ?? 'Regular';
 
 // Setelah update berhasil, reset status sesuai aturan routing (tidak di-hardcode)
+$routing_request_type = str_replace('_', ' ', $request_type);
+
 // Cek apakah kolom request_type sudah ada di tabel routing
 $col_check_rt = mysqli_query($conn, 
     "SELECT 1 FROM information_schema.columns 
@@ -95,13 +97,13 @@ if ($has_rt_col) {
                      WHERE divisi_id = ? 
                      AND (cabang IS NULL OR cabang = '' OR cabang = ?) 
                      AND is_active = 1 
-                     AND (request_type IS NULL OR request_type = '' OR request_type = ?)
+                     AND (request_type IS NULL OR request_type = '' OR request_type = ? OR request_type = 'Semua')
                      ORDER BY 
                          (request_type = ?) DESC,
                          (cabang = ?) DESC 
                      LIMIT 1";
     $stmt_routing = mysqli_prepare($conn, $routing_query);
-    mysqli_stmt_bind_param($stmt_routing, 'issss', $divisi, $cabang, $request_type, $request_type, $cabang);
+    mysqli_stmt_bind_param($stmt_routing, 'issss', $divisi, $cabang, $routing_request_type, $routing_request_type, $cabang);
 } else {
     // Fallback jika tidak ada request_type
     $routing_query = "SELECT initial_status 

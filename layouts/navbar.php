@@ -187,98 +187,32 @@ function is_active($patterns) {
                 
                 if ($canAssetIT && $canAssetGA): ?>
                     <!-- Departemen IT -->
-                    <?php $IT_active = (is_active(['z_tambah_asset']) || (is_active(['z_tambah_asset']) && isset($_GET['cabang']))); ?>
-                    <li class="submenu <?= $IT_active ? 'active' : '' ?>">
-                        <a href="javascript:void(0);" class="<?= $IT_active ? 'subdrop' : '' ?>">
+                    <li class="<?= is_active('z_tambah_asset') ? 'active' : '' ?>">
+                        <a href="<?= BASE_URL ?>/z_tambah_asset/dashboard.php">
                             <i class="fas fa-desktop"></i>
                             <span> Manajemen Aset IT</span>
-                            <span class="menu-arrow"></span>
                         </a>
-                        <ul style="display: <?= $IT_active ? 'block' : 'none' ?>;">
-                            <li class="<?= (is_active('z_tambah_asset') && empty($_GET['cabang'])) ? 'active' : '' ?>">
-                                <a href="<?= BASE_URL ?>/z_tambah_asset/dashboard.php">Semua Cabang</a>
-                            </li>
-                            <li class="submenu <?= isset($_GET['cabang']) ? 'active' : '' ?>">
-                                <a href="javascript:void(0);" class="<?= isset($_GET['cabang']) ? 'subdrop' : '' ?>">Cabang <span class="menu-arrow"></span></a>
-                                <ul style="display: <?= isset($_GET['cabang']) ? 'block' : 'none' ?>;">
-                                    <?php foreach($nav_cabangs as $cbg): ?>
-                                    <li class="<?= (isset($_GET['cabang']) && $_GET['cabang'] === $cbg) ? 'active' : '' ?>">
-                                        <a href="<?= BASE_URL ?>/z_tambah_asset/dashboard.php?cabang=<?= urlencode($cbg) ?>"><?= htmlspecialchars($cbg) ?></a>
-                                    </li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </li>
-                        </ul>
                     </li>
                     <!-- Departemen GA -->
-                    <?php $GA_active = (is_active(['z_management_asset_ga']) || (is_active(['z_management_asset_ga']) && isset($_GET['cabang']))); ?>
-                    <li class="submenu <?= $GA_active ? 'active' : '' ?>">
-                        <a href="javascript:void(0);" class="<?= $GA_active ? 'subdrop' : '' ?>">
+                    <li class="<?= is_active('z_management_asset_ga') ? 'active' : '' ?>">
+                        <a href="<?= BASE_URL ?>/z_management_asset_ga/dashboard.php">
                             <i class="fas fa-building"></i>
                             <span> Manajemen Aset GA</span>
-                            <span class="menu-arrow"></span>
                         </a>
-                        <ul style="display: <?= $GA_active ? 'block' : 'none' ?>;">
-                            <li class="<?= (is_active('z_management_asset_ga') && empty($_GET['cabang'])) ? 'active' : '' ?>">
-                                <a href="<?= BASE_URL ?>/z_management_asset_ga/dashboard.php">Semua Cabang</a>
-                            </li>
-                            <li class="submenu <?= isset($_GET['cabang']) ? 'active' : '' ?>">
-                                <a href="javascript:void(0);" class="<?= isset($_GET['cabang']) ? 'subdrop' : '' ?>">Cabang <span class="menu-arrow"></span></a>
-                                <ul style="display: <?= isset($_GET['cabang']) ? 'block' : 'none' ?>;">
-                                    <?php foreach($nav_cabangs as $cbg): ?>
-                                    <li class="<?= (isset($_GET['cabang']) && $_GET['cabang'] === $cbg) ? 'active' : '' ?>">
-                                        <a href="<?= BASE_URL ?>/z_management_asset_ga/dashboard.php?cabang=<?= urlencode($cbg) ?>"><?= htmlspecialchars($cbg) ?></a>
-                                    </li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </li>
-                        </ul>
                     </li>
                 <?php elseif ($canAssetIT): ?>
-                    <?php $IT_active = (is_active(['z_tambah_asset']) || (is_active(['z_tambah_asset']) && isset($_GET['cabang']))); ?>
-                    <li class="submenu <?= $IT_active ? 'active' : '' ?>">
-                        <a href="javascript:void(0);" class="<?= $IT_active ? 'subdrop' : '' ?>">
+                    <li class="<?= is_active('z_tambah_asset') ? 'active' : '' ?>">
+                        <a href="<?= BASE_URL ?>/z_tambah_asset/dashboard.php">
                             <i class="fas fa-table"></i>
-                            <span> Manajemen Aset</span>
-                            <span class="menu-arrow"></span>
+                            <span> Manajemen Aset IT</span>
                         </a>
-                        <ul style="display: <?= $IT_active ? 'block' : 'none' ?>;">
-                            <li class="<?= (is_active('z_tambah_asset') && empty($_GET['cabang'])) ? 'active' : '' ?>">
-                                <a href="<?= BASE_URL ?>/z_tambah_asset/dashboard.php">Semua Cabang</a>
-                            </li>
-                            <li class="submenu <?= isset($_GET['cabang']) ? 'active' : '' ?>">
-                                <a href="javascript:void(0);" class="<?= isset($_GET['cabang']) ? 'subdrop' : '' ?>">Cabang <span class="menu-arrow"></span></a>
-                                <ul style="display: <?= isset($_GET['cabang']) ? 'block' : 'none' ?>;">
-                                    <?php foreach($nav_cabangs as $cbg): ?>
-                                    <li class="<?= (isset($_GET['cabang']) && $_GET['cabang'] === $cbg) ? 'active' : '' ?>">
-                                        <a href="<?= BASE_URL ?>/z_tambah_asset/dashboard.php?cabang=<?= urlencode($cbg) ?>"><?= htmlspecialchars($cbg) ?></a>
-                                    </li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </li>
-                        </ul>
                     </li>
                 <?php elseif ($canAssetGA): ?>
-                    <?php $GA_active = (is_active(['z_management_asset_ga']) || (is_active(['z_management_asset_ga']) && isset($_GET['cabang']))); ?>
-                    <li class="submenu <?= $GA_active ? 'active' : '' ?>">
-                        <a href="javascript:void(0);" class="<?= $GA_active ? 'subdrop' : '' ?>">
+                    <li class="<?= is_active('z_management_asset_ga') ? 'active' : '' ?>">
+                        <a href="<?= BASE_URL ?>/z_management_asset_ga/dashboard.php">
                             <i class="fas fa-table"></i>
-                            <span> Manajemen Aset</span>
-                            <span class="menu-arrow"></span>
+                            <span> Manajemen Aset GA</span>
                         </a>
-                        <ul style="display: <?= $GA_active ? 'block' : 'none' ?>;">
-                            <li class="<?= (is_active('z_management_asset_ga') && empty($_GET['cabang'])) ? 'active' : '' ?>">
-                                <a href="<?= BASE_URL ?>/z_management_asset_ga/dashboard.php">Semua Cabang</a>
-                            </li>
-                            <li class="submenu">
-                                <a href="javascript:void(0);">Cabang <span class="menu-arrow"></span></a>
-                                <ul style="display: none;">
-                                    <?php foreach($nav_cabangs as $cbg): ?>
-                                    <li><a href="<?= BASE_URL ?>/z_management_asset_ga/dashboard.php?cabang=<?= urlencode($cbg) ?>"><?= htmlspecialchars($cbg) ?></a></li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </li>
-                        </ul>
                     </li>
                 <?php endif; ?>
 
@@ -465,8 +399,9 @@ function is_active($patterns) {
                 <?php endif; ?>
 
                 <?php 
-                $hasReportMenu = $auth->hasPermission('report_ppx', 'read');
-                if ($hasReportMenu): ?>
+                $hasReportMonthly = $auth->hasPermission('report_ppx', 'read');
+                $hasReportAll     = $auth->hasPermission('report_ppx_all', 'read');
+                if ($hasReportMonthly || $hasReportAll): ?>
                     <?php $isReportActive = is_active(['z_report_ppx']) || (strpos($_SERVER['PHP_SELF'], 'z_report_ppx') !== false); ?>
                     <li class="submenu <?= $isReportActive ? 'active' : '' ?>">
                         <a href="javascript:void(0);" class="<?= $isReportActive ? 'subdrop' : '' ?>">
@@ -475,8 +410,11 @@ function is_active($patterns) {
                             <span class="menu-arrow"></span>
                         </a>
                         <ul style="display: <?= $isReportActive ? 'block' : 'none' ?>;">
-                            <?php if ($auth->hasPermission('report_ppx', 'read')): ?>
-                                <li class="<?= is_active('z_report_ppx') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_report_ppx/dashboard.php">Laporan Anggaran Bulanan</a></li>
+                            <?php if ($hasReportMonthly): ?>
+                                <li class="<?= is_active('z_report_ppx/dashboard.php') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_report_ppx/dashboard.php">Laporan Anggaran Bulanan</a></li>
+                            <?php endif; ?>
+                            <?php if ($hasReportAll): ?>
+                                <li class="<?= is_active('z_report_ppx/report_all.php') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_report_ppx/report_all.php">Laporan PPX Regular & Monthly</a></li>
                             <?php endif; ?>
                         </ul>
                     </li>

@@ -68,11 +68,11 @@ $jabatan_options = [
 
 // Daftar kantor cabang
 $kantor_cabang_options = [
-    'Puri T1',
-    'Puri T6',
+    'Jakarta T1',
+    'Jakarta T6',
     'Cabang Medan',
     'Bekasi',
-    'Puri',
+    'Jakarta',
     'Bali',
     'Surabaya',
     'Banjarmasin',

@@ -101,7 +101,7 @@ $current_perms = [];
                                 <div class="form-group">
                                     <label>Nama Role <span class="text-danger">*</span></label>
                                     <input type="text" name="nama_role" class="form-control"
-                                           placeholder="contoh: finance_puri" required
+                                           placeholder="contoh: finance_jakarta" required
                                            value="<?= htmlspecialchars($_POST['nama_role'] ?? '') ?>">
                                     <small class="text-muted">Huruf kecil dan underscore. Spasi otomatis jadi underscore.</small>
                                 </div>

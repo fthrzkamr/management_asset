@@ -377,7 +377,7 @@ $preselected_asset = $_GET['asset'] ?? '';
                                                     <label class="font-weight-bold">Cabang <span class="required">*</span></label>
                                                     <select name="cabang" class="form-control" required>
                                                         <option value="">-- Pilih Cabang --</option>
-                                                        <option value="Puri">Puri</option>
+                                                        <option value="Jakarta">Jakarta</option>
                                                         <option value="Bekasi">Bekasi</option>
                                                         <option value="Cibinong">Cibinong</option>
                                                         <option value="Medan">Medan</option>

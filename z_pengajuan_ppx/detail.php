@@ -83,6 +83,12 @@ if ($result_realisasi) {
         }
     }
 }
+
+// Tentukan URL kembali secara dinamis
+$back_url = "dashboard.php";
+if (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'z_approval_ppx_asmen') !== false) {
+    $back_url = "../z_approval_ppx_asmen/dashboard.php";
+}
 ?>
 
 <!DOCTYPE html>
@@ -144,12 +150,12 @@ if ($result_realisasi) {
                             <h3 class="page-title">Detail Pengajuan PPX</h3>
                             <ul class="breadcrumb">
                                 <li class="breadcrumb-item"><a href="../dashboard.php">Dashboard</a></li>
-                                <li class="breadcrumb-item"><a href="dashboard.php">Pengajuan PPX</a></li>
+                                <li class="breadcrumb-item"><a href="<?= $back_url ?>">Pengajuan PPX</a></li>
                                 <li class="breadcrumb-item active">Detail PPX</li>
                             </ul>
                         </div>
                         <div class="col-md-4 text-right">
-                            <a href="dashboard.php" class="btn btn-secondary text-white">
+                            <a href="<?= $back_url ?>" class="btn btn-secondary text-white">
                                 <i class="fas fa-arrow-left"></i> Kembali
                             </a>
                         </div>
