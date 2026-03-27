@@ -337,13 +337,13 @@ function is_active($patterns) {
                     if ($hasInventoryATK): 
                 ?>
                     <?php 
-                        $isInventoryActive = is_active(['z_inventory_atk', 'z_pt_bst_penerimaan']); 
+                        $isInventoryActive = is_active(['z_inventory_atk', 'z_pt_bst_penerimaan']) && !(isset($_GET['ref']) && $_GET['ref'] === 'bst'); 
                     ?>
                     <li class="submenu <?= $isInventoryActive ? 'active' : '' ?>">
                         <a href="#" class="<?= $isInventoryActive ? 'subdrop' : '' ?>"><i class="fas fa-boxes"></i> <span>Inventory ATK</span> <span class="menu-arrow"></span></a>
                         <ul style="display: <?= $isInventoryActive ? 'block' : 'none' ?>;">
                             <?php if ($auth->hasPermission('inventory_atk_master', 'read')): ?>
-                                <li class="<?= is_active('z_inventory_atk/inventory_list') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_inventory_atk/inventory_list.php">Master Inventory</a></li>
+                                <li class="<?= (is_active('z_inventory_atk/inventory_list') && !(isset($_GET['ref']) && $_GET['ref'] === 'bst')) ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_inventory_atk/inventory_list.php">Master Inventory</a></li>
                             <?php endif; ?>
                             <?php if ($auth->hasPermission('inventory_atk_stok', 'read')): ?>
                                 <li class="<?= is_active('z_inventory_atk/stok_gudang') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_inventory_atk/stok_gudang.php">Stok Gudang ATK</a></li>
