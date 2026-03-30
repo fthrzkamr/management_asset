@@ -289,6 +289,8 @@ foreach ($budgets as $budget) {
                 <th style="width: 15%">Kategori</th>
                 <th style="width: 25%">Rincian Kebutuhan</th>
                 <th style="width: 5%">Qty</th>
+                <th style="width: 5%">Jml Hari</th>
+                <th style="width: 5%">Jml Minggu</th>
                 <th style="width: 10%">Harga Satuan (Rp)</th>
                 <th style="width: 10%">Total Harga (Rp)</th>
             </tr>
@@ -313,6 +315,8 @@ foreach ($budgets as $budget) {
                 <td><?= htmlspecialchars($item['category_name'] ?? '-') ?></td>
                 <td><?= htmlspecialchars($item['rincian'] ?? '-') ?></td>
                 <td class="text-center"><?= intval($item['qty'] ?? 0) ?></td>
+                <td class="text-center"><?= intval($item['jumlah_hari'] ?? 0) ?></td>
+                <td class="text-center"><?= intval($item['jumlah_minggu'] ?? 0) ?></td>
                 <td class="text-right"><?= number_format(floatval($item['harga_satuan'] ?? 0), 0, '', '') ?></td>
                 <td class="text-right"><?= number_format($item['line_total'] ?? 0, 0, '', '') ?></td>
             </tr>
@@ -329,7 +333,7 @@ foreach ($budgets as $budget) {
     }
 ?>
             <tr class="total-row">
-                <td colspan="7" class="text-right"><strong>GRAND TOTAL ITEM</strong></td>
+                <td colspan="9" class="text-right"><strong>GRAND TOTAL ITEM</strong></td>
                 <td class="text-right"><strong><?= number_format($grand_item_total, 0, '', '') ?></strong></td>
             </tr>
         </tbody>

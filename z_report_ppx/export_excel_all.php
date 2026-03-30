@@ -113,6 +113,9 @@ echo "\xEF\xBB\xBF"; // UTF-8 BOM
                 <th>Divisi</th>
                 <th>Rincian Item</th>
                 <th>Qty</th>
+                <th>Satuan</th>
+                <th>Jml Hari</th>
+                <th>Jml Minggu</th>
                 <th>Harga Satuan</th>
                 <th>Total Harga</th>
                 <th>Status</th>
@@ -142,6 +145,9 @@ echo "\xEF\xBB\xBF"; // UTF-8 BOM
                     
                     <td><?= htmlspecialchars($item['rincian']) ?></td>
                     <td class="text-center"><?= $item['jumlah'] ?></td>
+                    <td class="text-center"><?= htmlspecialchars($item['satuan'] ?? '-') ?></td>
+                    <td class="text-center"><?= htmlspecialchars($item['jumlah_hari'] ?? '-') ?></td>
+                    <td class="text-center"><?= htmlspecialchars($item['jumlah_minggu'] ?? '-') ?></td>
                     <td class="text-right"><?= number_format($item['harga_satuan'], 0, '', '') ?></td>
                     <td class="text-right"><?= number_format($item['total_harga'], 0, '', '') ?></td>
                     
