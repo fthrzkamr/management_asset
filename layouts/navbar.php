@@ -367,12 +367,13 @@ function is_active($patterns) {
                     $hasBSTMenu = $auth->hasPermission('inventory_atk_master', 'read') || 
                                   $auth->hasPermission('pt_bst_inventory', 'read') || 
                                   $auth->hasPermission('pt_bst_po_pembelian', 'read') || 
-                                  $auth->hasPermission('pt_bst_po_masuk', 'read');
+                                  $auth->hasPermission('pt_bst_po_masuk', 'read') ||
+                                  $auth->hasPermission('pt_bst_asset', 'read');
                     if ($hasBSTMenu): 
                 ?>
                     <?php 
                         // Tambahkan deteksi ?ref=bst agar dropdown BST menyala mandiri tanpa membangunkan dropdown ATK
-                        $isBSTActive = is_active(['z_pt_bst/inventory', 'z_pt_bst/po_masuk', 'z_pt_bst/po_pembelian']) || (isset($_GET['ref']) && $_GET['ref'] === 'bst'); 
+                        $isBSTActive = is_active(['z_pt_bst/inventory', 'z_pt_bst/po_masuk', 'z_pt_bst/po_pembelian', 'z_pt_bst/asset']) || (isset($_GET['ref']) && $_GET['ref'] === 'bst'); 
                     ?>
                     <li class="submenu <?= $isBSTActive ? 'active' : '' ?>">
                         <a href="#" class="<?= $isBSTActive ? 'subdrop' : '' ?>"><i class="fas fa-truck-loading"></i> <span>PT BST</span> <span class="menu-arrow"></span></a>
@@ -388,6 +389,9 @@ function is_active($patterns) {
                             <?php endif; ?>
                             <?php if ($auth->hasPermission('pt_bst_po_masuk', 'read')): ?>
                                 <li class="<?= is_active('z_pt_bst/po_masuk') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_pt_bst/po_masuk/dashboard.php">Kelola PO Masuk</a></li>
+                            <?php endif; ?>
+                            <?php if ($auth->hasPermission('pt_bst_asset', 'read')): ?>
+                                <li class="<?= is_active('z_pt_bst/asset') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_pt_bst/asset/dashboard.php">Manajemen Aset (BST)</a></li>
                             <?php endif; ?>
                         </ul>
                     </li>

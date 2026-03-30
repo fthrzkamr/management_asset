@@ -223,6 +223,12 @@ $PERMISSION_MODULES = [
         'group' => 'Modul PT BST',
         'actions' => ['create', 'read', 'update', 'delete', 'process'],
     ],
+    'pt_bst_asset' => [
+        'label' => 'Manajemen Aset (BST)',
+        'icon'  => 'fas fa-laptop-medical',
+        'group' => 'Modul PT BST',
+        'actions' => ['create', 'read', 'update', 'delete'],
+    ],
     'analytics' => [
         'label' => 'Dashboard Analitik',
         'icon'  => 'fas fa-chart-pie',

@@ -41,10 +41,10 @@
               
               <!-- 2 baris teks di tengah dengan responsive font -->
               <div class="text-center mb-4">
-                <h4 class="mb-1 d-none d-sm-block">Selamat Datang Di Pendataan Asset</h4>
+                <h4 class="mb-1 d-none d-sm-block">Asset & Budget Management System</h4>
                 <h4 class="mb-0 d-none d-sm-block">Dua Farma Group</h4>
                 <!-- Mobile version dengan font lebih kecil -->
-                <h5 class="mb-1 d-block d-sm-none">Selamat Datang Di Pendataan Asset</h5>
+                <h5 class="mb-1 d-block d-sm-none">Asset & Budget Management System</h5>
                 <h5 class="mb-0 d-block d-sm-none">Dua Farma Group</h5>
               </div>
 
