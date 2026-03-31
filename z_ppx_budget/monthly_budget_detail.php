@@ -189,6 +189,10 @@ $period_display = date('F Y', strtotime($budget['period_year'] . '-' . $budget['
                                         <td><?= htmlspecialchars($budget['budget_name']) ?></td>
                                     </tr>
                                     <tr>
+                                        <th>Tipe Anggaran</th>
+                                        <td><span class="badge badge-info"><?= htmlspecialchars($budget['tipe_anggaran'] ?? 'N/A') ?></span></td>
+                                    </tr>
+                                    <tr>
                                         <th>Status</th>
                                         <td>
                                             <?php
@@ -289,6 +293,8 @@ $period_display = date('F Y', strtotime($budget['period_year'] . '-' . $budget['
                                         <th>Rincian</th>
                                         <th>Qty</th>
                                         <th>Satuan</th>
+                                        <th>Jml Hari</th>
+                                        <th>Jml Minggu</th>
                                         <th>Harga Satuan</th>
                                         <th>Total</th>
                                     </tr>
@@ -305,7 +311,7 @@ $period_display = date('F Y', strtotime($budget['period_year'] . '-' . $budget['
                                             $current_category = $item['id_category'];
                                     ?>
                                         <tr class="table-secondary">
-                                            <td colspan="8"><strong><?= htmlspecialchars($item['category_code']) ?> - <?= htmlspecialchars($item['category_name']) ?></strong></td>
+                                            <td colspan="10"><strong><?= htmlspecialchars($item['category_code']) ?> - <?= htmlspecialchars($item['category_name']) ?></strong></td>
                                         </tr>
                                     <?php endif; ?>
                                         <tr>
@@ -315,6 +321,8 @@ $period_display = date('F Y', strtotime($budget['period_year'] . '-' . $budget['
                                             <td><?= htmlspecialchars($item['rincian']) ?></td>
                                             <td class="text-center"><?= intval($item['qty']) ?></td>
                                             <td class="text-center"><?= htmlspecialchars($item['satuan']) ?></td>
+                                            <td class="text-center"><?= $item['jumlah_hari'] > 0 ? intval($item['jumlah_hari']) : '-' ?></td>
+                                            <td class="text-center"><?= $item['jumlah_minggu'] > 0 ? intval($item['jumlah_minggu']) : '-' ?></td>
                                             <td class="text-right">Rp <?= number_format(floatval($item['harga_satuan']), 0, ',', '.') ?></td>
                                             <td class="text-right">Rp <?= number_format($line_total, 0, ',', '.') ?></td>
                                         </tr>
@@ -322,7 +330,7 @@ $period_display = date('F Y', strtotime($budget['period_year'] . '-' . $budget['
                                 </tbody>
                                 <tfoot class="bg-light">
                                     <tr>
-                                        <th colspan="7" class="text-right">Total:</th>
+                                        <th colspan="9" class="text-right">Total:</th>
                                         <th class="text-right">Rp <?= number_format($total_allocation, 0, ',', '.') ?></th>
                                     </tr>
                                 </tfoot>

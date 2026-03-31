@@ -209,9 +209,32 @@ $period_display = date('F Y', strtotime($budget['period_year'] . '-' . $budget['
                                 <small class="text-muted">Status budget tidak dapat diubah secara manual</small>
                             </div>
 
-                            <div class="form-group">
-                                <label>Catatan</label>
-                                <textarea name="notes" class="form-control" rows="3"><?= htmlspecialchars($budget['notes']) ?></textarea>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Tipe Anggaran <span class="text-danger">*</span></label>
+                                        <select name="tipe_anggaran" id="tipe_anggaran" class="form-control" required>
+                                            <option value="">-- Pilih Tipe --</option>
+                                            <?php
+                                            $tipe_options = [
+                                                'Kas Besar BCA', 'Kas Besar Jakarta', 'Kas Kecil Jakarta', 
+                                                'Bekasi', 'Cibinong', 'Medan', 'Bali', 'Surabaya', 
+                                                'Malang', 'Banjarmasin', 'HRGA', 'Bussines', 'Warehouse'
+                                            ];
+                                            foreach ($tipe_options as $opt) {
+                                                $selected = ($budget['tipe_anggaran'] == $opt) ? 'selected' : '';
+                                                echo '<option value="' . $opt . '" ' . $selected . '>' . $opt . '</option>';
+                                            }
+                                            ?>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Catatan</label>
+                                        <textarea name="notes" class="form-control" rows="1"><?= htmlspecialchars($budget['notes']) ?></textarea>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="form-group">
@@ -267,11 +290,13 @@ $period_display = date('F Y', strtotime($budget['period_year'] . '-' . $budget['
                                                 <table class="table table-sm table-bordered mb-0">
                                                     <thead class="thead-light">
                                                         <tr>
-                                                            <th style="width: 35%;">Rincian Item</th>
-                                                            <th style="width: 10%;">Qty</th>
-                                                            <th style="width: 12%;">Satuan</th>
-                                                            <th style="width: 20%;">Harga Satuan</th>
-                                                            <th style="width: 18%;">Total</th>
+                                                            <th style="width: 25%;">Rincian Item</th>
+                                                            <th style="width: 8%;">Qty</th>
+                                                            <th style="width: 10%;">Satuan</th>
+                                                            <th style="width: 10%;">Jml Hari</th>
+                                                            <th style="width: 10%;">Jml Minggu</th>
+                                                            <th style="width: 16%;">Harga Satuan</th>
+                                                            <th style="width: 16%;">Total</th>
                                                             <th style="width: 5%;"></th>
                                                         </tr>
                                                     </thead>
@@ -301,6 +326,8 @@ $period_display = date('F Y', strtotime($budget['period_year'] . '-' . $budget['
                                                                         <option value="dll" <?= $item['satuan'] == 'dll' ? 'selected' : '' ?>>dll</option>
                                                                     </select>
                                                                 </td>
+                                                                    <td><input type="number" name="items[<?= $itemIndex ?>][jumlah_hari]" class="form-control form-control-sm" placeholder="0" value="<?= $item['jumlah_hari'] ?>" min="0"></td>
+                                                                    <td><input type="number" name="items[<?= $itemIndex ?>][jumlah_minggu]" class="form-control form-control-sm" placeholder="0" value="<?= $item['jumlah_minggu'] ?>" min="0"></td>
                                                                     <td><input type="text" name="items[<?= $itemIndex ?>][harga]" class="form-control form-control-sm item-price" value="<?= number_format($item['harga_satuan'], 0, ',', '.') ?>" placeholder="0"></td>
                                                                     <td><input type="text" name="items[<?= $itemIndex ?>][total]" class="form-control form-control-sm item-total" value="<?= number_format($itemTotal, 0, ',', '.') ?>" placeholder="0"></td>
                                                                 <td><button type="button" class="btn btn-sm btn-danger remove-item-btn">&times;</button></td>
@@ -412,11 +439,13 @@ $(document).ready(function() {
                     <table class="table table-sm table-bordered mb-0">
                         <thead class="thead-light">
                             <tr>
-                                <th style="width: 35%;">Rincian Item</th>
-                                <th style="width: 10%;">Qty</th>
-                                <th style="width: 12%;">Satuan</th>
-                                <th style="width: 20%;">Harga Satuan</th>
-                                <th style="width: 18%;">Total</th>
+                                <th style="width: 28%;">Rincian Item</th>
+                                <th style="width: 8%;">Qty</th>
+                                <th style="width: 9%;">Satuan</th>
+                                <th style="width: 9%;">Jml Hari</th>
+                                <th style="width: 9%;">Jml Minggu</th>
+                                <th style="width: 16%;">Harga Satuan</th>
+                                <th style="width: 16%;">Total</th>
                                 <th style="width: 5%;"></th>
                             </tr>
                         </thead>
@@ -457,6 +486,8 @@ $(document).ready(function() {
                         <option value="dll">dll</option>
                     </select>
                 </td>
+                <td><input type="number" name="items[${itemIndex}][jumlah_hari]" class="form-control form-control-sm" placeholder="0" min="0"></td>
+                <td><input type="number" name="items[${itemIndex}][jumlah_minggu]" class="form-control form-control-sm" placeholder="0" min="0"></td>
                 <td><input type="text" name="items[${itemIndex}][harga]" class="form-control form-control-sm item-price" value="" placeholder="0"></td>
                 <td><input type="text" name="items[${itemIndex}][total]" class="form-control form-control-sm item-total" value="" placeholder="0"></td>
                 <td><button type="button" class="btn btn-sm btn-danger remove-item-btn">&times;</button></td>

@@ -31,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $period_month = intval($_POST['period_month']);
         $budget_name = trim($_POST['budget_name']);
         $notes = trim($_POST['notes']);
+        $tipe_anggaran = trim($_POST['tipe_anggaran'] ?? '');
         $created_by = $_SESSION['id_user'];
         $master_id = trim($_POST['master_id']);
         
@@ -202,21 +203,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Build INSERT: if master_id is null, insert NULL explicitly to avoid inserting empty string or 0
         if (is_null($master_id)) {
             $insert_budget = "INSERT INTO ppx_monthly_budget 
-                             (master_id, period_year, period_month, budget_name, total_allocation, 
+                             (master_id, period_year, period_month, budget_name, tipe_anggaran, total_allocation, 
                               master_allocation, total_remaining, status, created_by, notes, file_excel) 
-                             VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                             VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = mysqli_prepare($conn, $insert_budget);
-            mysqli_stmt_bind_param($stmt, 'iisdddssss', 
-                $period_year, $period_month, $budget_name, 
+            mysqli_stmt_bind_param($stmt, 'iisdddsssss', 
+                $period_year, $period_month, $budget_name, $tipe_anggaran,
                 $total_allocation, $total_allocation, $total_allocation, $initial_status, $created_by, $notes, $file_excel_name);
         } else {
             $insert_budget = "INSERT INTO ppx_monthly_budget 
-                             (master_id, period_year, period_month, budget_name, total_allocation, 
+                             (master_id, period_year, period_month, budget_name, tipe_anggaran, total_allocation, 
                               master_allocation, total_remaining, status, created_by, notes, file_excel) 
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = mysqli_prepare($conn, $insert_budget);
-            mysqli_stmt_bind_param($stmt, 'siisdddssss', 
-                $master_id, $period_year, $period_month, $budget_name, 
+            mysqli_stmt_bind_param($stmt, 'siisdddsssss', 
+                $master_id, $period_year, $period_month, $budget_name, $tipe_anggaran,
                 $total_allocation, $total_allocation, $total_allocation, $initial_status, $created_by, $notes, $file_excel_name);
         }
         

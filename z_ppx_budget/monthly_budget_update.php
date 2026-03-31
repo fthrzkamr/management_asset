@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $budget_name = trim($_POST['budget_name']);
         $status = $_POST['status'];
         $notes = trim($_POST['notes']);
+        $tipe_anggaran = trim($_POST['tipe_anggaran'] ?? '');
         $user_id = $_SESSION['id_user'];
         
         $items = isset($_POST['items']) ? $_POST['items'] : [];
@@ -158,27 +159,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Update budget header
         if ($file_excel !== '') {
             $update_budget = "UPDATE ppx_monthly_budget 
-                             SET budget_name = ?, status = ?, notes = ?,
+                             SET budget_name = ?, status = ?, notes = ?, tipe_anggaran = ?,
                                  total_allocation = ?, total_remaining = ?, master_allocation = ?, file_excel = ?
                              WHERE id_budget = ?";
             $stmt = mysqli_prepare($conn, $update_budget);
             if (!$stmt) {
                 throw new Exception("Gagal prepare update budget: " . mysqli_error($conn));
             }
-            mysqli_stmt_bind_param($stmt, 'sssdddsi', 
-                $budget_name, $status, $notes, 
+            mysqli_stmt_bind_param($stmt, 'ssssdddsi', 
+                $budget_name, $status, $notes, $tipe_anggaran,
                 $total_allocation, $total_allocation, $total_allocation, $file_excel, $id_budget);
         } else {
             $update_budget = "UPDATE ppx_monthly_budget 
-                             SET budget_name = ?, status = ?, notes = ?,
+                             SET budget_name = ?, status = ?, notes = ?, tipe_anggaran = ?,
                                  total_allocation = ?, total_remaining = ?, master_allocation = ?
                              WHERE id_budget = ?";
             $stmt = mysqli_prepare($conn, $update_budget);
             if (!$stmt) {
                 throw new Exception("Gagal prepare update budget: " . mysqli_error($conn));
             }
-            mysqli_stmt_bind_param($stmt, 'sssdddi', 
-                $budget_name, $status, $notes, 
+            mysqli_stmt_bind_param($stmt, 'ssssdddi', 
+                $budget_name, $status, $notes, $tipe_anggaran,
                 $total_allocation, $total_allocation, $total_allocation, $id_budget);
         }
         
@@ -321,16 +322,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($item_id > 0 && isset($existing_ids[$item_id])) {
                 // Update existing item
+                $jumlah_hari = intval($item['jumlah_hari'] ?? 0);
+                $jumlah_minggu = intval($item['jumlah_minggu'] ?? 0);
                 $update_item = "UPDATE ppx_monthly_budget_item_detail 
                                SET id_budget_item = ?, id_category = ?, rincian = ?, qty = ?, satuan = ?, 
-                                   harga_satuan = ?, total = ?
+                                   jumlah_hari = ?, jumlah_minggu = ?, harga_satuan = ?, total = ?
                                WHERE id = ? AND id_budget = ?";
                 $stmt_item = mysqli_prepare($conn, $update_item);
                 if (!$stmt_item) {
                     throw new Exception("Gagal prepare update item: " . mysqli_error($conn));
                 }
-                mysqli_stmt_bind_param($stmt_item, 'iisisdiii', 
-                    $id_budget_item, $cat, $rincian, $qty, $satuan, $harga, $line_total, $item_id, $id_budget);
+                mysqli_stmt_bind_param($stmt_item, 'iisisiidiii', 
+                    $id_budget_item, $cat, $rincian, $qty, $satuan, 
+                    $jumlah_hari, $jumlah_minggu, $harga, $line_total, $item_id, $id_budget);
                 
                 if (!mysqli_stmt_execute($stmt_item)) {
                     throw new Exception("Gagal update item: " . mysqli_error($conn));
@@ -339,15 +343,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $processed_ids[] = $item_id;
             } else {
                 // Insert new item WITH id_budget_item
+                $jumlah_hari = intval($item['jumlah_hari'] ?? 0);
+                $jumlah_minggu = intval($item['jumlah_minggu'] ?? 0);
                 $insert_item = "INSERT INTO ppx_monthly_budget_item_detail 
-                               (id_budget, id_budget_item, id_category, rincian, qty, satuan, harga_satuan, total, created_by) 
-                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                               (id_budget, id_budget_item, id_category, rincian, qty, satuan, jumlah_hari, jumlah_minggu, harga_satuan, total, created_by) 
+                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 $stmt_item = mysqli_prepare($conn, $insert_item);
                 if (!$stmt_item) {
                     throw new Exception("Gagal prepare insert item: " . mysqli_error($conn));
                 }
-                mysqli_stmt_bind_param($stmt_item, 'iiisisiii', 
-                    $id_budget, $id_budget_item, $cat, $rincian, $qty, $satuan, $harga, $line_total, $user_id);
+                mysqli_stmt_bind_param($stmt_item, 'iiisisiiidi', 
+                    $id_budget, $id_budget_item, $cat, $rincian, $qty, $satuan, 
+                    $jumlah_hari, $jumlah_minggu, $harga, $line_total, $user_id);
                 
                 if (!mysqli_stmt_execute($stmt_item)) {
                     throw new Exception("Gagal insert item baru: " . mysqli_error($conn));

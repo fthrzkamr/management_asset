@@ -79,6 +79,7 @@ $query = "SELECT
     ROUND((mb.total_used / mb.total_allocation * 100), 2) as usage_percentage,
     mb.status,
     mb.approved_by,
+    mb.tipe_anggaran,
     u.nama_user as created_by_name,
     mb.created_at
 FROM ppx_monthly_budget mb
@@ -165,6 +166,7 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
                                             <th>Sisa</th>
                                             <th>Utilisasi</th>
                                             <th>Status</th>
+                                            <th>Tipe</th>
                                             <th>Dibuat Oleh</th>
                                             <th style="width:100px">Aksi</th>
                                         </tr>
@@ -201,6 +203,9 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
                                                         <span class="badge badge-<?= htmlspecialchars($badge_cls) ?>">
                                                             <?= htmlspecialchars($row['status']) ?>
                                                         </span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge badge-info"><?= htmlspecialchars($row['tipe_anggaran'] ?? 'N/A') ?></span>
                                                     </td>
                                                     <td><?= htmlspecialchars($row['created_by_name']) ?></td>
                                                     <td onclick="event.stopPropagation();">

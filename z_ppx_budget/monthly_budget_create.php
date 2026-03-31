@@ -102,16 +102,7 @@ $master_budgets_result = null;
                         </div>
                         <form action="monthly_budget_create_insert.php" method="POST" id="budgetForm" enctype="multipart/form-data">
                             <div class="row">
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label>Sumber Dana (Master Anggaran) <span class="text-danger">*</span></label>
-                                        <select name="master_id" id="master_id" class="form-control" disabled>
-                                            <option value="">-- Pilih Bulan dan Tahun terlebih dahulu --</option>
-                                        </select>
-                                        <small class="text-muted">Master anggaran (opsional). Jika tidak dipilih, Finance akan melakukan commit sumber dana nanti.</small>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="form-group">
                                         <label>Bulan <span class="text-danger">*</span></label>
                                         <select name="period_month" id="period_month" class="form-control" required>
@@ -126,7 +117,7 @@ $master_budgets_result = null;
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <div class="form-group">
                                         <label>Tahun <span class="text-danger">*</span></label>
                                         <select name="period_year" id="period_year" class="form-control" required>
@@ -138,6 +129,36 @@ $master_budgets_result = null;
                                             }
                                             ?>
                                         </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Tipe Anggaran <span class="text-danger">*</span></label>
+                                        <select name="tipe_anggaran" id="tipe_anggaran" class="form-control" required>
+                                            <option value="">-- Pilih Tipe --</option>
+                                            <option value="Kas Besar BCA">Kas Besar BCA</option>
+                                            <option value="Kas Besar Jakarta">Kas Besar Jakarta</option>
+                                            <option value="Kas Kecil Jakarta">Kas Kecil Jakarta</option>
+                                            <option value="Bekasi">Bekasi</option>
+                                            <option value="Cibinong">Cibinong</option>
+                                            <option value="Medan">Medan</option>
+                                            <option value="Bali">Bali</option>
+                                            <option value="Surabaya">Surabaya</option>
+                                            <option value="Malang">Malang</option>
+                                            <option value="Banjarmasin">Banjarmasin</option>
+                                            <option value="HRGA">HRGA</option>
+                                            <option value="Bussines">Bussines</option>
+                                            <option value="Warehouse">Warehouse</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-group">
+                                        <label>Sumber Dana (Master Anggaran)</label>
+                                        <select name="master_id" id="master_id" class="form-control" disabled>
+                                            <option value="">-- Pilih Bulan dan Tahun terlebih dahulu --</option>
+                                        </select>
+                                        <small class="text-muted">Opsional.</small>
                                     </div>
                                 </div>
                             </div>
