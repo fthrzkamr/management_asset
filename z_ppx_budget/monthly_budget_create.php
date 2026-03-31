@@ -102,7 +102,7 @@ $master_budgets_result = null;
                         </div>
                         <form action="monthly_budget_create_insert.php" method="POST" id="budgetForm" enctype="multipart/form-data">
                             <div class="row">
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <div class="form-group">
                                         <label>Bulan <span class="text-danger">*</span></label>
                                         <select name="period_month" id="period_month" class="form-control" required>
@@ -117,7 +117,7 @@ $master_budgets_result = null;
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <div class="form-group">
                                         <label>Tahun <span class="text-danger">*</span></label>
                                         <select name="period_year" id="period_year" class="form-control" required>
@@ -131,7 +131,7 @@ $master_budgets_result = null;
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-md-4">
                                     <div class="form-group">
                                         <label>Tipe Anggaran <span class="text-danger">*</span></label>
                                         <select name="tipe_anggaran" id="tipe_anggaran" class="form-control" required>
@@ -152,13 +152,16 @@ $master_budgets_result = null;
                                         </select>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-12">
                                     <div class="form-group">
                                         <label>Sumber Dana (Master Anggaran)</label>
                                         <select name="master_id" id="master_id" class="form-control" disabled>
                                             <option value="">-- Pilih Bulan dan Tahun terlebih dahulu --</option>
                                         </select>
-                                        <small class="text-muted">Opsional.</small>
+                                        <small class="text-muted">Opsional. Jika tidak dipilih, Finance akan menentukan sumber dana nanti.</small>
                                     </div>
                                 </div>
                             </div>
@@ -205,15 +208,15 @@ $master_budgets_result = null;
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label>Catatan</label>
-                                        <textarea required name="notes" class="form-control" rows="3" 
+                                        <textarea name="notes" class="form-control" rows="3" 
                                                   placeholder="Catatan tambahan tentang budget ini"></textarea>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label>Upload File Excel</label>
-                                        <input type="file" required name="file_excel" class="form-control-file" accept=".xls,.xlsx">
-                                        <small class="text-muted">Lampirkan file Excel rincian budget jika ada</small>
+                                        <input type="file" name="file_excel" class="form-control-file" accept=".xls,.xlsx">
+                                        <small class="text-muted">Lampirkan file Excel rincian budget (Opsional)</small>
                                     </div>
                                 </div>
                             </div>

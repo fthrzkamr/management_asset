@@ -195,18 +195,23 @@ $period_display = date('F Y', strtotime($budget['period_year'] . '-' . $budget['
                         <form action="monthly_budget_update.php" method="POST" enctype="multipart/form-data">
                             <input type="hidden" name="id_budget" value="<?= $id_budget ?>">
 
-                            <div class="form-group">
-                                <label>Nama Budget</label>
-                                <input type="text" name="budget_name" class="form-control" 
-                                       value="<?= htmlspecialchars($budget['budget_name']) ?>" readonly>
-                                <small class="text-muted">Nama budget tidak dapat diubah</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Status</label>
-                                <input type="text" class="form-control" value="<?= htmlspecialchars($budget['status']) ?>" readonly>
-                                <input type="hidden" name="status" value="<?= htmlspecialchars($budget['status']) ?>">
-                                <small class="text-muted">Status budget tidak dapat diubah secara manual</small>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Nama Budget</label>
+                                        <input type="text" name="budget_name" class="form-control" 
+                                               value="<?= htmlspecialchars($budget['budget_name']) ?>" readonly>
+                                        <small class="text-muted">Nama budget tidak dapat diubah</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-group">
+                                        <label>Status</label>
+                                        <input type="text" class="form-control" value="<?= htmlspecialchars($budget['status']) ?>" readonly>
+                                        <input type="hidden" name="status" value="<?= htmlspecialchars($budget['status']) ?>">
+                                        <small class="text-muted">Status budget tidak dapat diubah secara manual</small>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="row">
