@@ -1,6 +1,7 @@
 <?php
 // filepath: c:\xampp\htdocs\asset_dfm\aset_update.php
 include('../dist/config/config.php');
+require_once('../dist/config/SentinelDeskSync.php');
 date_default_timezone_set('Asia/Jakarta');
 
 // Cek session login
@@ -32,13 +33,14 @@ $tanggal_pengadaan = !empty($_POST['tanggal_pengadaan']) ? $_POST['tanggal_penga
 
 
 $user_pemakai   = !empty($_POST['user']) ? mysqli_real_escape_string($conn, $_POST['user']) : null;
-$kondisi        = mysqli_real_escape_string($conn, $_POST['kondisi'] ?? 'Baru');
+$kondisi        = mysqli_real_escape_string($conn, $_POST['kondisi'] ?? 'Baik');
 $keterangan     = !empty($_POST['keterangan']) ? mysqli_real_escape_string($conn, $_POST['keterangan']) : null;
 
 // New fields
 $nilai_pengadaan_satuan = (float)($_POST['nilai_pengadaan_satuan'] ?? 0);
 $total_nilai_pengadaan  = (float)($_POST['total_nilai_pengadaan'] ?? 0);
 $informasi_barang       = mysqli_real_escape_string($conn, $_POST['informasi_barang'] ?? '');
+$status_barang          = in_array($_POST['status_barang'] ?? '', ['Asset','Sewa']) ? $_POST['status_barang'] : 'Asset';
 
 // Update user_info dengan user yang sedang melakukan edit
 $user_info      = (int)$_SESSION['id_user'];
@@ -128,6 +130,7 @@ $sql = "UPDATE asset_dfm SET
             foto_asset = '" . mysqli_real_escape_string($conn, $foto_asset) . "',
             user = " . ($user_pemakai ? "'$user_pemakai'" : "NULL") . ",
             kondisi = '$kondisi',
+            status_barang = '$status_barang',
             keterangan = " . ($keterangan ? "'$keterangan'" : "NULL") . ",
             nilai_pengadaan_satuan = '$nilai_pengadaan_satuan',
             total_nilai_pengadaan = '$total_nilai_pengadaan',
@@ -139,6 +142,10 @@ $sql = "UPDATE asset_dfm SET
 $update = mysqli_query($conn, $sql);
 
 if ($update) {
+    // Best-effort push to SentinelDesk - see SentinelDeskSync.php. Never
+    // blocks or alters this success response even if it fails.
+    sentineldesk_sync_asset($kode_aset_lama, $kondisi, $status_barang, $user_pemakai, $lokasi);
+
     $success_message = "Data asset berhasil diupdate!";
     
     if ($foto_baru_diupload) {

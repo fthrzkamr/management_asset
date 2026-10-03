@@ -1,6 +1,7 @@
 <?php
 // filepath: c:\xampp\htdocs\asset_dfm\aset_insert.php
 include '../dist/config/config.php';
+require_once '../dist/config/SentinelDeskSync.php';
 date_default_timezone_set('Asia/Jakarta');
 
 // Cek session login
@@ -28,13 +29,14 @@ $tanggal_pengadaan = !empty($_POST['tanggal_pengadaan']) ? $_POST['tanggal_penga
 
 
 $user_pemakai   = !empty($_POST['user']) ? mysqli_real_escape_string($conn, $_POST['user']) : null;
-$kondisi        = mysqli_real_escape_string($conn, $_POST['kondisi'] ?? 'Baru');
+$kondisi        = mysqli_real_escape_string($conn, $_POST['kondisi'] ?? 'Baik');
 $keterangan     = !empty($_POST['keterangan']) ? mysqli_real_escape_string($conn, $_POST['keterangan']) : null;
 
 // New fields
 $nilai_pengadaan_satuan = (float)($_POST['nilai_pengadaan_satuan'] ?? 0);
 $total_nilai_pengadaan  = (float)($_POST['total_nilai_pengadaan'] ?? 0);
 $informasi_barang       = mysqli_real_escape_string($conn, $_POST['informasi_barang'] ?? '');
+$status_barang          = in_array($_POST['status_barang'] ?? '', ['Asset','Sewa']) ? $_POST['status_barang'] : 'Asset';
 
 // User info dari session
 $user_info      = (int)$_SESSION['id_user'];
@@ -151,13 +153,13 @@ $kode_aset = "{$kode_kategori}-{$tahun}{$new_no}-{$kode_lokasi}";
 $sql = "INSERT INTO asset_dfm (
     kode_aset, kategori_aset, lokasi, lokasi_detail, nama_aset, merk, spesifikasi,
     jumlah, satuan, tanggal_pengadaan, foto_asset,
-    user, kondisi, keterangan, user_info, created_at, updated_at,
+    user, kondisi, status_barang, keterangan, user_info, created_at, updated_at,
     nilai_pengadaan_satuan, total_nilai_pengadaan, informasi_barang
 ) VALUES (
     '$kode_aset', '$kategori_nama', '$lokasi_nama', '$lokasi_detail', '$nama_aset', '$merk', '$spesifikasi',
     '$jumlah', '$satuan', " . ($tanggal_pengadaan ? "'$tanggal_pengadaan'" : "NULL") . ",
     " . ($foto_asset ? "'$foto_asset'" : "NULL") . ",
-    " . ($user_pemakai ? "'$user_pemakai'" : "NULL") . ", '$kondisi', " . ($keterangan ? "'$keterangan'" : "NULL") . ",
+    " . ($user_pemakai ? "'$user_pemakai'" : "NULL") . ", '$kondisi', '$status_barang', " . ($keterangan ? "'$keterangan'" : "NULL") . ",
     '$user_info', '$created_at', '$updated_at',
     '$nilai_pengadaan_satuan', '$total_nilai_pengadaan', '$informasi_barang'
 )";
@@ -165,6 +167,10 @@ $sql = "INSERT INTO asset_dfm (
 $insert = mysqli_query($conn, $sql);
 
 if ($insert) {
+    // Best-effort push to SentinelDesk - see SentinelDeskSync.php. Never
+    // blocks or alters this success response even if it fails.
+    sentineldesk_sync_asset($kode_aset, $kondisi, $status_barang, $user_pemakai, $lokasi_nama);
+
     echo "<script>alert('Data aset berhasil disimpan dengan kode $kode_aset\\nFoto: $foto_asset'); window.location.href='dashboard.php';</script>";
 } else {
     // Jika gagal dan ada foto yang sudah diupload, hapus foto
