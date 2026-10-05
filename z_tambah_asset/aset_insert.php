@@ -169,7 +169,7 @@ $insert = mysqli_query($conn, $sql);
 if ($insert) {
     // Best-effort push to SentinelDesk - see SentinelDeskSync.php. Never
     // blocks or alters this success response even if it fails.
-    sentineldesk_sync_asset($kode_aset, $kondisi, $status_barang, $user_pemakai, $lokasi_nama);
+    sentineldesk_sync_asset($kode_aset, $kondisi, $status_barang, $user_pemakai, $lokasi_nama, $nama_aset, $merk, $spesifikasi, $lokasi_detail);
 
     echo "<script>alert('Data aset berhasil disimpan dengan kode $kode_aset\\nFoto: $foto_asset'); window.location.href='dashboard.php';</script>";
 } else {

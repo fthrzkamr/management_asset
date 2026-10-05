@@ -144,7 +144,7 @@ $update = mysqli_query($conn, $sql);
 if ($update) {
     // Best-effort push to SentinelDesk - see SentinelDeskSync.php. Never
     // blocks or alters this success response even if it fails.
-    sentineldesk_sync_asset($kode_aset_lama, $kondisi, $status_barang, $user_pemakai, $lokasi);
+    sentineldesk_sync_asset($kode_aset_lama, $kondisi, $status_barang, $user_pemakai, $lokasi, $nama_aset, $merk, $spesifikasi, $lokasi_detail);
 
     $success_message = "Data asset berhasil diupdate!";
     
