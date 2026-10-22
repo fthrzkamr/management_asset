@@ -64,6 +64,7 @@ $where_sql = implode(" AND ", $where_clauses);
 $query = "SELECT 
     pmb.id_budget AS no_ppx,
     pmb.created_at AS tanggal_pengajuan,
+    pmb.tipe_anggaran,
     u.nama_user AS nama_pic,
     d.nama_divisi,
     c.nama_cabang AS cabang,
@@ -249,6 +250,7 @@ if(!in_array(date('Y'), $list_tahun)){
                                                     <th>No</th>
                                                     <th>Tanggal</th>
                                                     <th>Cabang</th>
+                                                    <th>Tipe Anggaran</th>
                                                     <th>PIC</th>
                                                     <th>Divisi</th>
                                                     <th>Nominal (Rp)</th>
@@ -277,6 +279,7 @@ if(!in_array(date('Y'), $list_tahun)){
                                                     <td><?= $no++ ?></td>
                                                     <td><?= date('d/m/Y', strtotime($row['tanggal_pengajuan'])) ?></td>
                                                     <td><?= htmlspecialchars($row['cabang'] ?? '-') ?></td>
+                                                    <td><span class="badge badge-info"><?= htmlspecialchars($row['tipe_anggaran'] ?? '-') ?></span></td>
                                                     <td><?= htmlspecialchars($row['nama_pic']) ?></td>
                                                     <td><?= htmlspecialchars($row['nama_divisi'] ?? '-') ?></td>
                                                     <td class="text-right">Rp <?= number_format($row['nominal_ppx'], 0, ',', '.') ?></td>

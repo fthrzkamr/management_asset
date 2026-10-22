@@ -41,6 +41,12 @@ $nilai_pengadaan_satuan = (float)($_POST['nilai_pengadaan_satuan'] ?? 0);
 $total_nilai_pengadaan  = (float)($_POST['total_nilai_pengadaan'] ?? 0);
 $informasi_barang       = mysqli_real_escape_string($conn, $_POST['informasi_barang'] ?? '');
 $status_barang          = in_array($_POST['status_barang'] ?? '', ['Asset','Sewa']) ? $_POST['status_barang'] : 'Asset';
+$status_kepemilikan     = in_array($_POST['status_kepemilikan'] ?? '', ['DFM','MPF','PLM','DUI']) ? $_POST['status_kepemilikan'] : null;
+
+if (empty($status_kepemilikan)) {
+    echo "<script>alert('Error: Status Kepemilikan wajib dipilih!'); window.history.back();</script>";
+    exit;
+}
 
 // Update user_info dengan user yang sedang melakukan edit
 $user_info      = (int)$_SESSION['id_user'];
@@ -131,6 +137,7 @@ $sql = "UPDATE asset_dfm SET
             user = " . ($user_pemakai ? "'$user_pemakai'" : "NULL") . ",
             kondisi = '$kondisi',
             status_barang = '$status_barang',
+            status_kepemilikan = '$status_kepemilikan',
             keterangan = " . ($keterangan ? "'$keterangan'" : "NULL") . ",
             nilai_pengadaan_satuan = '$nilai_pengadaan_satuan',
             total_nilai_pengadaan = '$total_nilai_pengadaan',

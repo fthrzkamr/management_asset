@@ -31,11 +31,11 @@ mysqli_stmt_bind_result($stmt, $current_status, $divisi_ppx);
 mysqli_stmt_fetch($stmt);
 mysqli_stmt_close($stmt);
 
-// Logic: Manager Operasional approves -> set Selesai for divisi 2,4,17 when status=Finance
+// Logic: Manager Operasional approves -> set Selesai for divisi 2,4,17 when status=Operasional
 if ($action === 'approve') {
     if (trim($current_status) === 'Selesai Realisasi') {
         $status = 'Selesai';
-    } elseif (in_array($divisi_ppx, [2,4,17]) && trim($current_status) === 'Finance') {
+    } elseif (in_array($divisi_ppx, [2,4,17]) && trim($current_status) === 'Operasional') {
         $status = 'Selesai';
     } else {
         $status = 'Uang Muka';

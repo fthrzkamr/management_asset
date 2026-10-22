@@ -110,6 +110,34 @@ foreach ($tmp as $key => $value) {
 call_user_func_array([$stmt, 'bind_param'], $refs);
 
 if (mysqli_stmt_execute($stmt)) {
+    // TAMBAHAN: Jika status menjadi 'Revisi', kembalikan budget (jika pengajuan tipe Monthly_Budget)
+    if ($status === 'Revisi') {
+        error_log("PPX Approval: Request $no_pengajuan revised, checking if budget needs recovery");
+        
+        // Ambil data pengajuan untuk cek budget_item dan nominal
+        $q_get = "SELECT id_budget_item, nominal_ppx, request_type FROM ppx_request WHERE no_ppx = '$no_pengajuan'";
+        $r_get = mysqli_query($conn, $q_get);
+        if ($r_get && $ppx_data = mysqli_fetch_assoc($r_get)) {
+            if ($ppx_data['request_type'] === 'Monthly_Budget' && !empty($ppx_data['id_budget_item'])) {
+                $id_item = $ppx_data['id_budget_item'];
+                $nominal = $ppx_data['nominal_ppx'];
+                
+                error_log("PPX Approval: Returning Rp $nominal to budget_item $id_item");
+                
+                $update_budget = "UPDATE ppx_monthly_budget_item 
+                                SET remaining = remaining + $nominal,
+                                    updated_at = NOW()
+                                WHERE id_budget_item = '$id_item'";
+                
+                if (mysqli_query($conn, $update_budget)) {
+                    error_log("PPX Approval: Budget recovered successfully");
+                } else {
+                    error_log("PPX Approval: Failed to recover budget - " . mysqli_error($conn));
+                }
+            }
+        }
+    }
+    
     $_SESSION['success'] = 'Pengajuan berhasil diproses.';
 } else {
     $_SESSION['error'] = 'Gagal memproses pengajuan: ' . mysqli_stmt_error($stmt);

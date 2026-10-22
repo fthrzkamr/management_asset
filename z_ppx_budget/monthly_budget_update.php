@@ -2,6 +2,7 @@
 
 include_once(__DIR__ . '/../dist/config/config.php');
 include_once(__DIR__ . '/../dist/config/auth_helper.php');
+require_once __DIR__ . '/../dist/config/ApprovalHelper.php';
 
 // Initialize auth helper
 $auth = new AuthHelper($conn);
@@ -30,9 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Get POST data
         $id_budget = intval($_POST['id_budget']);
         $budget_name = trim($_POST['budget_name']);
-        $status = $_POST['status'];
         $notes = trim($_POST['notes']);
         $tipe_anggaran = trim($_POST['tipe_anggaran'] ?? '');
+        $submitted_action = $_POST['action'] ?? 'submit';
         $user_id = $_SESSION['id_user'];
         
         $items = isset($_POST['items']) ? $_POST['items'] : [];
@@ -42,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // Get current budget data including master_id and old allocation
-        $current_query = "SELECT master_id, total_allocation, status, approved_by FROM ppx_monthly_budget WHERE id_budget = ?";
+        $current_query = "SELECT master_id, total_allocation, status, approved_by, period_year, period_month FROM ppx_monthly_budget WHERE id_budget = ?";
         $stmt_cur = mysqli_prepare($conn, $current_query);
         mysqli_stmt_bind_param($stmt_cur, 'i', $id_budget);
         mysqli_stmt_execute($stmt_cur);
@@ -50,6 +51,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if (!$current_budget) {
             throw new Exception("Budget tidak ditemukan");
+        }
+        
+        // Determine status: if action=draft, keep as Draft
+        if ($submitted_action === 'draft') {
+            $status = 'Draft';
+        } else if ($current_budget['status'] === 'Draft') {
+            // Transitioning from Draft to Submit: use initial routing status
+            $helper = new ApprovalHelper($conn);
+            $id_cabang_session = $_SESSION['id_cabang'] ?? $_SESSION['cabang'] ?? '';
+            $id_divisi_session = $_SESSION['id_divisi'] ?? $_SESSION['divisi'] ?? null;
+            
+            // Bypass logic for March 2026
+            if ($current_budget['period_year'] == 2026 && $current_budget['period_month'] == 3) {
+                $status = 'Active';
+            } else {
+                $status = $helper->getInitialStatus($id_cabang_session, $id_divisi_session);
+            }
+            if (empty($status)) $status = 'Pending';
+        } else {
+            // Keep current status unless it's Revisi being resubmitted
+            $status = $_POST['status'] ?? $current_budget['status'];
         }
         
         // Check if budget is already approved - cannot edit
@@ -60,12 +82,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Budget yang sudah disetujui/aktif tidak dapat diubah");
         }
         
-        $master_id = $current_budget['master_id'];
-        $old_allocation = floatval($current_budget['total_allocation']);
+        // For Draft action, allow empty items (partial save)
+        if ($submitted_action === 'draft' && empty($items)) {
+            // Update header only, no items required
+            $update_budget = "UPDATE ppx_monthly_budget SET budget_name = ?, status = ?, notes = ?, tipe_anggaran = ? WHERE id_budget = ?";
+            $stmt = mysqli_prepare($conn, $update_budget);
+            mysqli_stmt_bind_param($stmt, 'ssssi', $budget_name, $status, $notes, $tipe_anggaran, $id_budget);
+            if (!mysqli_stmt_execute($stmt)) throw new Exception("Gagal update budget: " . mysqli_error($conn));
+            mysqli_commit($conn);
+            header("Location: monthly_budget_edit.php?id=$id_budget&success=Draft berhasil disimpan");
+            exit();
+        }
         
-        if (empty($items)) {
+        if (empty($items) && $submitted_action !== 'draft') {
             throw new Exception("Tidak ada item yang dikirim");
         }
+        
+        $master_id = $current_budget['master_id'];
+        $old_allocation = floatval($current_budget['total_allocation']);
         
         // Calculate total allocation from items
         $total_allocation = 0;
@@ -79,8 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $total_raw = isset($item['total']) ? $item['total'] : '0';
             
             // Parse harga (remove Rupiah formatting)
-            $harga = intval(str_replace(['Rp', 'rp', 'RP', '.', ',', ' '], '', $harga_raw));
-            $manual_total = intval(str_replace(['Rp', 'rp', 'RP', '.', ',', ' '], '', $total_raw));
+            $harga = intval(preg_replace('/[^\d]/', '', $harga_raw));
+            $manual_total = intval(preg_replace('/[^\d]/', '', $total_raw));
             
             // Skip empty items
             if (empty($rincian) && $harga <= 0) {
@@ -95,7 +129,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception("Ada item yang tidak memiliki rincian");
             }
             if ($harga <= 0) {
-                throw new Exception("Harga untuk '$rincian' harus lebih dari 0");
+                $postCount = count($_POST, COUNT_RECURSIVE);
+                throw new Exception("Harga untuk '$rincian' harus lebih dari 0 (Diterima: '$harga_raw', Hasil parse: '$harga', Total Post Vars: $postCount)");
             }
             
             $calculated_total = $qty * $harga;
@@ -109,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $categoryAllocations[$cat] += $line_total;
         }
         
-        if ($total_allocation <= 0) {
+        if ($total_allocation <= 0 && $submitted_action !== 'draft') {
             throw new Exception("Total alokasi harus lebih dari 0");
         }
         
@@ -298,8 +333,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $total_raw = isset($item['total']) ? $item['total'] : '0';
             
             // Parse harga
-            $harga = intval(str_replace(['Rp', 'rp', 'RP', '.', ',', ' '], '', $harga_raw));
-            $manual_total = intval(str_replace(['Rp', 'rp', 'RP', '.', ',', ' '], '', $total_raw));
+            $harga = intval(preg_replace('/[^\d]/', '', $harga_raw));
+            $manual_total = intval(preg_replace('/[^\d]/', '', $total_raw));
             
             // Skip empty items
             if (empty($rincian) && $harga <= 0) {
@@ -376,7 +411,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         mysqli_commit($conn);
         
-        header("Location: monthly_budget_detail.php?id=$id_budget&success=Budget berhasil diupdate");
+        if ($submitted_action === 'draft') {
+            header("Location: monthly_budget_edit.php?id=$id_budget&success=" . urlencode("Draft berhasil disimpan"));
+        } else {
+            header("Location: monthly_budget_detail.php?id=$id_budget&success=Budget berhasil diupdate");
+        }
         exit();
         
     } catch (Exception $e) {

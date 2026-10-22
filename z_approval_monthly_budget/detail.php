@@ -30,7 +30,7 @@ $query = "SELECT mb.*, u.nama_user as creator_name, a.nama_user as approver_name
           FROM ppx_monthly_budget mb
           LEFT JOIN user_dfm u ON mb.created_by = u.id_user
           LEFT JOIN user_dfm a ON mb.approved_by = a.id_user
-          WHERE mb.id_monthly_budget = ?";
+          WHERE mb.id_budget = ?";
 
 $stmt = mysqli_prepare($conn, $query);
 mysqli_stmt_bind_param($stmt, 'i', $id_budget);
@@ -44,12 +44,12 @@ if (mysqli_num_rows($result) == 0) {
 
 $budget = mysqli_fetch_assoc($result);
 
-// Get items
-$items_query = "SELECT mbi.*, pbc.category_name, pbc.category_code
-                FROM ppx_monthly_budget_item mbi
-                LEFT JOIN ppx_budget_category pbc ON mbi.id_category = pbc.id_category
-                WHERE mbi.monthly_budget_id = ?
-                ORDER BY pbc.category_name";
+// Get detailed items
+$items_query = "SELECT d.*, bc.category_name, bc.category_code
+                FROM ppx_monthly_budget_item_detail d
+                LEFT JOIN ppx_budget_category bc ON d.id_category = bc.id_category
+                WHERE d.id_budget = ?
+                ORDER BY bc.category_name, d.id";
 
 $stmt_items = mysqli_prepare($conn, $items_query);
 mysqli_stmt_bind_param($stmt_items, 'i', $id_budget);
@@ -104,16 +104,16 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                                         <td><?= htmlspecialchars($budget['budget_name']) ?></td>
                                     </tr>
                                     <tr>
+                                        <th>Tipe Anggaran</th>
+                                        <td><span class="badge badge-info"><?= htmlspecialchars($budget['tipe_anggaran'] ?? 'N/A') ?></span></td>
+                                    </tr>
+                                    <tr>
                                         <th>Sumber Dana</th>
-                                        <td><?= htmlspecialchars($budget['master_id']) ?></td>
+                                        <td><?= htmlspecialchars($budget['master_id'] ?? '-') ?></td>
                                     </tr>
                                     <tr>
                                         <th>Dibuat Oleh</th>
                                         <td><?= htmlspecialchars($budget['creator_name']) ?></td>
-                                    </tr>
-                                    <tr>
-                                        <th>Tanggal Dibuat</th>
-                                        <td><?= date('d/m/Y H:i', strtotime($budget['created_at'])) ?></td>
                                     </tr>
                                 </table>
                             </div>
@@ -124,43 +124,28 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                                         <td><strong class="text-primary">Rp <?= number_format($budget['total_allocation'], 0, ',', '.') ?></strong></td>
                                     </tr>
                                     <tr>
-                                        <th>Total Sisa</th>
-                                        <td><strong class="text-success">Rp <?= number_format($budget['total_remaining'], 0, ',', '.') ?></strong></td>
-                                    </tr>
-                                    <tr>
                                         <th>Status</th>
                                         <td>
                                             <?php
                                             $badge_class = 'secondary';
                                             switch ($budget['status']) {
                                                 case 'Pending': $badge_class = 'warning'; break;
-                                                case 'Approved': $badge_class = 'success'; break;
+                                                case 'Approved': case 'Active': $badge_class = 'success'; break;
                                                 case 'Rejected': $badge_class = 'danger'; break;
+                                                case 'Revisi': $badge_class = 'info'; break;
                                             }
                                             ?>
                                             <span class="badge badge-<?= $badge_class ?>"><?= $budget['status'] ?></span>
                                         </td>
                                     </tr>
-                                    <?php if ($budget['approved_by']): ?>
-                                        <tr>
-                                            <th>Disetujui Oleh</th>
-                                            <td><?= htmlspecialchars($budget['approver_name']) ?></td>
-                                        </tr>
-                                        <tr>
-                                            <th>Tanggal Approval</th>
-                                            <td><?= date('d/m/Y H:i', strtotime($budget['approved_at'])) ?></td>
-                                        </tr>
-                                    <?php endif; ?>
+                                    <tr>
+                                        <th>Tanggal Dibuat</th>
+                                        <td><?= date('d/m/Y H:i', strtotime($budget['created_at'])) ?></td>
+                                    </tr>
                                     <tr>
                                         <th>Catatan</th>
                                         <td><?= nl2br(htmlspecialchars($budget['notes'])) ?: '-' ?></td>
                                     </tr>
-                                    <?php if ($budget['approval_notes']): ?>
-                                        <tr>
-                                            <th>Catatan Approval</th>
-                                            <td><?= nl2br(htmlspecialchars($budget['approval_notes'])) ?></td>
-                                        </tr>
-                                    <?php endif; ?>
                                 </table>
                             </div>
                         </div>
@@ -174,54 +159,48 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
             <div class="col-md-12">
                 <div class="card">
                     <div class="card-header">
-                        <h4 class="card-title mb-0">Detail Alokasi per Kategori</h4>
+                        <h4 class="card-title mb-0">Rincian Item Anggaran</h4>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-bordered table-hover">
+                            <table class="table table-bordered table-sm table-hover">
                                 <thead class="bg-light">
                                     <tr>
                                         <th width="5%">No</th>
-                                        <th width="10%">Kode</th>
-                                        <th width="25%">Kategori</th>
-                                        <th width="15%">Alokasi</th>
-                                        <th width="15%">Sisa</th>
-                                        <th width="10%">Carryover</th>
-                                        <th width="20%">Catatan</th>
+                                        <th>Kategori</th>
+                                        <th>Rincian</th>
+                                        <th width="8%">Qty</th>
+                                        <th width="8%">Satuan</th>
+                                        <th width="8%">Jml Hari</th>
+                                        <th width="8%">Jml Minggu</th>
+                                        <th width="12%">Harga Satuan</th>
+                                        <th width="15%">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <?php 
                                     $no = 1;
                                     $total_allocation = 0;
-                                    $total_remaining = 0;
                                     while ($item = mysqli_fetch_assoc($items_result)): 
-                                        $total_allocation += $item['allocation'];
-                                        $total_remaining += $item['remaining'];
+                                        $total_allocation += $item['total'];
                                     ?>
                                         <tr>
                                             <td><?= $no++ ?></td>
-                                            <td><?= htmlspecialchars($item['category_code']) ?></td>
-                                            <td><?= htmlspecialchars($item['category_name']) ?></td>
-                                            <td>Rp <?= number_format($item['allocation'], 0, ',', '.') ?></td>
-                                            <td>Rp <?= number_format($item['remaining'], 0, ',', '.') ?></td>
-                                            <td class="text-center">
-                                                <?php if ($item['allow_carryover']): ?>
-                                                    <span class="badge badge-success">Ya</span>
-                                                <?php else: ?>
-                                                    <span class="badge badge-secondary">Tidak</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td><?= htmlspecialchars($item['notes']) ?: '-' ?></td>
+                                            <td><small><?= htmlspecialchars($item['category_name']) ?></small></td>
+                                            <td><?= htmlspecialchars($item['rincian']) ?></td>
+                                            <td class="text-center"><?= number_format($item['qty'], 0) ?></td>
+                                            <td><?= htmlspecialchars($item['satuan']) ?></td>
+                                            <td class="text-center"><?= $item['jumlah_hari'] ?: '-' ?></td>
+                                            <td class="text-center"><?= $item['jumlah_minggu'] ?: '-' ?></td>
+                                            <td class="text-right">Rp <?= number_format($item['harga_satuan'], 0, ',', '.') ?></td>
+                                            <td class="text-right font-weight-bold">Rp <?= number_format($item['total'], 0, ',', '.') ?></td>
                                         </tr>
                                     <?php endwhile; ?>
                                 </tbody>
                                 <tfoot class="bg-light">
                                     <tr>
-                                        <th colspan="3" class="text-right">Total:</th>
-                                        <th>Rp <?= number_format($total_allocation, 0, ',', '.') ?></th>
-                                        <th>Rp <?= number_format($total_remaining, 0, ',', '.') ?></th>
-                                        <th colspan="2"></th>
+                                        <th colspan="8" class="text-right">Total:</th>
+                                        <th class="text-right">Rp <?= number_format($total_allocation, 0, ',', '.') ?></th>
                                     </tr>
                                 </tfoot>
                             </table>

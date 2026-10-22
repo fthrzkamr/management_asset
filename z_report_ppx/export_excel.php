@@ -53,6 +53,7 @@ $query = "SELECT
     mb.period_year,
     mb.period_month,
     mb.budget_name,
+    mb.tipe_anggaran,
     mb.total_allocation,
     mb.master_allocation,
     mb.total_remaining,
@@ -229,6 +230,7 @@ echo "\xEF\xBB\xBF";
                 <th>No</th>
                 <th>Periode</th>
                 <th>Cabang</th>
+                <th>Tipe Anggaran</th>
                 <th>PIC</th>
                 <th>Divisi</th>
                 <th>Status Terbaru</th>
@@ -259,6 +261,7 @@ foreach ($budgets as $budget) {
                 <td class="text-center"><?= $no++ ?></td>
                 <td class="text-center"><?= $month_names[$budget['period_month']] ?> <?= $budget['period_year'] ?></td>
                 <td><?= htmlspecialchars($budget['creator_cabang'] ?? '-') ?></td>
+                <td><?= htmlspecialchars($budget['tipe_anggaran'] ?? '-') ?></td>
                 <td><?= htmlspecialchars($budget['creator_name']) ?></td>
                 <td><?= htmlspecialchars($budget['creator_divisi'] ?? '-') ?></td>
                 <td class="text-center"><?= $budget['status'] ?></td>
@@ -268,7 +271,7 @@ foreach ($budgets as $budget) {
             </tr>
 <?php } ?>
             <tr class="total-row">
-                <td colspan="6" class="text-right"><strong>GRAND TOTAL</strong></td>
+                <td colspan="7" class="text-right"><strong>GRAND TOTAL</strong></td>
                 <td class="text-right"><strong><?= number_format($total_allocation_sum, 0, '', '') ?></strong></td>
                 <td class="text-right"><strong><?= number_format($total_used_sum, 0, '', '') ?></strong></td>
                 <td class="text-right"><strong><?= number_format($total_remaining_sum, 0, '', '') ?></strong></td>
@@ -289,6 +292,7 @@ foreach ($budgets as $budget) {
                 <th style="width: 15%">Kategori</th>
                 <th style="width: 25%">Rincian Kebutuhan</th>
                 <th style="width: 5%">Qty</th>
+                <th style="width: 5%">Satuan</th>
                 <th style="width: 5%">Jml Hari</th>
                 <th style="width: 5%">Jml Minggu</th>
                 <th style="width: 10%">Harga Satuan (Rp)</th>
@@ -315,6 +319,7 @@ foreach ($budgets as $budget) {
                 <td><?= htmlspecialchars($item['category_name'] ?? '-') ?></td>
                 <td><?= htmlspecialchars($item['rincian'] ?? '-') ?></td>
                 <td class="text-center"><?= intval($item['qty'] ?? 0) ?></td>
+                <td class="text-center"><?= htmlspecialchars($item['satuan'] ?? '-') ?></td>
                 <td class="text-center"><?= intval($item['jumlah_hari'] ?? 0) ?></td>
                 <td class="text-center"><?= intval($item['jumlah_minggu'] ?? 0) ?></td>
                 <td class="text-right"><?= number_format(floatval($item['harga_satuan'] ?? 0), 0, '', '') ?></td>
@@ -333,7 +338,7 @@ foreach ($budgets as $budget) {
     }
 ?>
             <tr class="total-row">
-                <td colspan="9" class="text-right"><strong>GRAND TOTAL ITEM</strong></td>
+                <td colspan="10" class="text-right"><strong>GRAND TOTAL ITEM</strong></td>
                 <td class="text-right"><strong><?= number_format($grand_item_total, 0, '', '') ?></strong></td>
             </tr>
         </tbody>

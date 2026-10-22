@@ -18,7 +18,7 @@ if (isset($_POST['login'])) {
 
         // Check for query errors
         if ($result === false) {
-            error_log('Login query error: ' . mysqli_error($conn));
+            file_put_contents('debug_login.log', '[' . date('Y-m-d H:i:s') . '] Query: ' . $sql . ' | Error: ' . mysqli_error($conn) . PHP_EOL, FILE_APPEND);
             header("Location: login.php?err=dberror");
             exit();
         }

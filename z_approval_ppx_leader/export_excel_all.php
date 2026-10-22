@@ -92,7 +92,7 @@ echo '<!DOCTYPE html>
 <body>';
 
 echo '<h3 style="text-align: center;">LAPORAN PENGAJUAN PPX</h3>';
-echo '<h5 style="text-align: center;">PT. DUA FARMA MAHAKARSA</h5>';
+echo '<h5 style="text-align: center;">DF GROUP</h5>';
 echo '<br>';
 
 echo '<table>';

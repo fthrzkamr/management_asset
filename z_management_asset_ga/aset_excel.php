@@ -19,9 +19,12 @@ $query = mysqli_query($conn, "
         spesifikasi,
         jumlah,
         satuan,
+        nilai_pengadaan_satuan,
+        total_nilai_pengadaan,
         tanggal_pengadaan,
         user,
         kondisi,
+        status_kepemilikan,
         keterangan
     FROM asset_ga
     ORDER BY nama_aset DESC
@@ -92,9 +95,12 @@ if (!$query) {
                 <th width="15%">Spesifikasi</th>
                 <th width="5%">Jumlah</th>
                 <th width="5%">Satuan</th>
+                <th width="10%">Harga Satuan</th>
+                <th width="10%">Total Harga</th>
                 <th width="10%">Tgl Pengadaan</th>
                 <th width="10%">User/PJ</th>
                 <th width="8%">Kondisi</th>
+                <th width="10%">Kepemilikan</th>
                 <th width="15%">Keterangan</th>
             </tr>
         </thead>
@@ -106,8 +112,9 @@ if (!$query) {
             while ($row = mysqli_fetch_assoc($query)) {
                 // Format tanggal
                 $tgl_pengadaan = $row['tanggal_pengadaan'] ? date('d-m-Y', strtotime($row['tanggal_pengadaan'])) : '-';
-
                 
+                $total_keseluruhan += (float)$row['total_nilai_pengadaan'];
+
                 echo "<tr>";
                 echo "<td class='center'>" . $no++ . "</td>";
                 echo "<td>" . htmlspecialchars($row['kode_aset']) . "</td>";
@@ -119,9 +126,12 @@ if (!$query) {
                 echo "<td>" . htmlspecialchars($row['spesifikasi'] ?: '-') . "</td>";
                 echo "<td class='center'>" . number_format($row['jumlah'], 0, ',', '.') . "</td>";
                 echo "<td class='center'>" . htmlspecialchars($row['satuan']) . "</td>";
+                echo "<td class='right'>" . number_format((float)$row['nilai_pengadaan_satuan'], 0, ',', '.') . "</td>";
+                echo "<td class='right'>" . number_format((float)$row['total_nilai_pengadaan'], 0, ',', '.') . "</td>";
                 echo "<td class='center'>" . $tgl_pengadaan . "</td>";
                 echo "<td>" . htmlspecialchars($row['user'] ?: '-') . "</td>";
                 echo "<td class='center'>" . htmlspecialchars($row['kondisi']) . "</td>";
+                echo "<td class='center'>" . htmlspecialchars($row['status_kepemilikan'] ?: '-') . "</td>";
                 echo "<td>" . htmlspecialchars($row['keterangan'] ?: '-') . "</td>";
                 echo "</tr>";
             }
@@ -129,6 +139,13 @@ if (!$query) {
             
 
         </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="11" class="right" style="font-weight:bold;">Total Keseluruhan</td>
+                <td class="right" style="font-weight:bold;"><?= number_format($total_keseluruhan, 0, ',', '.') ?></td>
+                <td colspan="5"></td>
+            </tr>
+        </tfoot>
     </table>
 
     <div style="margin-top: 20px; font-size: 10px; color: #666;">

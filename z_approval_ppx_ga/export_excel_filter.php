@@ -76,7 +76,7 @@ if (!empty($no_ppx)) {
 
     // Header laporan
     echo '<div class="header-title">DETAIL PENGAJUAN PPX</div>';
-    echo '<div class="company-name">PT. DUA FARMA MAHAKARSA</div>';
+    echo '<div class="company-name">DF GROUP</div>';
     echo '<div class="print-info">Dicetak: ' . date('d/m/Y H:i:s') . '</div>';
 
     // Informasi PPX (layout: kiri = PIC/jabatan/divisi/cabang/tgl; kanan = tingkat/status/uang_muka/nominal_realisasi/total_nominal)
@@ -268,7 +268,7 @@ if (!empty($no_ppx)) {
     <body>';
 
     echo '<h2 style="text-align: center;">LAPORAN PENGAJUAN PPX</h2>';
-    echo '<h4 style="text-align: center;">PT. DUA FARMA MAHAKARSA</h4>';
+    echo '<h4 style="text-align: center;">DF GROUP</h4>';
     echo '<p style="text-align: center;">Dicetak: ' . date('d/m/Y H:i:s') . '</p>';
     echo '<br>';
 

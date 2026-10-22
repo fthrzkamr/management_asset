@@ -297,6 +297,36 @@ try {
     }
 
     mysqli_commit($conn);
+    
+    // TAMBAHAN: Potong budget kembali jika tipenya Monthly_Budget (setelah revisi)
+    if ($request_type === 'Monthly_Budget' && !empty($existing['id_budget_item'])) {
+        $id_item = $existing['id_budget_item'];
+        
+        error_log("PPX Update: Request $no_ppx updated from Revisi, re-deducting budget ($total_nominal)");
+        
+        // Cek sisa budget saat ini
+        $q_cek_b = "SELECT remaining FROM ppx_monthly_budget_item WHERE id_budget_item = '$id_item'";
+        $r_cek_b = mysqli_query($conn, $q_cek_b);
+        if ($r_cek_b && $b_row = mysqli_fetch_assoc($r_cek_b)) {
+            $rem = $b_row['remaining'];
+            if ($rem < $total_nominal) {
+                // Warning jika sisa tidak cukup (kasus jarang karena sudah divalidasi manual di add, tapi bagus untuk preventif)
+                error_log("PPX Update: Warning - budget remaining ($rem) less than new nominal ($total_nominal)");
+            }
+            
+            $update_b = "UPDATE ppx_monthly_budget_item 
+                        SET remaining = remaining - $total_nominal,
+                            updated_at = NOW()
+                        WHERE id_budget_item = '$id_item'";
+            
+            if (mysqli_query($conn, $update_b)) {
+                error_log("PPX Update: Budget deducted successfully");
+            } else {
+                error_log("PPX Update: Failed to deduct budget - " . mysqli_error($conn));
+            }
+        }
+    }
+
     $_SESSION['success'] = 'Pengajuan PPX berhasil diperbarui.';
     header("Location: dashboard.php");
     exit();

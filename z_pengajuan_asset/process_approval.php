@@ -13,8 +13,11 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Cek permission - hanya yang punya approve permission
-if (!$auth->hasPermission('pengajuan_asset', 'approve')) {
+$isGlobalApprover = $auth->hasPermission('pengajuan_asset', 'approve');
+$canApproveIT = $auth->isIT() || $auth->hasPermission('approval_asset_it', 'approve');
+$canApproveGA = $auth->isGa() || $auth->hasPermission('approval_asset_ga', 'approve');
+
+if (!$isGlobalApprover && !$canApproveIT && !$canApproveGA) {
     $_SESSION['error'] = 'Anda tidak memiliki izin untuk approve pengajuan asset!';
     header('Location: dashboard.php');
     exit();
@@ -81,110 +84,37 @@ try {
         throw new Exception('Pengajuan sudah diproses sebelumnya! Status saat ini: ' . $asset_data['status']);
     }
     
-    // Validasi hak approval berdasarkan approval_level dan role:
-    // Level 1: GA Jakarta approve pengajuan dari GA Surabaya (approval_level = 2 dan belum ada approved_by_ga)
-    // Level 2: Manager HR/Koordinator HR approve pengajuan yang sudah di-approve GA Jakarta
-    // Level 1 (standard): HR/GA/IT approve langsung untuk pengajuan biasa (approval_level = 1)
-    
-    $current_user_role = strtolower($auth->getUserRole());
-    $is_ga_jakarta = ($auth->isGA() && strtolower($cabang_pengaju) != 'surabaya'); // GA tapi bukan Surabaya berarti Jakarta
-    $is_manager_hr = ($auth->isHr() || $current_user_role == 'koordinator'); // HR atau Koordinator HR
-    
-    if ($approval_level == 2) {
-        // Pengajuan dari GA Surabaya - butuh 2 level approval
-        if ($approved_by_ga == null) {
-            // Level 1: Harus di-approve oleh GA Jakarta
-            if (!$is_ga_jakarta) {
-                throw new Exception('Pengajuan dari GA Surabaya harus di-approve oleh GA Jakarta terlebih dahulu!');
-            }
-        } else {
-            // Level 2: Sudah di-approve GA Jakarta, sekarang butuh Manager HR
-            if (!$is_manager_hr) {
-                throw new Exception('Pengajuan ini harus di-approve oleh Manager HR!');
-            }
-        }
-    } else {
-        // Pengajuan standar - validasi berdasarkan sub kategori
-        if ($auth->isIT() && $asset_data['sub_kategori'] != 'IT') {
-            throw new Exception('Anda sebagai IT hanya dapat menyetujui pengajuan asset dengan sub kategori IT!');
-        } elseif ($auth->isGa() && $asset_data['sub_kategori'] != 'GA') {
-            throw new Exception('Anda sebagai GA hanya dapat menyetujui pengajuan asset dengan sub kategori GA!');
+    // Validasi berdasarkan sub kategori (sesuai permission Administrator)
+    if (!$isGlobalApprover) {
+        if ($canApproveIT && !$canApproveGA && $asset_data['sub_kategori'] != 'IT') {
+            throw new Exception('Anda hanya dapat menyetujui pengajuan asset dengan sub kategori IT!');
+        } elseif ($canApproveGA && !$canApproveIT && $asset_data['sub_kategori'] != 'GA') {
+            throw new Exception('Anda hanya dapat menyetujui pengajuan asset dengan sub kategori GA!');
         }
     }
     
-    // Set status dan update field berdasarkan decision dan approval level
+    // Set status dan update field berdasarkan decision
     if ($decision === 'approve') {
         $approval_date = date('Y-m-d H:i:s');
+        $new_status = 'Disetujui';
+        $status_message = 'disetujui';
         
-        if ($approval_level == 2 && $approved_by_ga == null) {
-            // Level 1: GA Jakarta approve - masih Pending, tunggu Manager HR
-            $new_status = 'Pending';
-            $status_message = 'disetujui oleh GA Jakarta, menunggu Manager HR';
-            
-            $update_query = "UPDATE asset_request 
-                            SET approved_by_ga = ?, 
-                                approved_at_ga = ?, 
-                                catatan_approval = CONCAT(IFNULL(catatan_approval, ''), '\n[GA Jakarta] ', ?),
-                                updated_at = NOW() 
-                            WHERE no_pengajuan = ?";
-            
-            $update_stmt = mysqli_prepare($conn, $update_query);
-            mysqli_stmt_bind_param($update_stmt, "isss", 
-                $_SESSION['id_user'], 
-                $approval_date, 
-                $catatan_approval, 
-                $no_pengajuan
-            );
-            
-        } elseif ($approval_level == 2 && $approved_by_ga != null) {
-            // Level 2: Manager HR approve - Disetujui final
-            $new_status = 'Disetujui';
-            $status_message = 'disetujui oleh Manager HR';
-            
-            $update_query = "UPDATE asset_request 
-                            SET status = ?, 
-                                approved_by_manager_hr = ?, 
-                                approved_at_manager_hr = ?,
-                                approved_by = ?,
-                                approved_at = ?,
-                                catatan_approval = CONCAT(IFNULL(catatan_approval, ''), '\n[Manager HR] ', ?),
-                                updated_at = NOW() 
-                            WHERE no_pengajuan = ?";
-            
-            $update_stmt = mysqli_prepare($conn, $update_query);
-            mysqli_stmt_bind_param($update_stmt, "sisissS", 
-                $new_status,
-                $_SESSION['id_user'], 
-                $approval_date,
-                $_SESSION['id_user'],
-                $approval_date,
-                $catatan_approval, 
-                $no_pengajuan
-            );
-            
-        } else {
-            // Approval standar (level 1) - langsung Disetujui
-            $new_status = 'Disetujui';
-            $status_message = 'disetujui';
-            
-            $update_query = "UPDATE asset_request 
-                            SET status = ?, 
-                                approved_by = ?, 
-                                approved_at = ?, 
-                                catatan_approval = ?, 
-                                updated_at = NOW() 
-                            WHERE no_pengajuan = ?";
-            
-            $update_stmt = mysqli_prepare($conn, $update_query);
-            mysqli_stmt_bind_param($update_stmt, "sisss", 
-                $new_status, 
-                $_SESSION['id_user'], 
-                $approval_date, 
-                $catatan_approval, 
-                $no_pengajuan
-            );
-        }
+        $update_query = "UPDATE asset_request 
+                        SET status = ?, 
+                            approved_by = ?, 
+                            approved_at = ?, 
+                            catatan_approval = ?, 
+                            updated_at = NOW() 
+                        WHERE no_pengajuan = ?";
         
+        $update_stmt = mysqli_prepare($conn, $update_query);
+        mysqli_stmt_bind_param($update_stmt, "sisss", 
+            $new_status, 
+            $_SESSION['id_user'], 
+            $approval_date, 
+            $catatan_approval, 
+            $no_pengajuan
+        );
     } else { // reject
         $new_status = 'Ditolak';
         $status_message = 'ditolak';

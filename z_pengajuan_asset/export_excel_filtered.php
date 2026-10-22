@@ -64,6 +64,7 @@ $query = "SELECT
     ar.nama_pic,
     ar.jabatan,
     ar.divisi,
+    d.nama_divisi,
     ka.kategori_asset,
     ar.jenis_pengadaan,
     ar.deskripsi_asset,
@@ -84,10 +85,11 @@ $query = "SELECT
     u.nama_user as nama_pengaju,
     approver.nama_user as nama_approver
 FROM asset_request ar
-LEFT JOIN kategori_asset ka ON ar.kategori_asset = ka.kategori_asset
+LEFT JOIN kategori_asset ka ON ar.kategori_asset = ka.id_kategori
 LEFT JOIN lokasi_asset la ON ar.lokasi_penggunaan = la.id_lokasi
 LEFT JOIN user_dfm u ON ar.user_id = u.id_user
 LEFT JOIN user_dfm approver ON ar.approved_by = approver.id_user
+LEFT JOIN divisi d ON ar.divisi = d.id_divisi
 $whereClause
 ORDER BY ar.tanggal_pengajuan DESC";
 
@@ -150,7 +152,7 @@ echo '<!DOCTYPE html>
 <body>';
 
 echo '<h2 style="text-align: center;">LAPORAN PENGAJUAN ASSET</h2>';
-echo '<h3 style="text-align: center;">PT. DUA FARMA MAHAKARSA</h3>';
+echo '<h3 style="text-align: center;">DF GROUP</h3>';
 
 // Tampilkan info filter
 echo '<div style="margin: 20px 0; padding: 10px; background-color: #f5f5f5; border: 1px solid #ddd;">';
@@ -232,7 +234,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     echo '<td>' . htmlspecialchars($row['nama_pengaju']) . '</td>';
     echo '<td>' . htmlspecialchars($row['nama_pic']) . '</td>';
     echo '<td>' . htmlspecialchars($row['jabatan']) . '</td>';
-    echo '<td>' . htmlspecialchars($row['divisi']) . '</td>';
+    echo '<td>' . htmlspecialchars($row['nama_divisi'] ?? $row['divisi']) . '</td>';
     echo '<td>' . htmlspecialchars($row['kategori_asset']) . '</td>';
     echo '<td>' . htmlspecialchars($row['jenis_pengadaan']) . '</td>';
     echo '<td>' . htmlspecialchars($row['deskripsi_asset']) . '</td>';
@@ -296,7 +298,7 @@ echo '</table>';
 
 echo '<br><br>';
 echo '<p style="font-size: 10px; color: #666;">
-    <em>Laporan ini digenerate otomatis oleh Sistem Manajemen Asset DFM<br>
+    <em>Laporan ini digenerate otomatis oleh DF GROUP<br>
     Data yang ditampilkan sesuai dengan filter yang dipilih dan hak akses user<br>
     Dicetak pada: ' . date('d/m/Y H:i:s') . ' oleh: ' . htmlspecialchars($_SESSION['nama_user']) . '</em>
 </p>';

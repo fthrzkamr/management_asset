@@ -132,7 +132,7 @@ if (!empty($no_ppx)) {
         </div>
 
         <div class="header">
-            <div class="company-name">PT. DUA FARMA MAHAKARSA</div>
+            <div class="company-name">DF GROUP</div>
             <div class="document-title">DETAIL PENGAJUAN PPX</div>
         </div>
 

@@ -22,8 +22,10 @@ $query = mysqli_query($conn, "
         tanggal_pengadaan,
         user,
         kondisi,
+        status_barang,
+        status_kepemilikan,
         keterangan
-    FROM asset_dfm 
+    FROM asset_dfm
     ORDER BY nama_aset DESC
 ");
 
@@ -95,6 +97,8 @@ if (!$query) {
                 <th width="10%">Tgl Pengadaan</th>
                 <th width="10%">User/PJ</th>
                 <th width="8%">Kondisi</th>
+                <th width="10%">Status</th>
+                <th width="10%">Kepemilikan</th>
                 <th width="15%">Keterangan</th>
             </tr>
         </thead>
@@ -119,9 +123,13 @@ if (!$query) {
                 echo "<td>" . htmlspecialchars($row['spesifikasi'] ?: '-') . "</td>";
                 echo "<td class='center'>" . number_format($row['jumlah'], 0, ',', '.') . "</td>";
                 echo "<td class='center'>" . htmlspecialchars($row['satuan']) . "</td>";
+                $status_val = $row['status_barang'] ?? 'Asset';
+
                 echo "<td class='center'>" . $tgl_pengadaan . "</td>";
                 echo "<td>" . htmlspecialchars($row['user'] ?: '-') . "</td>";
                 echo "<td class='center'>" . htmlspecialchars($row['kondisi']) . "</td>";
+                echo "<td class='center'>" . htmlspecialchars($status_val) . "</td>";
+                echo "<td class='center'>" . htmlspecialchars($row['status_kepemilikan'] ?: '-') . "</td>";
                 echo "<td>" . htmlspecialchars($row['keterangan'] ?: '-') . "</td>";
                 echo "</tr>";
             }

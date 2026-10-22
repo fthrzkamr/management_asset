@@ -4,6 +4,17 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 
+// DEBUG: tulis log ke file untuk konfirmasi POST diterima
+$debug_log = __DIR__ . '/debug_submit.txt';
+file_put_contents($debug_log, 
+    date('Y-m-d H:i:s') . " METHOD=" . ($_SERVER['REQUEST_METHOD'] ?? 'NONE') . "\n" .
+    "POST keys: " . implode(', ', array_keys($_POST ?? [])) . "\n" .
+    "user_id=" . ($_POST['user_id'] ?? 'NOT SET') . " | " .
+    "no_ppx=" . ($_POST['no_ppx'] ?? 'NOT SET') . " | " .
+    "cabang=" . ($_POST['cabang'] ?? 'NOT SET') . "\n\n",
+    FILE_APPEND
+);
+
 include('../dist/config/config.php');
 
 // Cek session login
@@ -21,27 +32,57 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         error_log("PPX Insert: Transaction started");
 
         // Ambil data dari form - PPX Request
-        $no_ppx = mysqli_real_escape_string($conn, $_POST['no_ppx']);
-        $nama_pic = mysqli_real_escape_string($conn, $_POST['nama_pic']);
-        $jabatan = mysqli_real_escape_string($conn, $_POST['jabatan']);
-        $divisi = mysqli_real_escape_string($conn, $_POST['divisi']);
-        // Tambahkan departemen
-        $departemen = mysqli_real_escape_string($conn, $_POST['departemen']);
+        $no_ppx = mysqli_real_escape_string($conn, $_POST['no_ppx'] ?? '');
+        // Ambil user_id dari POST, fallback ke SESSION jika tidak ada/0
+        $user_id = isset($_POST['user_id']) && (int)$_POST['user_id'] > 0 
+                   ? (int)$_POST['user_id'] 
+                   : (int)($_SESSION['id_user'] ?? 0);
+        
+        if ($user_id <= 0) {
+            throw new Exception('User ID tidak valid. Silakan login ulang.');
+        }
+        
+        // Ambil data user dari database jika form inputnya disembunyikan
+        $user_query = "SELECT u.nama_user, u.divisi, u.departemen, u.jabatan
+                       FROM user_dfm u WHERE u.id_user = $user_id";
+        $user_res = mysqli_query($conn, $user_query);
+        if (!$user_res) {
+            throw new Exception('Query user gagal: ' . mysqli_error($conn));
+        }
+        $user_row = mysqli_fetch_assoc($user_res);
+        if (!$user_row) {
+            throw new Exception("Data user dengan ID $user_id tidak ditemukan di database.");
+        }
+        
+        $nama_pic = isset($_POST['nama_pic']) ? mysqli_real_escape_string($conn, $_POST['nama_pic']) : mysqli_real_escape_string($conn, $user_row['nama_user'] ?? '');
+        $jabatan = isset($_POST['jabatan']) ? mysqli_real_escape_string($conn, $_POST['jabatan']) : mysqli_real_escape_string($conn, $user_row['jabatan'] ?? '');
+        $divisi = isset($_POST['divisi']) ? mysqli_real_escape_string($conn, $_POST['divisi']) : (isset($_POST['id_divisi']) ? mysqli_real_escape_string($conn, $_POST['id_divisi']) : mysqli_real_escape_string($conn, $user_row['divisi'] ?? ''));
+        $departemen = isset($_POST['departemen']) ? mysqli_real_escape_string($conn, $_POST['departemen']) : (isset($_POST['id_departemen']) ? mysqli_real_escape_string($conn, $_POST['id_departemen']) : mysqli_real_escape_string($conn, $user_row['departemen'] ?? ''));
+        
         $cabang = mysqli_real_escape_string($conn, $_POST['cabang']);
+        $tujuan_pencarian = mysqli_real_escape_string($conn, $_POST['tujuan_pencarian'] ?? '');
+        $metode_pembayaran = mysqli_real_escape_string($conn, $_POST['metode_pembayaran'] ?? '');
 
-        // NEW: ambil data bank/rekening
+        // NEW: ambil data bank/rekening berdasarkan metode pembayaran
         $nama_bank = isset($_POST['nama_bank']) ? mysqli_real_escape_string($conn, $_POST['nama_bank']) : null;
         $nama_rek  = isset($_POST['nama_rek'])  ? mysqli_real_escape_string($conn, $_POST['nama_rek'])  : null;
         $no_rek    = isset($_POST['no_rek'])    ? mysqli_real_escape_string($conn, $_POST['no_rek'])    : null;
+        
+        // Jika Cash: nama_rek diambil dari nama_rek_cash (tombol submit sudah sync-kan)
+        // nama_bank & no_rek kosong untuk Cash
+        if ($metode_pembayaran === 'Cash') {
+            $nama_bank = null;
+            $no_rek    = null;
+        }
 
-        $user_id = (int)$_POST['user_id'];
         $tanggal_pengajuan = mysqli_real_escape_string($conn, $_POST['tanggal_pengajuan']);
         $alasan_pengajuan = mysqli_real_escape_string($conn, $_POST['alasan_pengajuan']);
         $tingkat_kepentingan = mysqli_real_escape_string($conn, $_POST['tingkat_kepentingan']);
         $tanggal_dibutuhkan = mysqli_real_escape_string($conn, $_POST['tanggal_dibutuhkan']);
-        $status = mysqli_real_escape_string($conn, $_POST['status']);
+        $status = mysqli_real_escape_string($conn, $_POST['status'] ?? '');
         
         // Ambil request_type dan id_category dari form
+        // id_category sekarang selalu kosong (dipindah ke Realisasi Bulanan)
         $request_type = isset($_POST['request_type']) ? mysqli_real_escape_string($conn, $_POST['request_type']) : 'Regular';
         $id_category = isset($_POST['id_category']) && !empty($_POST['id_category']) ? (int)$_POST['id_category'] : null;
         
@@ -224,7 +265,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                              AND (request_type IS NULL OR request_type = '' OR request_type = ? OR request_type = 'Semua')
                              ORDER BY 
                                  (request_type = ?) DESC,
-                                 (cabang = ?) DESC 
+                                 CASE WHEN cabang = ? THEN 1 WHEN (cabang IS NULL OR cabang = '') THEN 0 ELSE -1 END DESC
                              LIMIT 1";
             $stmt_routing = mysqli_prepare($conn, $routing_query);
             mysqli_stmt_bind_param($stmt_routing, 'issss', $divisi, $cabang, $routing_request_type, $routing_request_type, $cabang);
@@ -249,25 +290,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $initial_status = $routing_row['initial_status'];
             error_log("PPX Insert: Using configured routing - divisi=$divisi, cabang=$cabang, request_type=$request_type, initial_status=$initial_status, approver_role=" . ($routing_row['approver_role'] ?? 'NULL'));
         } else {
-            // No routing config found - fallback to original logic
-            if ($flow_type === 'cabang' && !empty($cabang_user)) {
-                // Check if a Kacab exists for this cabang
-                $check_kacab_q = "SELECT 1 FROM user_dfm u JOIN roles r ON u.id_role = r.id_role WHERE r.nama_role = 'kacab' AND u.id_cabang = '" . mysqli_real_escape_string($conn, $cabang_user) . "' LIMIT 1";
-                $check_kacab_r = mysqli_query($conn, $check_kacab_q);
-                if ($check_kacab_r && mysqli_num_rows($check_kacab_r) > 0) {
-                    $initial_status = 'Kacab';
-                } else {
-                    $initial_status = 'Leader';
-                }
-                error_log("PPX Insert: No routing config - using cabang logic, initial_status = $initial_status");
-            } else {
-                error_log("PPX Insert: No routing config - keeping default status = $initial_status");
-            }
+            // Tidak ada konfigurasi routing → tampilkan error agar admin segera mengatur routing
+            throw new Exception('Routing approval untuk divisi Anda belum dikonfigurasi. Silakan hubungi Administrator untuk mengatur routing PPX.');
         }
         
-        // Safety fallback if status is still empty
+        // Safety fallback if status is still empty — tidak boleh terjadi lagi
         if (empty($initial_status)) {
-            $initial_status = 'Leader';
+            throw new Exception('Gagal menentukan status awal pengajuan. Hubungi Administrator.');
         }
         mysqli_stmt_close($stmt_routing);
         
@@ -278,7 +307,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             jabatan, 
             divisi, 
             departemen, 
-            cabang, 
+            cabang,
+            tujuan_pencarian,
+            metode_pembayaran,
             nama_bank,
             nama_rek,
             no_rek,
@@ -293,7 +324,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             no_pengajuan_renovasi,
             no_service,
             request_type,
-            id_category
+            id_category,
+            flow_type,
+            cabang_user
         ) VALUES (
             '$no_ppx', 
             '$user_id', 
@@ -301,7 +334,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             '$jabatan', 
             '$divisi', 
             '$departemen', 
-            '$cabang', 
+            '$cabang',
+            '$tujuan_pencarian',
+            '$metode_pembayaran',
             '$nama_bank',
             '$nama_rek',
             '$no_rek',
@@ -316,7 +351,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             " . ($no_pengajuan_renovasi ? "'$no_pengajuan_renovasi'" : "NULL") . ",
             " . ($no_service ? "'" . mysqli_real_escape_string($conn, $no_service) . "'" : "NULL") . ",
             '$request_type',
-            " . ($id_category ? "'$id_category'" : "NULL") . "
+            " . ($id_category ? "'$id_category'" : "NULL") . ",
+            '$flow_type',
+            " . ($cabang_user ? "'$cabang_user'" : "NULL") . "
         )";
         
         error_log("PPX Insert: About to execute INSERT query for no_ppx = $no_ppx");
@@ -330,132 +367,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         error_log("PPX Insert: INSERT query successful");
         
-        // Jika request_type = Monthly_Budget, cek dan potong budget
-        if ($request_type === 'Monthly_Budget' && $id_category && $total_nominal > 0) {
-            error_log("PPX Insert: Processing Monthly_Budget type with category = $id_category");
-            
-            // Get current period
-            $current_year = date('Y');
-            $current_month = (int)date('m');
-            
-            // Get current user's division and role for filtering
-            $user_id = $_SESSION['id_user'];
-            $user_query = "SELECT u.divisi, d.nama_divisi, r.nama_role 
-                           FROM user_dfm u 
-                           LEFT JOIN divisi d ON u.divisi = d.id_divisi 
-                           LEFT JOIN roles r ON u.id_role = r.id_role
-                           WHERE u.id_user = $user_id";
-            $user_result = mysqli_query($conn, $user_query);
-            $user_data = mysqli_fetch_assoc($user_result);
-            $user_division_id = $user_data['divisi'];
-            $user_division = $user_data['nama_divisi'];
-            $user_role = $user_data['nama_role'];
-            
-            // Filter budget berdasarkan role dan divisi (sama seperti get_budget_categories.php):
-            // 1. IT, GA -> pakai budget yang dibuat oleh divisi HR (divisi 7)
-            // 2. User divisi HR -> pakai budget divisi HR
-            // 3. User lain -> pakai budget yang mereka buat sendiri
-            if (in_array(strtolower($user_role), ['it', 'ga'])) {
-                // IT dan GA pakai budget yang dibuat oleh user divisi HR (divisi 7)
-                $division_filter = "AND ub.divisi = 7";
-                error_log("PPX Insert: Role $user_role - menggunakan budget divisi HR");
-            } elseif ($user_division_id == 7) {
-                // User divisi HR pakai budget divisi HR
-                $division_filter = "AND ub.divisi = 7";
-                error_log("PPX Insert: Divisi HR - menggunakan budget divisi HR");
-            } else {
-                // User lain hanya bisa pakai budget yang mereka buat sendiri
-                $division_filter = "AND mb.created_by = $user_id";
-                error_log("PPX Insert: Role $user_role - hanya budget created_by=$user_id");
-            }
-            
-            // Find budget item untuk category + period ini dengan filter sesuai role
-            // Prioritaskan budget item yang punya sisa terbanyak
-            // JOIN dengan user_dfm untuk filter divisi (untuk IT/GA/HR)
-            $budget_query = "SELECT mbi.id_budget_item, mbi.remaining, mbi.allocation 
-                           FROM ppx_monthly_budget_item mbi
-                           JOIN ppx_monthly_budget mb ON mbi.id_budget = mb.id_budget
-                           LEFT JOIN user_dfm ub ON mb.created_by = ub.id_user
-                           WHERE mbi.id_category = '$id_category'
-                           AND mb.period_year = '$current_year'
-                           AND mb.period_month = '$current_month'
-                           AND mb.status IN ('Approved', 'Active')
-                           AND mbi.remaining > 0
-                           $division_filter
-                           ORDER BY mbi.remaining DESC
-                           LIMIT 1";
-            
-            error_log("PPX Insert: Budget query = " . $budget_query);
-            
-            $budget_result = mysqli_query($conn, $budget_query);
-            
-            if (!$budget_result) {
-                error_log("PPX Insert: Budget query failed - " . mysqli_error($conn));
-                throw new Exception('Error saat mengecek budget: ' . mysqli_error($conn));
-            }
-            
-            if (mysqli_num_rows($budget_result) > 0) {
-                $budget_row = mysqli_fetch_assoc($budget_result);
-                $id_budget_item = $budget_row['id_budget_item'];
-                $remaining = $budget_row['remaining'];
-                
-                error_log("PPX Insert: Budget found - id_budget_item=$id_budget_item, remaining=$remaining, required=$total_nominal");
-                
-                // Cek apakah budget cukup dengan pesan error yang jelas
-                if ($remaining < $total_nominal) {
-                    error_log("PPX Insert: Budget insufficient");
-                    $kelebihan = $total_nominal - $remaining;
-                    $error_message = "❌ PENGAJUAN PPX DITOLAK: NOMINAL MELEBIHI BUDGET!\n\n";
-                    $error_message .= "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
-                    $error_message .= "Total Nominal PPX: Rp " . number_format($total_nominal, 0, ',', '.') . "\n";
-                    $error_message .= "Sisa Budget Tersedia: Rp " . number_format($remaining, 0, ',', '.') . "\n";
-                    $error_message .= "Kelebihan: Rp " . number_format($kelebihan, 0, ',', '.') . "\n";
-                    $error_message .= "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
-                    $error_message .= "Silakan lakukan salah satu berikut:\n";
-                    $error_message .= "1. Kurangi nominal item sesuai sisa budget\n";
-                    $error_message .= "2. Pilih kategori anggaran lain yang memiliki budget cukup\n";
-                    $error_message .= "3. Hubungi Manager Finance untuk penambahan alokasi budget\n\n";
-                    $error_message .= "📞 Kontak: Manager Finance - Ext: 101 / WA: 0812-xxxx-xxxx";
-                    
-                    throw new Exception($error_message);
-                }
-                
-                // Update id_budget_item di ppx_request
-                $update_ppx = "UPDATE ppx_request 
-                             SET id_budget_item = '$id_budget_item'
-                             WHERE no_ppx = '$no_ppx'";
-                
-                error_log("PPX Insert: Updating ppx_request with id_budget_item");
-                
-                if (!mysqli_query($conn, $update_ppx)) {
-                    $error = mysqli_error($conn);
-                    error_log("PPX Insert: Failed to update id_budget_item - " . $error);
-                    throw new Exception('Gagal mengupdate id_budget_item: ' . $error);
-                }
-                
-                // Potong budget: kurangi remaining
-                $new_remaining = $remaining - $total_nominal;
-                $update_budget = "UPDATE ppx_monthly_budget_item 
-                                SET remaining = '$new_remaining',
-                                    updated_at = NOW()
-                                WHERE id_budget_item = '$id_budget_item'";
-                
-                error_log("PPX Insert: Deducting budget, new_remaining = $new_remaining");
-                
-                if (!mysqli_query($conn, $update_budget)) {
-                    $error = mysqli_error($conn);
-                    error_log("PPX Insert: Failed to deduct budget - " . $error);
-                    throw new Exception('Gagal memotong budget: ' . $error);
-                }
-                
-                error_log("PPX Insert: Budget deducted successfully");
-            } else {
-                error_log("PPX Insert: No approved budget found for this category/period");
-                throw new Exception('Budget untuk kategori ini belum tersedia atau belum diapprove untuk bulan ini!');
-            }
-        } else {
-            error_log("PPX Insert: Skipping budget logic (Regular type or no category)");
-        }
+        // =====================================================================
+        // LOGIKA BUDGET DEDUCTION — DINONAKTIFKAN
+        // Kategori Anggaran tidak lagi dipilih saat pengajuan PPX.
+        // Pemotongan budget akan dilakukan dari modul Realisasi Bulanan.
+        // id_category selalu NULL → blok ini tidak akan pernah aktif.
+        // =====================================================================
+        // if ($request_type === 'Monthly_Budget' && $id_category && $total_nominal > 0) {
+        //     ... budget deduction logic ...
+        // }
+        error_log("PPX Insert: Budget deduction skipped — akan diproses via Realisasi Bulanan");
 
         // Insert detail items ke ppx_request_detail (prepared statement dengan kolom yang sesuai)
         $inserted_details = 0;
@@ -568,6 +489,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error_msg = $e->getMessage();
         error_log("PPX Insert: Exception caught - " . $error_msg);
         error_log("PPX Insert: Stack trace - " . $e->getTraceAsString());
+        // Tulis ke debug file juga
+        file_put_contents(__DIR__ . '/debug_submit.txt', 
+            date('Y-m-d H:i:s') . " EXCEPTION: " . $error_msg . "\n", FILE_APPEND);
         $_SESSION['error'] = $error_msg;
         header("Location: add.php");
         exit();

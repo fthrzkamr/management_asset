@@ -49,7 +49,7 @@ if (!empty($search)) {
 }
 
 $sql .= " GROUP BY p.id_pengambilan 
-          ORDER BY p.tanggal_pengambilan DESC";
+          ORDER BY CASE WHEN p.status = 'Pending' THEN 1 ELSE 2 END ASC, p.tanggal_pengambilan DESC";
 
 $result = mysqli_query($conn, $sql);
 
@@ -211,7 +211,7 @@ $stats = mysqli_fetch_assoc($stats_result);
                                                 <th>Divisi</th>
                                                 <th>Total Item</th>
                                                 <th>Status</th>
-                                                <th>Aksi</th>
+                                                <th width="100">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -249,14 +249,9 @@ $stats = mysqli_fetch_assoc($stats_result);
                                                             class="btn btn-sm btn-info" title="Detail">
                                                             <i class="fas fa-eye"></i>
                                                         </a>
-                                                        <?php if ($row['status'] == 'Pending'): ?>
-                                                            <button type="button" class="btn btn-sm btn-success" onclick="approveNow(<?= $row['id_pengambilan'] ?>, 'Approved')" title="Approve">
-                                                                <i class="fas fa-check"></i>
-                                                            </button>
-                                                            <button type="button" class="btn btn-sm btn-danger"
-                                                                onclick="approveNow(<?= $row['id_pengambilan'] ?>, 'Rejected')"
-                                                                title="Reject">
-                                                                <i class="fas fa-times"></i>
+                                                        <?php if ($row['status'] == 'Pending' && $auth->hasPermission('inventory_atk_pengambilan', 'approve')): ?>
+                                                            <button type="button" class="btn btn-sm btn-primary" onclick="openApproveModal(<?= $row['id_pengambilan'] ?>)" title="Proses Approval">
+                                                                <i class="fas fa-edit"></i>
                                                             </button>
                                                         <?php endif; ?>
                                                     </td>
@@ -276,6 +271,32 @@ $stats = mysqli_fetch_assoc($stats_result);
 
     </div>
 
+    <!-- Modal Approve -->
+    <div class="modal fade" id="approveModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <form id="formApproveModal" onsubmit="submitModalApprove(event)">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Proses Approval Pengambilan ATK</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="id_pengambilan" id="modal_id_pengambilan">
+                        <input type="hidden" name="status" id="modal_status" value="Approved">
+                        <div id="modal_items_container">
+                            <div class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data...</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                        <button type="button" class="btn btn-danger" onclick="setModalStatus('Rejected'); $('#formApproveModal').submit();">Reject</button>
+                        <button type="submit" class="btn btn-success" onclick="setModalStatus('Approved')">Save & Approve</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- <script src="../assets/js/jquery-3.6.0.min.js"></script> -->
     <!-- <script src="../assets/js/popper.min.js"></script> -->
     <!-- <script src="../assets/plugins/bootstrap/js/bootstrap.min.js"></script> dihapus karena sudah ada di footer -->
@@ -286,12 +307,20 @@ $stats = mysqli_fetch_assoc($stats_result);
 
     <script>
         $(document).ready(function() {
-            $('#tablePengajuan').DataTable({
+            var t = $('#tablePengajuan').DataTable({
                 "pageLength": 25,
-                "order": [
-                    [2, "desc"]
+                "order": [], // Use SQL ordering by default
+                "columnDefs": [
+                    { "orderable": false, "targets": 0 } // Disable sorting on the 'No' column header
                 ]
             });
+            
+            // Recalculate row numbers when sorting or searching
+            t.on('order.dt search.dt', function () {
+                t.column(0, {search:'applied', order:'applied'}).nodes().each(function (cell, i) {
+                    cell.innerHTML = i + 1;
+                });
+            }).draw();
         });
 
         // Direct approve without modal
@@ -300,7 +329,6 @@ $stats = mysqli_fetch_assoc($stats_result);
             data.append('id_pengambilan', id);
             data.append('status', status);
 
-            console.log('approveNow sending', id, status);
             fetch('process_approve.php', {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -308,25 +336,80 @@ $stats = mysqli_fetch_assoc($stats_result);
                 body: data.toString()
             })
             .then(async res => {
-                console.log('response status:', res.status, 'ok:', res.ok);
                 const text = await res.text();
-                console.log('response text:', text);
                 try {
                     const j = JSON.parse(text);
                     if (j.success) {
-                        // reload to reflect changes
-                        window.location.href = 'dashboard.php';
+                        window.location.reload();
                     } else {
                         alert('Gagal: ' + (j.message || text));
                     }
                 } catch (e) {
-                    if (res.ok) window.location.href = 'dashboard.php';
+                    if (res.ok) window.location.reload();
                     else alert('Terjadi kesalahan. Cek console.');
                 }
             })
             .catch(err => {
-                console.error(err);
-                alert('Gagal menghubungi server. Cek console.');
+                alert('Gagal menghubungi server.');
+            });
+        }
+
+        let approveModalObj = null;
+        function openApproveModal(id) {
+            $('#modal_id_pengambilan').val(id);
+            $('#modal_items_container').html('<div class="text-center my-4"><i class="fas fa-spinner fa-spin fa-2x"></i><br>Memuat data...</div>');
+            
+            fetch('ajax_get_pengambilan_items.php?id=' + id)
+                .then(res => res.text())
+                .then(html => {
+                    $('#modal_items_container').html(html);
+                })
+                .catch(err => {
+                    $('#modal_items_container').html('<div class="text-danger text-center">Gagal memuat data.</div>');
+                });
+                
+            if (!approveModalObj) {
+                approveModalObj = new bootstrap.Modal(document.getElementById('approveModal'));
+            }
+            approveModalObj.show();
+        }
+
+        function setModalStatus(status) {
+            $('#modal_status').val(status);
+        }
+
+        function submitModalApprove(e) {
+            e.preventDefault();
+            const form = document.getElementById('formApproveModal');
+            const data = new URLSearchParams(new FormData(form));
+            const status = $('#modal_status').val();
+            
+            if (!confirm(`Apakah Anda yakin ingin ${status === 'Approved' ? 'menyetujui' : 'menolak'} pengajuan ini?`)) {
+                return;
+            }
+
+            fetch('process_approve.php', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                body: data.toString()
+            })
+            .then(async res => {
+                const text = await res.text();
+                try {
+                    const j = JSON.parse(text);
+                    if (j.success) {
+                        window.location.reload();
+                    } else {
+                        alert('Gagal: ' + (j.message || text));
+                    }
+                } catch (e) {
+                    if (res.ok) window.location.reload();
+                    else alert('Terjadi kesalahan. Cek console.');
+                }
+            })
+            .catch(err => {
+                alert('Gagal menghubungi server.');
             });
         }
     </script>

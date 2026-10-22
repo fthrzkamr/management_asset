@@ -21,10 +21,13 @@ $qAsset = mysqli_query($conn, "
         a.kode_aset, 
         a.nama_aset, 
         a.merk, 
+        a.spesifikasi,
         a.kategori_aset, 
         a.lokasi, 
+        a.lokasi_detail,
         a.kondisi,
         a.user,
+        'IT' as divisi,
         CASE 
             WHEN s.kode_aset IS NOT NULL THEN 1 
             ELSE 0 
@@ -33,7 +36,30 @@ $qAsset = mysqli_query($conn, "
         s.no_service
     FROM asset_dfm a
     LEFT JOIN service_asset s ON a.kode_aset = s.kode_aset AND s.status_service = 'Service'
-    ORDER BY is_service ASC, a.nama_aset ASC
+
+    UNION ALL
+
+    SELECT 
+        a.kode_aset, 
+        a.nama_aset, 
+        a.merk, 
+        a.spesifikasi,
+        a.kategori_aset, 
+        a.lokasi, 
+        a.lokasi_detail,
+        a.kondisi,
+        a.user,
+        'GA' as divisi,
+        CASE 
+            WHEN s.kode_aset IS NOT NULL THEN 1 
+            ELSE 0 
+        END as is_service,
+        s.status_service,
+        s.no_service
+    FROM asset_ga a
+    LEFT JOIN service_asset s ON a.kode_aset = s.kode_aset AND s.status_service = 'Service'
+
+    ORDER BY divisi DESC, is_service ASC, nama_aset ASC
 ");
 
 // Ambil data teknisi
@@ -56,10 +82,13 @@ while ($asset = mysqli_fetch_assoc($qAsset)) {
         'kode_aset' => $asset['kode_aset'],
         'nama_aset' => $asset['nama_aset'],
         'merk' => $asset['merk'],
+        'spesifikasi' => $asset['spesifikasi'],
         'kategori_aset' => $asset['kategori_aset'],
         'lokasi' => $asset['lokasi'],
+        'lokasi_detail' => $asset['lokasi_detail'],
         'kondisi' => $asset['kondisi'],
         'user' => $asset['user'],
+        'divisi' => $asset['divisi'],
         'is_service' => $asset['is_service']
     ];
 }
@@ -117,7 +146,27 @@ while ($asset = mysqli_fetch_assoc($qAsset)) {
             color: #6c757d;
             cursor: not-allowed;
         }
+        /* Custom Select2 styling for consistent height */
+        .select2-container .select2-selection--single {
+            height: 38px !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: 36px !important;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px !important;
+        }
+        /* Make dropdown wider than the input for more info */
+        @media (min-width: 768px) {
+            .select2-dropdown {
+                min-width: 500px !important;
+            }
+        }
     </style>
+    
+    <!-- Select2 CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+
 </head>
 
 <body>
@@ -202,43 +251,56 @@ while ($asset = mysqli_fetch_assoc($qAsset)) {
                                             </button>
                                             
                                             <div class="row">
-                                                <div class="col-12 col-md-4 mb-3">
+                                                <div class="col-12 col-md-6 mb-3">
                                                     <label class="font-weight-bold small">Kode Asset <span class="text-danger">*</span></label>
                                                     <select name="assets[0][kode_aset]" class="form-control form-control-sm asset-select" required data-index="0">
                                                         <option value="">-- Pilih Asset --</option>
-                                                        <?php mysqli_data_seek($qAsset, 0); ?>
-                                                        <?php while ($asset = mysqli_fetch_assoc($qAsset)): ?>
+                                                        <?php 
+                                                        mysqli_data_seek($qAsset, 0); 
+                                                        $currentDivisi = '';
+                                                        while ($asset = mysqli_fetch_assoc($qAsset)): 
+                                                            if ($asset['divisi'] !== $currentDivisi) {
+                                                                if ($currentDivisi !== '') echo '</optgroup>';
+                                                                $currentDivisi = $asset['divisi'];
+                                                                echo '<optgroup label="Aset ' . htmlspecialchars($currentDivisi) . '">';
+                                                            }
+                                                        ?>
                                                             <?php if ($asset['is_service']): ?>
                                                                 <option value="<?= htmlspecialchars($asset['kode_aset']) ?>" disabled class="asset-service-option"
                                                                     data-nama="<?= htmlspecialchars($asset['nama_aset']) ?>"
                                                                     data-merk="<?= htmlspecialchars($asset['merk']) ?>"
+                                                                    data-spesifikasi="<?= htmlspecialchars($asset['spesifikasi']) ?>"
                                                                     data-kategori="<?= htmlspecialchars($asset['kategori_aset']) ?>"
                                                                     data-lokasi="<?= htmlspecialchars($asset['lokasi']) ?>"
+                                                                    data-lokasi_detail="<?= htmlspecialchars($asset['lokasi_detail']) ?>"
                                                                     data-kondisi="<?= htmlspecialchars($asset['kondisi']) ?>"
                                                                     data-user="<?= htmlspecialchars($asset['user']) ?>"
                                                                     data-service="true">
-                                                                    <?= htmlspecialchars($asset['kode_aset']) ?> - <?= htmlspecialchars($asset['nama_aset']) ?> - SEDANG SERVICE
+                                                                    <?= htmlspecialchars($asset['kode_aset']) ?> - <?= htmlspecialchars($asset['nama_aset']) ?> - <?= htmlspecialchars($asset['merk']) ?> - <?= htmlspecialchars($asset['lokasi_detail']) ?> - <?= htmlspecialchars($asset['spesifikasi']) ?> - SEDANG SERVICE
                                                                 </option>
                                                             <?php else: ?>
                                                                 <option value="<?= htmlspecialchars($asset['kode_aset']) ?>"
                                                                     data-nama="<?= htmlspecialchars($asset['nama_aset']) ?>"
                                                                     data-merk="<?= htmlspecialchars($asset['merk']) ?>"
+                                                                    data-spesifikasi="<?= htmlspecialchars($asset['spesifikasi']) ?>"
                                                                     data-kategori="<?= htmlspecialchars($asset['kategori_aset']) ?>"
                                                                     data-lokasi="<?= htmlspecialchars($asset['lokasi']) ?>"
+                                                                    data-lokasi_detail="<?= htmlspecialchars($asset['lokasi_detail']) ?>"
                                                                     data-kondisi="<?= htmlspecialchars($asset['kondisi']) ?>"
                                                                     data-user="<?= htmlspecialchars($asset['user']) ?>"
                                                                     data-service="false">
-                                                                    <?= htmlspecialchars($asset['kode_aset']) ?> - <?= htmlspecialchars($asset['nama_aset']) ?>
+                                                                    <?= htmlspecialchars($asset['kode_aset']) ?> - <?= htmlspecialchars($asset['nama_aset']) ?> - <?= htmlspecialchars($asset['merk']) ?> - <?= htmlspecialchars($asset['lokasi_detail']) ?> - <?= htmlspecialchars($asset['spesifikasi']) ?>
                                                                 </option>
                                                             <?php endif; ?>
                                                         <?php endwhile; ?>
+                                                        <?php if ($currentDivisi !== '') echo '</optgroup>'; ?>
                                                     </select>
                                                 </div>
-                                                <div class="col-12 col-md-4 mb-3">
+                                                <div class="col-12 col-md-3 mb-3">
                                                     <label class="font-weight-bold small">Nama Asset</label>
                                                     <input type="text" class="form-control form-control-sm readonly-field asset-nama" readonly>
                                                 </div>
-                                                <div class="col-12 col-md-4 mb-3">
+                                                <div class="col-12 col-md-3 mb-3">
                                                     <label class="font-weight-bold small">Kategori</label>
                                                     <input type="text" class="form-control form-control-sm readonly-field asset-kategori" readonly>
                                                 </div>
@@ -374,39 +436,54 @@ while ($asset = mysqli_fetch_assoc($qAsset)) {
         </div>
     </div>
 
+    <!-- Select2 JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
     <!-- JavaScript -->
     <script>
         var assetItemIndex = 1;
         var assetData = <?= json_encode($assetData) ?>;
         var assetOptionsHtml = '';
+        var currentDivisiJs = '';
         
         // Generate options HTML dari data JSON
         assetData.forEach(function(asset) {
+            if (asset.divisi !== currentDivisiJs) {
+                if (currentDivisiJs !== '') assetOptionsHtml += '</optgroup>';
+                currentDivisiJs = asset.divisi;
+                assetOptionsHtml += '<optgroup label="Aset ' + currentDivisiJs + '">';
+            }
             if (asset.is_service == 1) {
                 assetOptionsHtml += '<option value="' + asset.kode_aset + '" disabled class="asset-service-option" ' +
                     'data-nama="' + asset.nama_aset + '" ' +
                     'data-merk="' + asset.merk + '" ' +
+                    'data-spesifikasi="' + asset.spesifikasi + '" ' +
                     'data-kategori="' + asset.kategori_aset + '" ' +
                     'data-lokasi="' + asset.lokasi + '" ' +
+                    'data-lokasi_detail="' + asset.lokasi_detail + '" ' +
                     'data-kondisi="' + asset.kondisi + '" ' +
                     'data-user="' + asset.user + '" ' +
                     'data-service="true">' +
-                    asset.kode_aset + ' - ' + asset.nama_aset + ' - SEDANG SERVICE</option>';
+                    asset.kode_aset + ' - ' + asset.nama_aset + ' - ' + asset.merk + ' - ' + asset.lokasi_detail + ' - ' + asset.spesifikasi + ' - SEDANG SERVICE</option>';
             } else {
                 assetOptionsHtml += '<option value="' + asset.kode_aset + '" ' +
                     'data-nama="' + asset.nama_aset + '" ' +
                     'data-merk="' + asset.merk + '" ' +
+                    'data-spesifikasi="' + asset.spesifikasi + '" ' +
                     'data-kategori="' + asset.kategori_aset + '" ' +
                     'data-lokasi="' + asset.lokasi + '" ' +
+                    'data-lokasi_detail="' + asset.lokasi_detail + '" ' +
                     'data-kondisi="' + asset.kondisi + '" ' +
                     'data-user="' + asset.user + '" ' +
                     'data-service="false">' +
-                    asset.kode_aset + ' - ' + asset.nama_aset + '</option>';
+                    asset.kode_aset + ' - ' + asset.nama_aset + ' - ' + asset.merk + ' - ' + asset.lokasi_detail + ' - ' + asset.spesifikasi + '</option>';
             }
         });
+        if (currentDivisiJs !== '') assetOptionsHtml += '</optgroup>';
 
         $(document).ready(function() {
-            // No Select2 for asset selects to keep native appearance
+            // Select2 initialization for asset-select
+            initSelect2();
 
             // Initialize remove button visibility
             updateRemoveButtons();
@@ -512,7 +589,11 @@ while ($asset = mysqli_fetch_assoc($qAsset)) {
         });
 
         function initSelect2() {
-            // no Select2 initialization for asset-select to keep native look
+            $('.asset-select').select2({
+                width: '100%',
+                placeholder: "-- Cari & Pilih Asset --",
+                allowClear: true
+            });
         }
 
         function loadAssetInfo(index) {
@@ -587,18 +668,18 @@ while ($asset = mysqli_fetch_assoc($qAsset)) {
                 '<i class="fas fa-times"></i>' +
                 '</button>' +
                 '<div class="row">' +
-                '<div class="col-12 col-md-4 mb-3">' +
+                '<div class="col-12 col-md-6 mb-3">' +
                 '<label class="font-weight-bold small">Kode Asset <span class="text-danger">*</span></label>' +
                 '<select name="assets[' + newIndex + '][kode_aset]" class="form-control form-control-sm asset-select" required data-index="' + newIndex + '">' +
                 '<option value="">-- Pilih Asset --</option>' +
                 assetOptionsHtml +
                 '</select>' +
                 '</div>' +
-                '<div class="col-12 col-md-4 mb-3">' +
+                '<div class="col-12 col-md-3 mb-3">' +
                 '<label class="font-weight-bold small">Nama Asset</label>' +
                 '<input type="text" class="form-control form-control-sm readonly-field asset-nama" readonly>' +
                 '</div>' +
-                '<div class="col-12 col-md-4 mb-3">' +
+                '<div class="col-12 col-md-3 mb-3">' +
                 '<label class="font-weight-bold small">Kategori</label>' +
                 '<input type="text" class="form-control form-control-sm readonly-field asset-kategori" readonly>' +
                 '</div>' +
@@ -606,7 +687,13 @@ while ($asset = mysqli_fetch_assoc($qAsset)) {
 
             container.append(itemHtml);
 
-            // Tidak menginisialisasi Select2 agar tampilan tetap sama dengan select awal
+            // Menginisialisasi Select2 pada element yang baru saja ditambah
+            $('#assetItemsContainer select[name="assets[' + newIndex + '][kode_aset]"]').select2({
+                width: '100%',
+                placeholder: "-- Cari & Pilih Asset --",
+                allowClear: true
+            });
+
             assetItemIndex++;
             updateRemoveButtons();
             // Ensure penanggung_jawab is up-to-date (new row may be empty)
@@ -640,5 +727,4 @@ while ($asset = mysqli_fetch_assoc($qAsset)) {
         }
     </script>
 </body>
-
 </html>

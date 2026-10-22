@@ -46,7 +46,14 @@ foreach ($_POST['assets'] as $index => $asset) {
         $kode_aset = mysqli_real_escape_string($conn, $asset['kode_aset']);
         
         // Cek apakah asset ada
-        $check_asset = mysqli_query($conn, "SELECT kode_aset FROM asset_dfm WHERE kode_aset = '$kode_aset' LIMIT 1");
+        $check_asset = mysqli_query($conn, "
+            SELECT kode_aset FROM asset_dfm WHERE kode_aset = '$kode_aset'
+            UNION ALL
+            SELECT kode_aset FROM asset_ga WHERE kode_aset = '$kode_aset'
+            UNION ALL
+            SELECT kode_aset FROM asset_bst WHERE kode_aset = '$kode_aset'
+            LIMIT 1
+        ");
         if (!$check_asset || mysqli_num_rows($check_asset) == 0) {
             echo "<script>alert('Asset dengan kode $kode_aset tidak ditemukan!'); history.back();</script>";
             exit;
@@ -219,7 +226,12 @@ if ($inserted_count > 0 && count($failed_assets) == 0) {
 // Function untuk resize gambar - sama seperti sebelumnya
 function resizeImage($source, $destination, $max_width, $max_height, $quality = 80)
 {
-    $info = getimagesize($source);
+    // Jika module GD tidak aktif/tersedia di XAMPP PHP ini, skip proses resize gambar agar tidak error.
+    if (!function_exists('imagecreatefromjpeg') || !function_exists('imagecreatefrompng')) {
+        return true;
+    }
+
+    $info = @getimagesize($source);
     if (!$info) return false;
 
     $width = $info[0];

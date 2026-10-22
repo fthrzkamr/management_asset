@@ -94,7 +94,7 @@ echo "\xEF\xBB\xBF"; // UTF-8 BOM
 </head>
 <body>
     <div class="header-title">LAPORAN PENGAJUAN PPX (REGULAR & MONTHLY)</div>
-    <div style="text-align: center; font-weight: bold;">PT. DUA FARMA MAHAKARSA</div>
+    <div style="text-align: center; font-weight: bold;">DF GROUP</div>
     <div style="text-align: center; margin-bottom: 10px;">
         Periode: <?= $filter_bulan ?> / <?= $filter_tahun ?> 
         | Cabang: <?= !empty($filter_cabang) ? $filter_cabang : 'Semua Cabang' ?>
@@ -138,8 +138,8 @@ echo "\xEF\xBB\xBF"; // UTF-8 BOM
                         <td rowspan="<?= $rowcount ?>"><?= htmlspecialchars($row['no_ppx']) ?></td>
                         <td class="text-center" rowspan="<?= $rowcount ?>"><?= date('d/m/Y', strtotime($row['tanggal_pengajuan'])) ?></td>
                         <td class="text-center" rowspan="<?= $rowcount ?>"><?= htmlspecialchars($row['request_type']) ?></td>
-                        <td rowspan="<?= $rowcount ?>"><?= htmlspecialchars($row['nama_pic']) ?></td>
                         <td rowspan="<?= $rowcount ?>"><?= htmlspecialchars($row['cabang']) ?></td>
+                        <td rowspan="<?= $rowcount ?>"><?= htmlspecialchars($row['nama_pic']) ?></td>
                         <td rowspan="<?= $rowcount ?>"><?= htmlspecialchars($row['nama_divisi'] ?? '-') ?></td>
                     <?php endif; ?>
                     

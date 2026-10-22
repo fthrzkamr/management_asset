@@ -88,9 +88,9 @@ $total_pages = $total_records > 0 ? ceil($total_records / $limit) : 1;
 
 // Main query with pagination and sorting
 $main_sql = "
-   SELECT kode_aset, `user`, nama_aset, kategori_aset, lokasi, merk, 
-         jumlah, satuan, kondisi
-   FROM asset_ga 
+   SELECT kode_aset, `user`, nama_aset, kategori_aset, lokasi, merk,
+         jumlah, satuan, kondisi, status_barang, status_kepemilikan
+   FROM asset_ga
    $where_clause
    ORDER BY $sort_column $sort_order
    LIMIT $limit OFFSET $offset
@@ -456,11 +456,8 @@ function getSortIcon($column, $current_sort, $current_order)
                                           Merk <?= getSortIcon('merk', $sort_column, $sort_order) ?>
                                        </a>
                                     </th>
-                                    <th>
-                                       <a href="<?= getSortUrl('jumlah', $sort_column, $sort_order) ?>" class="text-dark text-decoration-none">
-                                          Jumlah <?= getSortIcon('jumlah', $sort_column, $sort_order) ?>
-                                       </a>
-                                    </th>
+                                    <th class="text-center">Status</th>
+                                    <th class="text-center">Kepemilikan</th>
                                     <th>
                                        <a href="<?= getSortUrl('kondisi', $sort_column, $sort_order) ?>" class="text-dark text-decoration-none">
                                           Kondisi <?= getSortIcon('kondisi', $sort_column, $sort_order) ?>
@@ -481,7 +478,26 @@ function getSortIcon($column, $current_sort, $current_order)
                                        echo "<td>" . htmlspecialchars($row['kategori_aset']) . "</td>";
                                        echo "<td>" . htmlspecialchars($row['lokasi']) . "</td>";
                                        echo "<td>" . htmlspecialchars($row['merk'] ?: '-') . "</td>";
-                                       echo "<td>" . number_format($row['jumlah'], 0, ',', '.') . " " . htmlspecialchars($row['satuan']) . "</td>";
+                                       // Badge status barang
+                                       $status_val = $row['status_barang'] ?? 'Asset';
+                                       $status_cl = ($status_val === 'Sewa') ? 'badge-warning' : 'badge-primary';
+                                       echo "<td class='text-center'><span class='badge {$status_cl}'>" . htmlspecialchars($status_val) . "</span></td>";
+
+                                       // Badge kepemilikan
+                                       $kepemilikan_val = $row['status_kepemilikan'] ?? '';
+                                       if (empty($kepemilikan_val)) {
+                                          echo "<td class='text-center text-muted font-weight-bold'>-</td>";
+                                       } else {
+                                          $kep_cl = 'badge-info';
+                                          switch ($kepemilikan_val) {
+                                             case 'DFM': $kep_cl = 'badge-info'; break;
+                                             case 'MPF': $kep_cl = 'badge-success'; break;
+                                             case 'PLM': $kep_cl = 'badge-warning'; break;
+                                             case 'DUI': $kep_cl = 'badge-primary'; break;
+                                             default: $kep_cl = 'badge-secondary'; break;
+                                          }
+                                          echo "<td class='text-center'><span class='badge {$kep_cl}'>" . htmlspecialchars($kepemilikan_val) . "</span></td>";
+                                       }
 
                                        // Badge kondisi dengan warna
                                        $kondisi_class = '';
@@ -507,6 +523,7 @@ function getSortIcon($column, $current_sort, $current_order)
                                        echo "<td><span class='badge {$kondisi_class}'>" . htmlspecialchars($row['kondisi']) . "</span></td>";
 
 
+
                                        echo "<td class='text-center'>
                                                 <div >
                                                    <a href='#viewModal' 
@@ -526,7 +543,7 @@ function getSortIcon($column, $current_sort, $current_order)
                                        echo "</tr>";
                                     }
                                  } else {
-                                     echo "<tr><td colspan='9' class='text-center py-4'>";
+                                     echo "<tr><td colspan='10' class='text-center py-4'>";
                                     echo "<i class='fas fa-inbox fa-3x text-muted mb-3'></i><br>";
                                     echo "<span class='text-muted'>Tidak ada data yang ditemukan</span>";
                                     if (!empty($search)) {
@@ -728,15 +745,24 @@ function getSortIcon($column, $current_sort, $current_order)
             });
          });
 
-         // Auto-submit search after 500ms delay
+         // Auto-submit search after 2000ms delay
          let searchTimeout;
          $('input[name="search"]').on('input', function() {
             clearTimeout(searchTimeout);
             const form = $(this).closest('form');
             searchTimeout = setTimeout(function() {
                form.submit();
-            }, 500);
+            }, 2000);
          });
+
+         // Restore focus to search input and set cursor to the end
+         const searchInput = $('input[name="search"]');
+         if (searchInput.length && searchInput.val().length > 0) {
+            searchInput.focus();
+            const val = searchInput.val();
+            searchInput.val('');
+            searchInput.val(val);
+         }
 
          // Tooltip for action buttons
          $('[title]').tooltip();

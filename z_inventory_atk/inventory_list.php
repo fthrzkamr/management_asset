@@ -42,7 +42,7 @@ $result = mysqli_query($conn, "SELECT * FROM inventory_atk ORDER BY kategori, na
                     <li class="breadcrumb-item active">Master Barang</li>
                 </ul>
             </div>
-            <?php if ($auth->hasPermission('inventory_atk', 'create')): ?>
+            <?php if ($auth->hasPermission('inventory_atk_master', 'create')): ?>
             <div class="col-auto">
                 <a href="inventory_add.php" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Tambah Barang
@@ -77,7 +77,7 @@ $result = mysqli_query($conn, "SELECT * FROM inventory_atk ORDER BY kategori, na
                             <th>Nama Barang</th>
                             <th width="90">Satuan</th>
                             <th width="130">Kategori</th>
-                            <?php if ($auth->hasPermission('inventory_atk', 'update') || $auth->hasPermission('inventory_atk', 'delete')): ?>
+                            <?php if ($auth->hasPermission('inventory_atk_master', 'update') || $auth->hasPermission('inventory_atk_master', 'delete')): ?>
                             <th width="120">Aksi</th>
                             <?php endif; ?>
                         </tr>
@@ -95,14 +95,14 @@ $result = mysqli_query($conn, "SELECT * FROM inventory_atk ORDER BY kategori, na
                                 ?>
                                 <span class="badge badge-<?= $b ?>"><?= $row['kategori'] ?></span>
                             </td>
-                            <?php if ($auth->hasPermission('inventory_atk', 'update') || $auth->hasPermission('inventory_atk', 'delete')): ?>
+                            <?php if ($auth->hasPermission('inventory_atk_master', 'update') || $auth->hasPermission('inventory_atk_master', 'delete')): ?>
                             <td>
-                                <?php if ($auth->hasPermission('inventory_atk', 'update')): ?>
+                                <?php if ($auth->hasPermission('inventory_atk_master', 'update')): ?>
                                     <a href="inventory_edit.php?id=<?= $row['id_barang'] ?>" class="btn btn-sm btn-warning" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                 <?php endif; ?>
-                                <?php if ($auth->hasPermission('inventory_atk', 'delete')): ?>
+                                <?php if ($auth->hasPermission('inventory_atk_master', 'delete')): ?>
                                     <a href="inventory_delete.php?id=<?= $row['id_barang'] ?>"
                                        class="btn btn-sm btn-danger" title="Hapus"
                                        onclick="return confirm('Yakin hapus barang ini?')">

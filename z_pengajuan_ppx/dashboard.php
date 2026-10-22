@@ -38,6 +38,16 @@ $user_id = $_SESSION['id_user'];
 // Halaman pengajuan: selalu tampilkan hanya milik user yang sedang login
 $whereClause = "WHERE pr.user_id = " . (int)$user_id;
 
+// Cek apakah kolom request_type ada di tabel ppx_request dan ppx_approval_routing
+$check_pr = mysqli_query($conn, "SHOW COLUMNS FROM ppx_request LIKE 'request_type'");
+$has_pr_req_type = mysqli_num_rows($check_pr) > 0;
+
+$check_par = mysqli_query($conn, "SHOW COLUMNS FROM ppx_approval_routing LIKE 'request_type'");
+$has_par_req_type = mysqli_num_rows($check_par) > 0;
+
+$pr_req_col = $has_pr_req_type ? "pr.request_type," : "'' AS request_type,";
+$par_req_order = ($has_pr_req_type && $has_par_req_type) ? ", (par.request_type = COALESCE(pr.request_type, 'Regular')) DESC" : "";
+
 // Query untuk daftar pengajuan PPX
 $query = "SELECT 
     pr.no_ppx,
@@ -50,12 +60,13 @@ $query = "SELECT
     pr.status,
     pr.nominal_ppx,
     pr.user_id,
-    pr.request_type,
+    $pr_req_col
     (SELECT par.initial_status FROM ppx_approval_routing par 
      WHERE par.divisi_id = pr.divisi 
        AND (par.cabang IS NULL OR par.cabang = '' OR par.cabang = pr.cabang)
        AND par.is_active = 1 
-     ORDER BY (par.cabang = pr.cabang) DESC, (par.request_type = COALESCE(pr.request_type, 'Regular')) DESC 
+       AND (par.request_type IS NULL OR par.request_type = '' OR par.request_type = COALESCE(pr.request_type,'Regular') OR par.request_type = 'Semua')
+     ORDER BY (par.cabang = pr.cabang) DESC $par_req_order 
      LIMIT 1) AS route_initial_status,
     u.nama_user AS nama_pengaju,
     COUNT(prd.no_ppx_detail) AS total_items,
@@ -345,9 +356,14 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                     <?php endif; ?>
                                                                     
                                                                     <?php 
-                                                                    $is_revisi = strtolower(trim($row['status'])) === 'revisi';
+                                                                    $is_revisi  = strtolower(trim($row['status'])) === 'revisi';
                                                                     $is_initial = ($row['status'] === $row['route_initial_status']);
-                                                                    $can_delete = $is_revisi || $is_initial;
+                                                                    // Izinkan hapus juga jika status sama persis dengan route_initial_status
+                                                                    // atau jika status mengandung kata kunci tahap awal (fallback keamanan)
+                                                                    $first_stage_keywords = ['asmen finance','leader','kacab','hr','operasional'];
+                                                                    $status_lower = strtolower(trim($row['status']));
+                                                                    $is_first_stage = in_array($status_lower, $first_stage_keywords);
+                                                                    $can_delete = $is_revisi || $is_initial || $is_first_stage;
                                                                     ?>
                                                                     <button type="button" 
                                                                         class="btn btn-action <?= $can_delete ? 'btn-outline-danger' : 'btn-outline-secondary disabled' ?>" 
@@ -473,6 +489,9 @@ unset($_SESSION['success'], $_SESSION['error']);
     <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js"></script>
 
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
         $(document).ready(function() {
             $('#ppxTable').DataTable({
@@ -509,15 +528,43 @@ unset($_SESSION['success'], $_SESSION['error']);
         }
 
         function deleteRequest(no_ppx) {
-            showConfirm(
-                'Apakah Anda yakin ingin menghapus pengajuan PPX ini?<br><br><strong>Peringatan: Data yang sudah dihapus tidak dapat dikembalikan!</strong>',
-                function(confirmed) {
-                    if (confirmed) {
-                        window.location.href = 'delete.php?id=' + no_ppx;
-                    }
-                },
-                'delete'
-            );
+            Swal.fire({
+                title: 'Hapus Pengajuan?',
+                html: 'Yakin ingin menghapus <strong>' + no_ppx + '</strong>?<br><small class="text-danger">Tindakan ini tidak dapat dibatalkan!</small>',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-trash"></i> Ya, Hapus!',
+                cancelButtonText: 'Batal'
+            }).then(function(result) {
+                if (result.isConfirmed) {
+                    fetch('delete_ajax.php', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: 'no_ppx=' + encodeURIComponent(no_ppx)
+                    })
+                    .then(r => r.json())
+                    .then(function(data) {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: data.message,
+                                timer: 2000,
+                                showConfirmButton: false
+                            }).then(function() {
+                                location.reload();
+                            });
+                        } else {
+                            Swal.fire('Gagal!', data.message, 'error');
+                        }
+                    })
+                    .catch(function() {
+                        Swal.fire('Error!', 'Terjadi kesalahan koneksi.', 'error');
+                    });
+                }
+            });
         }
 
         function openRealisasiModal(no_ppx) {

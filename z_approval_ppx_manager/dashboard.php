@@ -71,43 +71,24 @@ $auth->requirePermission('approval_ppx_manager', 'approve');
     LEFT JOIN ppx_request_detail prd ON pr.no_ppx = prd.no_ppx
     LEFT JOIN divisi d ON pr.divisi = d.id_divisi
     LEFT JOIN departemen dep ON pr.departemen = dep.id_departemen
-    WHERE pr.status IN ('Leader', 'Manager', 'Finance', 'Direktur', 'Uang Muka', 'Done', 'Selesai', 'Revisi')
-    AND (
-        pr.flow_type IN ('pusat', 'finance_ap')
-        OR (pr.flow_type = 'cabang' AND $kacab_subquery = 0)
-    )
+    WHERE pr.status IN ('Manager', 'Selesai', 'Revisi')
     GROUP BY pr.no_ppx
     ORDER BY 
-        FIELD(pr.status, 'Leader', 'Manager', 'Finance', 'Direktur', 'Uang Muka', 'Done', 'Selesai', 'Revisi'),
+        FIELD(pr.status, 'Manager', 'Revisi', 'Selesai'),
         pr.tanggal_pengajuan DESC";
-
 
 $result = mysqli_query($conn, $query);
 if (!$result) {
     die("Query Error: " . mysqli_error($conn));
 }
 
-// Statistics query - Filter berdasarkan flow_type yang relevan untuk Manager Finance
 $stats_query = "SELECT 
-    COUNT(CASE WHEN status = 'Leader' THEN 1 END) as pending_leader,
     COUNT(CASE WHEN status = 'Manager' THEN 1 END) as pending_manager,
-    COUNT(CASE WHEN status = 'Finance' THEN 1 END) as pending_finance,
-    COUNT(CASE WHEN status = 'Direktur' THEN 1 END) as pending_direktur,
-    COUNT(CASE WHEN status IN ('Done','Selesai') THEN 1 END) as approved,
-    COUNT(CASE WHEN status = 'Uang Muka' THEN 1 END) as uang_muka,
+    COUNT(CASE WHEN status = 'Selesai' THEN 1 END) as approved,
     COUNT(CASE WHEN status = 'Revisi' THEN 1 END) as rejected,
     COUNT(*) as total
 FROM ppx_request pr
-WHERE (
-    pr.flow_type IN ('pusat', 'finance_ap')
-    OR (pr.flow_type = 'cabang' AND (
-        SELECT COUNT(*) 
-        FROM user_dfm uk
-        INNER JOIN roles rk ON uk.id_role = rk.id_role
-        WHERE uk.id_cabang = pr.cabang_user
-        AND rk.nama_role = 'kacab'
-    ) = 0)
-)";
+WHERE status IN ('Manager', 'Selesai', 'Revisi')";
 
 $stats_result = mysqli_query($conn, $stats_query);
 $stats = mysqli_fetch_assoc($stats_result);
@@ -410,15 +391,6 @@ unset($_SESSION['success'], $_SESSION['error']);
 
                                                                 // Manager Finance bisa approve status 'Manager'
                                                                 if ($current_status === 'Manager') {
-                                                                    $can_approve = true;
-                                                                } 
-                                                                // Jika status Leader TAPI dari divisi Finance AR, Finance AP, Tax, Finance
-                                                                elseif ($current_status === 'Leader' && (
-                                                                    strpos($divisi_name, 'finance ar') !== false || 
-                                                                    strpos($divisi_name, 'finance ap') !== false || 
-                                                                    strpos($divisi_name, 'tax') !== false || 
-                                                                    strpos($divisi_name, 'finance') !== false
-                                                                )) {
                                                                     $can_approve = true;
                                                                 }
 

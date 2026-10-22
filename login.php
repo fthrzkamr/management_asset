@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dua Farma</title>
+    <title>DF GROUP</title>
     <link href="assets/css/login.css" rel="stylesheet" type="text/css">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
@@ -42,10 +42,10 @@
               <!-- 2 baris teks di tengah dengan responsive font -->
               <div class="text-center mb-4">
                 <h4 class="mb-1 d-none d-sm-block">Asset & Budget Management System</h4>
-                <h4 class="mb-0 d-none d-sm-block">Dua Farma Group</h4>
+                <h4 class="mb-0 d-none d-sm-block">DF GROUP</h4>
                 <!-- Mobile version dengan font lebih kecil -->
                 <h5 class="mb-1 d-block d-sm-none">Asset & Budget Management System</h5>
-                <h5 class="mb-0 d-block d-sm-none">Dua Farma Group</h5>
+                <h5 class="mb-0 d-block d-sm-none">DF GROUP</h5>
               </div>
 
               <?php if (isset($_GET['err'])): ?>
@@ -68,6 +68,12 @@
                         icon: 'error',
                         title: 'Akun Tidak Ditemukan',
                         text: 'Silakan cek kembali username Anda.'
+                      });
+                    <?php elseif ($_GET['err'] == 'dberror'): ?>
+                      Swal.fire({
+                        icon: 'error',
+                        title: 'Database Error',
+                        text: 'Terjadi masalah pada koneksi database. Hubungi IT Admin.'
                       });
                     <?php endif; ?>
                   });
@@ -97,6 +103,8 @@
                     <i class="fa fa-sign-in mr-2"></i>Login
                   </button>
                 </div>
+
+
 
               </form>
             </div>

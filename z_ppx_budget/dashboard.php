@@ -191,11 +191,7 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                         <li class="breadcrumb-item active">Anggaran Bulanan</li>
                     </ul>
                 </div>
-                <div class="col-auto">
-                    <a href="monthly_budget_create.php" class="btn btn-primary">
-                        <i class="fas fa-plus"></i> Buat Budget Baru
-                    </a>
-                </div>
+
             </div>
         </div>
 
@@ -268,12 +264,18 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                                 </div>
                                 
                                 <?php if (!empty($budget['file_excel'])): ?>
-                                    <div class="mb-3">
+                                    <div class="mb-3 d-inline-block mr-2">
                                         <a href="../uploads/ppx_excel/<?= htmlspecialchars($budget['file_excel']) ?>" class="btn btn-sm btn-outline-success" target="_blank" download>
-                                            <i class="fas fa-file-excel"></i> Download Lampiran Excel
+                                            <i class="fas fa-download"></i> Download Lampiran Excel
                                         </a>
                                     </div>
                                 <?php endif; ?>
+                                
+                                <div class="mb-3 d-inline-block">
+                                    <a href="export_excel.php?id=<?= $budget['id_budget'] ?>" class="btn btn-sm btn-success">
+                                        <i class="fas fa-file-excel"></i> Export Laporan ke Excel
+                                    </a>
+                                </div>
                                 
                                 <?php if ($budget['status'] === 'Revisi'): ?>
                                     <div class="alert alert-warning border-left border-danger mb-3" style="border-left-width:4px!important">
@@ -402,9 +404,7 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                             <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                             <h5 class="text-muted">Belum ada anggaran bulanan yang disetujui</h5>
                             <p class="text-muted">Budget yang sudah diapprove oleh Manager Finance akan muncul di sini</p>
-                            <a href="monthly_budget_create.php" class="btn btn-primary mt-2">
-                                <i class="fas fa-plus"></i> Buat Budget Baru
-                            </a>
+
                         </div>
                     </div>
                 <?php endif; ?>

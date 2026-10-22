@@ -331,6 +331,7 @@ if (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'z_appro
                 </div>
 
                 <!-- Detail Items Card -->
+                               <!-- Detail Items Card -->
                 <div class="row mt-4">
                     <div class="col-12">
                         <div class="card detail-card">
@@ -342,46 +343,61 @@ if (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'z_appro
                             </div>
                             <div class="card-body">
                                 <?php if (mysqli_num_rows($result_detail) > 0): ?>
-                                    <?php $total_all = 0;
-                                    $no = 1; ?>
-                                    <?php while ($detail = mysqli_fetch_assoc($result_detail)): ?>
-                                        <?php $total_all += $detail['total_harga']; ?>
-                                        <div class="detail-item">
-                                            <div class="row">
-                                                <div class="col-md-1">
-                                                    <h6 class="text-primary">#<?= $no++ ?></h6>
-                                                </div>
-                                                <div class="col-md-11">
-                                                    <div class="row">
-                                                        <div class="col-md-3">
-                                                            <small class="info-label">No. Akun:</small><br>
-                                                            <strong><?= htmlspecialchars($detail['no_akun']) ?></strong>
-                                                        </div>
-                                                        <div class="col-md-3">
-                                                            <small class="info-label">Jumlah & Satuan:</small><br>
-                                                            <strong><?= number_format($detail['jumlah']) ?> <?= htmlspecialchars($detail['satuan']) ?></strong>
-                                                        </div>
-                                                    </div>
-                                                    <div class="row mt-2">
-                                                        <div class="col-md-3">
-                                                            <small class="info-label">Harga Satuan:</small><br>
-                                                            Rp <?= number_format($detail['harga_satuan'], 0, ',', '.') ?>
-                                                        </div>
-                                                        <div class="col-md-3">
-                                                            <small class="info-label">Total Harga:</small><br>
-                                                            <strong class="text-primary">Rp <?= number_format($detail['total_harga'], 0, ',', '.') ?></strong>
-                                                        </div>
-                                                        <div class="col-md-6">
-                                                            <?php if (!empty($detail['deskripsi'])): ?>
-                                                                <small class="info-label">Deskripsi:</small><br>
-                                                                <small class="text-muted"><?= htmlspecialchars($detail['deskripsi']) ?></small>
-                                                            <?php endif; ?>
-                                                        </div>
-                                                    </div>
-                                                </div>
+                                    <?php 
+                                    $grouped_details = [];
+                                    $total_all = 0;
+                                    while ($detail = mysqli_fetch_assoc($result_detail)) {
+                                        $akun = $detail['no_akun'] ?: 'Tanpa Akun';
+                                        if (!isset($grouped_details[$akun])) {
+                                            $grouped_details[$akun] = [];
+                                        }
+                                        $grouped_details[$akun][] = $detail;
+                                        $total_all += $detail['total_harga'];
+                                    }
+                                    ?>
+                                    
+                                    <?php foreach ($grouped_details as $akun => $items): ?>
+                                        <?php 
+                                            // Hitung subtotal untuk akun ini
+                                            $subtotal = 0;
+                                            foreach($items as $item) $subtotal += $item['total_harga']; 
+                                        ?>
+                                        <div class="card mb-4 border-info shadow-sm">
+                                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0 text-dark"><i class="fas fa-wallet text-info"></i> Kategori: <strong><?= htmlspecialchars($akun) ?></strong></h6>
+                                                <h6 class="mb-0 text-primary">Subtotal: Rp <?= number_format($subtotal, 0, ',', '.') ?></h6>
+                                            </div>
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered table-hover mb-0">
+                                                    <thead class="thead-light">
+                                                        <tr>
+                                                            <th width="5%" class="text-center">No</th>
+                                                            <th width="35%">Rincian Item</th>
+                                                            <th width="15%" class="text-center">Qty</th>
+                                                            <th width="20%" class="text-right">Harga Satuan</th>
+                                                            <th width="25%" class="text-right">Total</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <?php $no = 1; foreach ($items as $item): ?>
+                                                            <tr>
+                                                                <td class="text-center"><?= $no++ ?></td>
+                                                                <td>
+                                                                    <?= htmlspecialchars($item['rincian']) ?>
+                                                                    <?php if (!empty($item['deskripsi'])): ?>
+                                                                        <br><small class="text-muted"><?= htmlspecialchars($item['deskripsi']) ?></small>
+                                                                    <?php endif; ?>
+                                                                </td>
+                                                                <td class="text-center"><?= number_format($item['jumlah']) ?> <?= htmlspecialchars($item['satuan']) ?></td>
+                                                                <td class="text-right">Rp <?= number_format($item['harga_satuan'], 0, ',', '.') ?></td>
+                                                                <td class="text-right"><strong>Rp <?= number_format($item['total_harga'], 0, ',', '.') ?></strong></td>
+                                                            </tr>
+                                                        <?php endforeach; ?>
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         </div>
-                                    <?php endwhile; ?>
+                                    <?php endforeach; ?>
 
                                     <!-- Total Summary -->
                                     <div class="alert alert-info mt-3">
@@ -395,6 +411,12 @@ if (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'z_appro
                                         </div>
                                     </div>
 
+                                    <!-- Tombol Kembali di bawah Total (pindah ke kiri) -->
+                                    <div class="text-left mb-4">
+                                        <a href="dashboard.php" class="btn btn-secondary">
+                                            <i class="fas fa-arrow-left"></i> Kembali
+                                        </a>
+                                    </div>
                                 <?php else: ?>
                                     <div class="text-center py-4">
                                         <i class="fas fa-inbox fa-3x text-muted mb-3"></i>

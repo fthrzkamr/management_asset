@@ -25,7 +25,7 @@ if (!$id_budget) {
 $query = "SELECT mb.*, u.nama_user as creator_name
           FROM ppx_monthly_budget mb
           LEFT JOIN user_dfm u ON mb.created_by = u.id_user
-          WHERE mb.id_monthly_budget = ?";
+          WHERE mb.id_budget = ?";
 
 $stmt = mysqli_prepare($conn, $query);
 mysqli_stmt_bind_param($stmt, 'i', $id_budget);
@@ -40,19 +40,19 @@ if (mysqli_num_rows($result) == 0) {
 
 $budget = mysqli_fetch_assoc($result);
 
-// Cek status - harus Pending
-if ($budget['status'] !== 'Pending') {
-    $_SESSION['error'] = 'Budget ini tidak dalam status Pending!';
+// Cek status - harus Pending atau Revisi
+if ($budget['status'] !== 'Pending' && $budget['status'] !== 'Revisi') {
+    $_SESSION['error'] = 'Budget ini tidak dalam status yang dapat diproses!';
     header("Location: dashboard.php");
     exit();
 }
 
-// Ambil detail items
-$items_query = "SELECT mbi.*, pbc.category_name, pbc.category_code
-                FROM ppx_monthly_budget_item mbi
-                LEFT JOIN ppx_budget_category pbc ON mbi.id_category = pbc.id_category
-                WHERE mbi.monthly_budget_id = ?
-                ORDER BY pbc.category_name";
+// Ambil detail items (item level)
+$items_query = "SELECT d.*, bc.category_name, bc.category_code
+                FROM ppx_monthly_budget_item_detail d
+                LEFT JOIN ppx_budget_category bc ON d.id_category = bc.id_category
+                WHERE d.id_budget = ?
+                ORDER BY bc.category_name, d.id";
 
 $stmt_items = mysqli_prepare($conn, $items_query);
 mysqli_stmt_bind_param($stmt_items, 'i', $id_budget);
@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                       approved_by = ?,
                       approved_at = NOW(),
                       approval_notes = ?
-                      WHERE id_monthly_budget = ?";
+                      WHERE id_budget = ?";
         
         $stmt_update = mysqli_prepare($conn, $update_sql);
         mysqli_stmt_bind_param($stmt_update, 'isi', $_SESSION['id_user'], $approval_notes, $id_budget);
@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                           approved_by = ?,
                           approved_at = NOW(),
                           approval_notes = ?
-                          WHERE id_monthly_budget = ?";
+                          WHERE id_budget = ?";
             
             $stmt_update = mysqli_prepare($conn, $update_sql);
             mysqli_stmt_bind_param($stmt_update, 'isi', $_SESSION['id_user'], $approval_notes, $id_budget);
@@ -164,12 +164,12 @@ unset($_SESSION['error']);
                                         <td><?= htmlspecialchars($budget['budget_name']) ?></td>
                                     </tr>
                                     <tr>
-                                        <th>Sumber Dana</th>
-                                        <td><?= htmlspecialchars($budget['master_id']) ?></td>
+                                        <th>Tipe Anggaran</th>
+                                        <td><span class="badge badge-info"><?= htmlspecialchars($budget['tipe_anggaran'] ?? 'N/A') ?></span></td>
                                     </tr>
                                     <tr>
-                                        <th>Dibuat Oleh</th>
-                                        <td><?= htmlspecialchars($budget['creator_name']) ?></td>
+                                        <th>Sumber Dana</th>
+                                        <td><?= htmlspecialchars($budget['master_id'] ?? '-') ?></td>
                                     </tr>
                                 </table>
                             </div>
@@ -184,8 +184,8 @@ unset($_SESSION['error']);
                                         <td><span class="badge badge-warning"><?= $budget['status'] ?></span></td>
                                     </tr>
                                     <tr>
-                                        <th>Tanggal Dibuat</th>
-                                        <td><?= date('d/m/Y H:i', strtotime($budget['created_at'])) ?></td>
+                                        <th>Dibuat Oleh</th>
+                                        <td><?= htmlspecialchars($budget['creator_name']) ?></td>
                                     </tr>
                                     <tr>
                                         <th>Catatan</th>
@@ -204,20 +204,22 @@ unset($_SESSION['error']);
             <div class="col-md-12">
                 <div class="card">
                     <div class="card-header">
-                        <h4 class="card-title mb-0">Detail Alokasi per Kategori</h4>
+                        <h4 class="card-title mb-0">Rincian Item Anggaran</h4>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-bordered">
+                            <table class="table table-bordered table-sm">
                                 <thead class="bg-light">
                                     <tr>
                                         <th>No</th>
-                                        <th>Kode</th>
                                         <th>Kategori</th>
-                                        <th>Alokasi</th>
-                                        <th>Sisa</th>
-                                        <th>Carryover</th>
-                                        <th>Catatan</th>
+                                        <th>Rincian</th>
+                                        <th>Qty</th>
+                                        <th>Satuan</th>
+                                        <th>Jml Hari</th>
+                                        <th>Jml Minggu</th>
+                                        <th>Harga Satuan</th>
+                                        <th>Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -225,30 +227,25 @@ unset($_SESSION['error']);
                                     $no = 1;
                                     $total = 0;
                                     while ($item = mysqli_fetch_assoc($items_result)): 
-                                        $total += $item['allocation'];
+                                        $total += $item['total'];
                                     ?>
                                         <tr>
                                             <td><?= $no++ ?></td>
-                                            <td><?= htmlspecialchars($item['category_code']) ?></td>
-                                            <td><?= htmlspecialchars($item['category_name']) ?></td>
-                                            <td>Rp <?= number_format($item['allocation'], 0, ',', '.') ?></td>
-                                            <td>Rp <?= number_format($item['remaining'], 0, ',', '.') ?></td>
-                                            <td>
-                                                <?php if ($item['allow_carryover']): ?>
-                                                    <span class="badge badge-success">Ya</span>
-                                                <?php else: ?>
-                                                    <span class="badge badge-secondary">Tidak</span>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td><?= htmlspecialchars($item['notes']) ?: '-' ?></td>
+                                            <td><small><?= htmlspecialchars($item['category_name']) ?></small></td>
+                                            <td><?= htmlspecialchars($item['rincian']) ?></td>
+                                            <td class="text-center"><?= number_format($item['qty'], 0) ?></td>
+                                            <td><?= htmlspecialchars($item['satuan']) ?></td>
+                                            <td class="text-center"><?= $item['jumlah_hari'] ?: '-' ?></td>
+                                            <td class="text-center"><?= $item['jumlah_minggu'] ?: '-' ?></td>
+                                            <td class="text-right">Rp <?= number_format($item['harga_satuan'], 0, ',', '.') ?></td>
+                                            <td class="text-right font-weight-bold">Rp <?= number_format($item['total'], 0, ',', '.') ?></td>
                                         </tr>
                                     <?php endwhile; ?>
                                 </tbody>
                                 <tfoot class="bg-light">
                                     <tr>
-                                        <th colspan="3" class="text-right">Total:</th>
-                                        <th>Rp <?= number_format($total, 0, ',', '.') ?></th>
-                                        <th colspan="3"></th>
+                                        <th colspan="8" class="text-right">Total:</th>
+                                        <th class="text-right">Rp <?= number_format($total, 0, ',', '.') ?></th>
                                     </tr>
                                 </tfoot>
                             </table>

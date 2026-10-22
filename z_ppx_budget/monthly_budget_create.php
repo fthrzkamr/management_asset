@@ -97,9 +97,9 @@ $master_budgets_result = null;
                         <h4 class="card-title mb-0"><i class="fas fa-plus-circle"></i> Form Budget Baru</h4>
                     </div>
                     <div class="card-body">
-                        <div class="alert alert-info">
+                        <!-- <div class="alert alert-info">
                             <strong>Catatan alur:</strong> Cabang dapat mengajukan budget tanpa memilih Sumber Dana (Master Anggaran). Finance akan meninjau dan melakukan commit/penetapan Master Anggaran untuk periode tersebut kemudian.
-                        </div>
+                        </div> -->
                         <form action="monthly_budget_create_insert.php" method="POST" id="budgetForm" enctype="multipart/form-data">
                             <div class="row">
                                 <div class="col-md-4">
@@ -120,20 +120,16 @@ $master_budgets_result = null;
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label>Tahun <span class="text-danger">*</span></label>
-                                        <select name="period_year" id="period_year" class="form-control" required>
-                                            <?php
-                                            $current_year = date('Y');
-                                            for ($y = $current_year - 1; $y <= $current_year + 2; $y++) {
-                                                $sel = ($y == $current_year) ? 'selected' : '';
-                                                echo '<option value="' . $y . '" ' . $sel . '>' . $y . '</option>';
-                                            }
-                                            ?>
+                                        <?php $current_year = date('Y'); ?>
+                                        <select name="period_year" id="period_year" class="form-control bg-light" required style="pointer-events: none;">
+                                            <option value="<?= $current_year ?>" selected><?= $current_year ?></option>
                                         </select>
+                                        <small class="text-muted">Tahun berjalan</small>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="form-group">
-                                        <label>Tipe Anggaran <span class="text-danger">*</span></label>
+                                        <label>Tipe Kas <span class="text-danger">*</span></label>
                                         <select name="tipe_anggaran" id="tipe_anggaran" class="form-control" required>
                                             <option value="">-- Pilih Tipe --</option>
                                             <option value="Kas Besar BCA">Kas Besar BCA</option>
@@ -154,7 +150,8 @@ $master_budgets_result = null;
                                 </div>
                             </div>
 
-                            <div class="row">
+                            <input type="hidden" name="master_id" value="">
+                            <!-- <div class="row">
                                 <div class="col-md-12">
                                     <div class="form-group">
                                         <label>Sumber Dana (Master Anggaran)</label>
@@ -164,15 +161,15 @@ $master_budgets_result = null;
                                         <small class="text-muted">Opsional. Jika tidak dipilih, Finance akan menentukan sumber dana nanti.</small>
                                     </div>
                                 </div>
-                            </div>
+                            </div> -->
 
                             <!-- Master Balance Info -->
-                            <div id="masterBalanceInfo" class="alert alert-info" style="display:none;">
+                            <!-- <div id="masterBalanceInfo" class="alert alert-info" style="display:none;">
                                 <strong>Info Saldo Master Anggaran:</strong><br>
                                 <strong>Saldo Tersedia: </strong><span id="availableBalance">Rp 0</span><br>
-                            </div>
+                            </div> -->
 
-                            <div class="row">
+                            <!-- <div class="row">
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label>Cabang</label>
@@ -200,9 +197,22 @@ $master_budgets_result = null;
                                         <small class="text-muted">Departemen pengguna</small>
                                     </div>
                                 </div>
-                            </div>
+                            </div> -->
 
                             <hr>
+
+                            <!-- LOAD DARI BULAN LALU (Fitur Utama) -->
+                            <div id="prevBudgetCard" class="alert alert-info d-flex align-items-center justify-content-between mb-3" style="display:none !important;">
+                                <div>
+                                    <i class="fas fa-history text-primary mr-2"></i>
+                                    <strong>Muat Pengajuan Terakhir:</strong>
+                                    <span id="prevBudgetInfo" class="ml-1 text-muted">Pilih Bulan terlebih dahulu.</span>
+                                </div>
+                                <button type="button" id="btnLoadPrev" class="btn btn-primary btn-sm ml-3" style="white-space:nowrap;" disabled>
+                                    <i class="fas fa-file-import"></i> Muat
+                                </button>
+                            </div>
+                            <div id="loadStatus" style="display:none;" class="mb-3"></div>
 
                             <div class="row">
                                 <div class="col-md-6">
@@ -214,9 +224,14 @@ $master_budgets_result = null;
                                 </div>
                                 <div class="col-md-6">
                                     <div class="form-group">
-                                        <label>Upload File Excel</label>
-                                        <input type="file" name="file_excel" class="form-control-file" accept=".xls,.xlsx">
-                                        <small class="text-muted">Lampirkan file Excel rincian budget (Opsional)</small>
+                                        <label><i class="fas fa-file-excel text-success"></i> Upload Lampiran Excel (Opsional)</label>
+                                        <div class="custom-file mb-1">
+                                            <input type="file" name="file_excel" class="custom-file-input" id="file_excel" accept=".xls,.xlsx">
+                                            <label class="custom-file-label" for="file_excel">Pilih file Excel...</label>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">
+                                            <i class="fas fa-info-circle"></i> File Excel ini akan disimpan sebagai lampiran dokumen pengajuan budget Anda.
+                                        </small>
                                     </div>
                                 </div>
                             </div>
@@ -230,7 +245,7 @@ $master_budgets_result = null;
                                 <!-- Category groups will be added here -->
                             </div>
                             
-                            <button type="button" id="addCategory" class="btn btn-primary mt-3">
+                            <button type="button" id="addCategory" class="btn btn-primary btn-sm mt-3" style="width: auto; min-width: 150px;">
                                 <i class="fa fa-plus"></i> Tambah Kategori Baru
                             </button>
                             
@@ -247,21 +262,30 @@ $master_budgets_result = null;
                                 </div>
                             </div>
 
-                            <div class="text-right mt-3">
-                                <a href="monthly_budget_list.php" class="btn btn-secondary">Batal</a>
-                                <button type="submit" class="btn btn-success">
-                                    <i class="fas fa-save"></i> Simpan Budget
-                                </button>
-                            </div>
+                             <div class="text-right mt-3">
+                                 <a href="monthly_budget_list.php" class="btn btn-secondary">Batal</a>
+                                 <button type="submit" name="action" value="draft" class="btn btn-warning">
+                                     <i class="fas fa-edit"></i> Simpan sebagai Draft
+                                 </button>
+                                 <button type="submit" name="action" value="submit" class="btn btn-success">
+                                     <i class="fas fa-save"></i> Simpan Budget
+                                 </button>
+                             </div>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
+
+
+
         <?php include_once('../layouts/footer.php'); ?>
 
     </div>
 </div>
+
+<!-- SheetJS Library untuk baca Excel di browser -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 
 <script>
@@ -316,9 +340,6 @@ $(document).ready(function() {
                         <span class="category-subtotal text-primary font-weight-bold h5" data-category-id="${catId}">Rp 0</span>
                     </div>
                     <div class="col-md-4 text-right" style="padding-top: 24px;">
-                        <button type="button" class="btn btn-sm btn-success add-item-btn" data-category-id="${catId}" title="Tambah Item">
-                            <i class="fa fa-plus"></i> Item
-                        </button>
                         <button type="button" class="btn btn-sm btn-danger remove-category-btn" title="Hapus Kategori">
                             <i class="fa fa-trash"></i> Kategori
                         </button>
@@ -341,6 +362,15 @@ $(document).ready(function() {
                         <tbody class="items-body" data-category-id="${catId}">
                             <!-- Items will be added here -->
                         </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="8" class="p-2">
+                                    <button type="button" class="btn btn-xs btn-success add-item-btn" data-category-id="${catId}">
+                                        <i class="fa fa-plus"></i> Item Baru
+                                    </button>
+                                </td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
@@ -511,83 +541,168 @@ $(document).ready(function() {
         addCategory();
     });
 
+    // Auto-check and AUTO-LOAD previous month budget
+    function checkPrevBudget() {
+        const month = $('#period_month').val();
+        const year  = $('#period_year').val();
+        const tipe  = $('#tipe_anggaran').val();
+
+        if (!month) {
+            $('#prevBudgetCard').hide();
+            return;
+        }
+
+        // Hitung nama bulan lalu
+        const monthNames = ['','Januari','Februari','Maret','April','Mei','Juni',
+                            'Juli','Agustus','September','Oktober','November','Desember'];
+        let prevMonth = parseInt(month) - 1;
+        let prevYear  = parseInt(year);
+        if (prevMonth < 1) { prevMonth = 12; prevYear--; }
+
+        $('#prevBudgetInfo').text('Mengecek data terakhir...');
+        $('#prevBudgetCard').show().css('display','flex');
+        $('#btnLoadPrev').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+        $.getJSON('get_prev_month_budget.php', { month: month, year: year, tipe: tipe })
+            .done(function(res) {
+                if (res.success && res.categories && res.categories.length > 0) {
+                    $('#prevBudgetInfo').html('Ditemukan data <strong>' + res.period + '</strong> (' + res.categories.length + ' kategori). Klik Muat untuk mengisi form.');
+                    $('#btnLoadPrev').prop('disabled', false)
+                        .html('<i class="fas fa-file-import"></i> Muat')
+                        .data('budgetData', res);
+                } else {
+                    $('#prevBudgetInfo').text('Tidak ada data dari pengajuan sebelumnya untuk Tipe Kas ini.');
+                    $('#btnLoadPrev').prop('disabled', true).html('<i class="fas fa-file-import"></i> Muat');
+                }
+            })
+            .fail(function() {
+                $('#prevBudgetInfo').text('Gagal mengecek data sebelumnya.');
+                $('#btnLoadPrev').prop('disabled', true).html('<i class="fas fa-file-import"></i> Muat');
+            });
+    }
+
+    // Handler tombol Muat manual
+    $('#btnLoadPrev').on('click', function() {
+        const res = $(this).data('budgetData');
+        if (!res) return;
+        if (confirm('Muat data dari ' + res.period + '?\nSemua item yang sedang diisi akan diganti.')) {
+            populateFromData(res);
+            $('#loadStatus').html('<div class="alert alert-success py-2"><i class="fas fa-check-circle"></i> Data dari <strong>' + res.period + '</strong> berhasil dimuat!</div>').show();
+            setTimeout(function(){ $('#loadStatus').fadeOut(); }, 4000);
+        }
+    });
+
+    function populateFromData(budgetData) {
+        // Clear existing categories
+        $('#categoriesContainer').empty();
+        categoryCounter = 0;
+
+        budgetData.categories.forEach(function(cat) {
+            categoryCounter++;
+            const catId = 'cat_auto_' + Date.now() + '_' + categoryCounter;
+
+            const categoryBlock = `
+                <div class="border rounded p-3 mb-3 category-block" data-category-id="${catId}" style="background-color: #f8f9fa;">
+                    <div class="row align-items-center mb-2">
+                        <div class="col-md-3">
+                            <label class="mb-1" style="font-size: 13px;"><strong>Kategori:</strong></label>
+                            <select class="form-control form-control-sm category-select" data-category-id="${catId}" required>
+                                <option value="">-- Pilih Kategori --</option>
+                                ${categoryOptions}
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="mb-1" style="font-size: 13px;"><strong>Subtotal Kategori:</strong></label><br>
+                            <span class="category-subtotal text-primary font-weight-bold h5" data-category-id="${catId}">Rp 0</span>
+                        </div>
+                        <div class="col-md-4 text-right" style="padding-top: 24px;">
+                            <button type="button" class="btn btn-sm btn-danger remove-category-btn" title="Hapus Kategori">
+                                <i class="fa fa-trash"></i> Kategori
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th style="width: 28%;">Rincian Item</th>
+                                    <th style="width: 8%;">Qty</th>
+                                    <th style="width: 9%;">Satuan</th>
+                                    <th style="width: 9%;">Jml Hari</th>
+                                    <th style="width: 9%;">Jml Minggu</th>
+                                    <th style="width: 16%;">Harga Satuan</th>
+                                    <th style="width: 16%;">Total</th>
+                                    <th style="width: 5%;"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="items-body" data-category-id="${catId}">
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="8" class="p-2">
+                                        <button type="button" class="btn btn-xs btn-success add-item-btn" data-category-id="${catId}">
+                                            <i class="fa fa-plus"></i> Item Baru
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            `;
+            $('#categoriesContainer').append(categoryBlock);
+            bindCategoryEvents();
+
+            $(`.category-select[data-category-id="${catId}"]`).val(cat.category_id);
+            updateCategoryForItems(catId);
+
+            cat.items.forEach(function(item) {
+                const itemIndex = Date.now() + '_' + Math.floor(Math.random() * 100000);
+                const itemId    = 'item_auto_' + itemIndex;
+
+                const satuanOptions = ['', 'pcs', 'unit', 'kg', 'meter', 'box', 'set', 'ltr', 'dll']
+                    .map(s => `<option value="${s}" ${s === item.satuan ? 'selected' : ''}>${s || '-'}</option>`)
+                    .join('');
+
+                const hargaFormatted = formatRupiah(parseInt(item.harga_satuan) || 0);
+                const totalFormatted = formatRupiah(parseInt(item.total_amount) || 0);
+
+                const itemRow = `
+                    <tr data-item-id="${itemId}" data-category-id="${catId}" data-item-index="${itemIndex}">
+                        <td>
+                            <input type="hidden" name="items[${itemIndex}][category]" class="item-category-ref" data-category-id="${catId}" value="${cat.category_id}">
+                            <input type="text" name="items[${itemIndex}][rincian]" class="form-control form-control-sm item-rincian" value="${item.rincian}" placeholder="Deskripsi item" required>
+                        </td>
+                        <td><input type="number" name="items[${itemIndex}][qty]" class="form-control form-control-sm item-qty" value="${item.qty || 1}" min="1"></td>
+                        <td>
+                            <select name="items[${itemIndex}][satuan]" class="form-control form-control-sm item-satuan">${satuanOptions}</select>
+                        </td>
+                        <td><input type="number" name="items[${itemIndex}][jumlah_hari]" class="form-control form-control-sm" value="${item.jumlah_hari || ''}" placeholder="0" min="0"></td>
+                        <td><input type="number" name="items[${itemIndex}][jumlah_minggu]" class="form-control form-control-sm" value="${item.jumlah_minggu || ''}" placeholder="0" min="0"></td>
+                        <td><input type="text" name="items[${itemIndex}][harga]" class="form-control form-control-sm item-price" value="${hargaFormatted}" placeholder="0"></td>
+                        <td><input type="text" name="items[${itemIndex}][total]" class="form-control form-control-sm item-total" value="${totalFormatted}" placeholder="0"></td>
+                        <td><button type="button" class="btn btn-sm btn-danger remove-item-btn">&times;</button></td>
+                    </tr>
+                `;
+
+                $(`.items-body[data-category-id="${catId}"]`).append(itemRow);
+                bindItemEvents();
+            });
+
+            updateCategorySubtotal(catId);
+        });
+
+        updateTotals();
+    }
+
     // Add one category on load
     addCategory();
 
-    // Load master budgets based on selected period
-    function loadMasterBudgets() {
-        const month = $('#period_month').val();
-        const year = $('#period_year').val();
-        
-        if (!month || !year) {
-            $('#master_id').html('<option value="">-- Pilih Bulan dan Tahun terlebih dahulu --</option>').prop('disabled', true);
-            $('#masterBalanceInfo').hide();
-            return;
-        }
-        
-        // Show loading
-        $('#master_id').html('<option value="">Loading...</option>').prop('disabled', true);
-        
-        // AJAX request to get master budgets for this period
-        $.ajax({
-            url: 'get_master_budgets_by_period.php',
-            type: 'GET',
-            data: { month: month, year: year },
-            dataType: 'json',
-            success: function(response) {
-                if (response.success && response.budgets) {
-                    let options = '<option value="">-- Pilih Master Anggaran --</option>';
-                    
-                    if (response.budgets.length === 0) {
-                        options = '<option value="" disabled>Tidak ada master anggaran tersedia untuk periode ini</option>';
-                        $('#master_id').html(options).prop('disabled', true);
-                    } else {
-                        response.budgets.forEach(function(budget) {
-                            const balanceFormatted = 'Rp ' + parseInt(budget.balance).toLocaleString('id-ID');
-                            options += `<option value="${budget.master_id}" data-balance="${budget.balance}">`;
-                            options += `${budget.master_id} - ${budget.description} (Saldo: ${balanceFormatted})`;
-                            options += `</option>`;
-                        });
-                        $('#master_id').html(options).prop('disabled', false);
-                    }
-                } else {
-                    $('#master_id').html('<option value="" disabled>Error loading data</option>').prop('disabled', true);
-                }
-            },
-            error: function() {
-                $('#master_id').html('<option value="" disabled>Error loading data</option>').prop('disabled', true);
-                alert('Gagal memuat data master anggaran. Silakan coba lagi.');
-            }
-        });
-    }
-    
-    // Trigger load when month or year changes
-    $('#period_month, #period_year').on('change', function() {
-        loadMasterBudgets();
-    });
-    
-    // Auto-load on page load if month and year are already selected
-    if ($('#period_month').val() && $('#period_year').val()) {
-        loadMasterBudgets();
-    }
 
-    // Handle master budget selection
-    $('#master_id').change(function() {
-        let selectedOption = $(this).find('option:selected');
-        masterBalance = parseFloat(selectedOption.data('balance')) || 0;
-        
-        if (masterBalance > 0) {
-            $('#masterBalanceInfo').show();
-            updateBalanceInfo();
-        } else {
-            $('#masterBalanceInfo').hide();
-        }
-    });
+    // Load master budgets logic removed as per user request (Finance will handle commit later)
+    // No longer using master_id dropdown in this form
     
-    // Auto-trigger on page load if master budget is already selected
-    if ($('#master_id').val()) {
-        $('#master_id').trigger('change');
-    }
+    // Calculate total allocation from items
 
     // Calculate total allocation from items
     function calculateTotal() {
@@ -650,7 +765,8 @@ $(document).ready(function() {
             if (!categoryVal || categoryVal === '0') {
                 let hasValidItems = false;
                 $block.find('.items-body tr').each(function() {
-                    const rincian = $(this).find('.item-rincian').val().trim();
+                    const rincianVal = $(this).find('.item-rincian').val();
+                    const rincian = rincianVal ? rincianVal.trim() : '';
                     const price = parseRupiah($(this).find('.item-price').val());
                     if (rincian || price > 0) {
                         hasValidItems = true;
@@ -677,7 +793,8 @@ $(document).ready(function() {
             
             // Remove completely empty item rows in this category
             $block.find('.items-body tr').each(function() {
-                const rincian = $(this).find('.item-rincian').val().trim();
+                const rincianVal = $(this).find('.item-rincian').val();
+                const rincian = rincianVal ? rincianVal.trim() : '';
                 const price = parseRupiah($(this).find('.item-price').val());
                 
                 if (!rincian && price <= 0) {
@@ -695,9 +812,10 @@ $(document).ready(function() {
             }
             
             $block.find('.items-body tr').each(function(itemIndex) {
-                const rincian = $(this).find('.item-rincian').val().trim();
+                const rincianVal = $(this).find('.item-rincian').val();
+                const rincian = rincianVal ? rincianVal.trim() : '';
                 const priceField = $(this).find('.item-price');
-                const priceValue = priceField.val();
+                const priceValue = priceField.val() || '';
                 const price = parseRupiah(priceValue);
                 
                 if (!rincian) {
@@ -738,6 +856,24 @@ $(document).ready(function() {
         
         // master_id is optional in the new flow — allow submit when not selected (Finance will commit later)
     });
+
+    // Jalankan pengecekan otomatis saat Bulan atau Tipe Kas diubah
+    $('#period_month, #tipe_anggaran').on('change', function() {
+        checkPrevBudget();
+    });
+
+    // ============================================================
+    // EXCEL ATTACHMENT HANDLER (Opsional)
+    // ============================================================
+    $('#file_excel').on('change', function() {
+        const fileName = $(this).val().split('\\').pop();
+        $(this).next('.custom-file-label').text(fileName || 'Pilih file Excel...');
+    });
+    // ============================================================
+    // END EXCEL ATTACHMENT HANDLER
+    // ============================================================
+
+
 
 });
 </script>

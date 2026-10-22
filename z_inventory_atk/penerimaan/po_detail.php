@@ -62,13 +62,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['proses_terima'])) {
                     // Karena ini memang sudah Master ATK, ID-nya adalah id_barang_bst
                     $id_barang_atk = $id_bst; 
                     
-                    // 2. Tambah Stok ATK (Update)
-                    mysqli_query($conn, "UPDATE inventory_stok SET quantity = quantity + $qty_real, updated_at = NOW() WHERE id_barang = $id_barang_atk");
+                    // 2. Tambah Stok ATK (Upsert: buat baru jika belum ada, atau update saldo jika sudah ada)
+                    $sql_stok = "INSERT INTO inventory_stok (id_barang, quantity, created_by) 
+                                 VALUES ($id_barang_atk, $qty_real, '$id_user') 
+                                 ON DUPLICATE KEY UPDATE quantity = quantity + $qty_real, updated_at = NOW()";
+                    if (!mysqli_query($conn, $sql_stok)) throw new Exception(mysqli_error($conn));
                     
                     // 3. Catat ke Histori atk_barang_masuk
                     $nomor_po_teks = mysqli_real_escape_string($conn, $po['nomor_po']);
-                    mysqli_query($conn, "INSERT INTO atk_barang_masuk (nomor_masuk, tanggal_masuk, id_barang, qty_masuk, created_by) 
-                                         VALUES ('BM-PO-$nomor_po_teks', '$tgl_masuk', $id_barang_atk, $qty_real, $id_user)");
+                    mysqli_query($conn, "INSERT INTO atk_barang_masuk (nomor_masuk, tanggal_masuk, id_barang, qty_masuk, created_by, keterangan) 
+                                         VALUES ('BM-PO-$nomor_po_teks', '$tgl_masuk', $id_barang_atk, $qty_real, $id_user, 'Penerimaan dr PO BST')");
                                          
                     // 4. Update status detail PO bahwa sudah diterima
                     mysqli_query($conn, "UPDATE bst_po_detail SET qty_diterima = $qty_real WHERE id_detail = " . $item['id_detail']);

@@ -45,6 +45,21 @@ switch ($asset['kondisi']) {
     default: $kondisi_class = 'badge-info';
 }
 
+// Badge status barang
+$status_barang_val = $asset['status_barang'] ?? 'Asset';
+$status_barang_class = ($status_barang_val === 'Sewa') ? 'badge-warning' : 'badge-primary';
+
+// Badge kepemilikan
+$kepemilikan_val = $asset['status_kepemilikan'] ?? '';
+$kep_class = 'badge-secondary';
+switch ($kepemilikan_val) {
+    case 'DFM': $kep_class = 'badge-info'; break;
+    case 'MPF': $kep_class = 'badge-success'; break;
+    case 'PLM': $kep_class = 'badge-warning'; break;
+    case 'DUI': $kep_class = 'badge-primary'; break;
+    default: $kep_class = 'badge-secondary'; $kepemilikan_val = '-'; break;
+}
+
 // Path foto asset
 $foto_path = '';
 if (!empty($asset['foto_asset'])) {
@@ -87,8 +102,20 @@ if (!empty($asset['foto_asset'])) {
                                 <td>: <?= htmlspecialchars($asset['merk'] ?: '-') ?></td>
                             </tr>
                             <tr>
+                                <td><strong>Status Barang</strong></td>
+                                <td>: <span class="badge <?= $status_barang_class ?>"><?= htmlspecialchars($status_barang_val) ?></span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Status Kepemilikan</strong></td>
+                                <td>: <?= empty($asset['status_kepemilikan']) ? '<span class="text-muted font-weight-bold">-</span>' : '<span class="badge ' . $kep_class . '">' . htmlspecialchars($kepemilikan_val) . '</span>' ?></td>
+                            </tr>
+                            <tr>
                                 <td><strong>Kondisi</strong></td>
                                 <td>: <span class="badge <?= $kondisi_class ?>"><?= htmlspecialchars($asset['kondisi']) ?></span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Kondisi Barang</strong></td>
+                                <td>: <span class="badge badge-secondary"><?= htmlspecialchars($asset['informasi_barang'] ?? 'Baru') ?></span></td>
                             </tr>
                         </table>
                     </div>

@@ -98,10 +98,17 @@ $result = mysqli_query($conn, $query);
                             </td>
                             <?php if ($auth->hasPermission('pt_bst', 'update')): ?>
                             <td class="text-center">
-                                <button type="button" class="btn btn-sm btn-outline-primary" 
-                                        onclick="openModal(<?= $row['id_barang'] ?>, '<?= addslashes($row['nama_barang']) ?>', <?= $row['stok_bst'] ?>)" title="Update Stok Manual">
-                                    <i class="fas fa-edit"></i>
-                                </button>
+                                <div class="btn-group">
+                                    <a href="stok_history.php?id=<?= $row['id_barang'] ?>" class="btn btn-sm btn-outline-info" title="Lihat History">
+                                        <i class="fas fa-history"></i>
+                                    </a>
+                                    <?php if ($auth->hasPermission('pt_bst', 'update')): ?>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" 
+                                            onclick="openModal(<?= $row['id_barang'] ?>, '<?= addslashes($row['nama_barang']) ?>', <?= $row['stok_bst'] ?>)" title="Update Stok Manual">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                             <?php endif; ?>
                         </tr>

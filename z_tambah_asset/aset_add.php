@@ -202,8 +202,34 @@ $qLokasi = mysqli_query($conn, "SELECT id_lokasi, lokasi_asset FROM lokasi_asset
                                             </div>
                                         </div>
 
-                                         <!-- Kondisi -->
-                                         <div class="col-12 col-md-4 mb-3">
+                                         <!-- Status Barang -->
+                                         <div class="col-12 col-md-3 mb-3">
+                                             <div class="form-group">
+                                                 <label for="status_barang" class="font-weight-bold">Status Barang <span class="text-danger">*</span></label>
+                                                 <select name="status_barang" id="status_barang" class="form-control" required onchange="toggleKondisi()">
+                                                     <option value="Asset" selected>Asset</option>
+                                                     <option value="Sewa">Sewa</option>
+                                                 </select>
+                                                 <small class="text-muted">Pilih "Sewa" jika barang adalah barang sewa</small>
+                                             </div>
+                                         </div>
+
+                                         <!-- Status Kepemilikan -->
+                                         <div class="col-12 col-md-3 mb-3">
+                                             <div class="form-group">
+                                                 <label for="status_kepemilikan" class="font-weight-bold">Status Kepemilikan <span class="text-danger">*</span></label>
+                                                 <select name="status_kepemilikan" id="status_kepemilikan" class="form-control" required>
+                                                     <option value="" disabled selected>-- Pilih Status Kepemilikan --</option>
+                                                     <option value="DFM">DFM</option>
+                                                     <option value="MPF">MPF</option>
+                                                     <option value="PLM">PLM</option>
+                                                     <option value="DUI">DUI</option>
+                                                 </select>
+                                             </div>
+                                         </div>
+
+                                         <!-- Kondisi (disembunyikan jika Sewa) -->
+                                         <div class="col-12 col-md-3 mb-3" id="div_kondisi">
                                              <div class="form-group">
                                                  <label for="kondisi" class="font-weight-bold">Informasi Kondisi <span class="text-danger">*</span></label>
                                                  <select name="kondisi" id="kondisi" class="form-control" required>
@@ -218,14 +244,14 @@ $qLokasi = mysqli_query($conn, "SELECT id_lokasi, lokasi_asset FROM lokasi_asset
                                          </div>
 
                                          <!-- Kondisi Barang (Acquisition) -->
-                                         <div class="col-12 col-md-8 mb-3">
+                                         <div class="col-12 col-md-3 mb-3">
                                              <div class="form-group">
                                                  <label for="informasi_barang" class="font-weight-bold">Kondisi Barang <span class="text-danger">*</span></label>
                                                  <select name="informasi_barang" id="informasi_barang" class="form-control" required>
                                                      <option value="Baru" selected>Baru</option>
                                                      <option value="Second">Second</option>
                                                  </select>
-                                                 <small class="text-muted">Status barang saat pengadaan</small>
+                                                 <small class="text-muted">Kondisi barang saat pengadaan</small>
                                              </div>
                                          </div>
 
@@ -322,6 +348,20 @@ $qLokasi = mysqli_query($conn, "SELECT id_lokasi, lokasi_asset FROM lokasi_asset
             const qty = parseFloat(document.getElementById('jumlah').value) || 0;
             const price = parseFloat(document.getElementById('nilai_pengadaan_satuan').value) || 0;
             document.getElementById('total_nilai_pengadaan').value = qty * price;
+        }
+
+        function toggleKondisi() {
+            const status = document.getElementById('status_barang').value;
+            const divKondisi = document.getElementById('div_kondisi');
+            const selectKondisi = document.getElementById('kondisi');
+            if (status === 'Sewa') {
+                divKondisi.style.display = 'none';
+                selectKondisi.removeAttribute('required');
+                selectKondisi.value = 'Baik'; // default value
+            } else {
+                divKondisi.style.display = '';
+                selectKondisi.setAttribute('required', 'required');
+            }
         }
 
         // Also trigger on qty change

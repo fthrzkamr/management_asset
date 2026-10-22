@@ -3,9 +3,10 @@
 require_once __DIR__ . '/../dist/config/config.php';
 
 // Ambil semua barang dari master inventory, susun per kategori
-$sql_items = "SELECT id_barang, nama_barang, satuan, kategori
-              FROM inventory_atk
-              ORDER BY kategori, nama_barang";
+$sql_items = "SELECT i.id_barang, i.nama_barang, i.satuan, i.kategori, COALESCE(s.quantity, 0) as stok
+              FROM inventory_atk i
+              LEFT JOIN inventory_stok s ON i.id_barang = s.id_barang
+              ORDER BY i.kategori, i.nama_barang";
 $res = mysqli_query($conn, $sql_items);
 
 $barang_by_kategori = [];
@@ -17,6 +18,7 @@ while ($item = mysqli_fetch_assoc($res)) {
         'id'     => $item['id_barang'],
         'nama'   => $item['nama_barang'],
         'satuan' => $item['satuan'] ?? '-',
+        'stok'   => $item['stok'] ?? 0,
     ];
 }
 $barang_json   = json_encode($barang_by_kategori, JSON_UNESCAPED_UNICODE);
@@ -272,7 +274,7 @@ $kategori_list = json_encode($all_kategori, JSON_UNESCAPED_UNICODE);
                     <label class="form-label">Divisi <span class="required">*</span></label>
                     <select name="divisi" class="form-control" required>
                         <option value="">-- Pilih Divisi --</option>
-                        <?php foreach (['HR','IT','Finance','Sales','Warehouse','GA','Operasional','Kurir','Other'] as $d): ?>
+                        <?php foreach (['Apoteker','HR','IT','Finance','Sales','Warehouse','GA','Operasional','Kurir','Bisnis','Other'] as $d): ?>
                             <option value="<?= $d ?>"><?= $d == 'Other' ? 'Lainnya' : $d ?></option>
                         <?php endforeach; ?>
                     </select>
@@ -303,7 +305,7 @@ $kategori_list = json_encode($all_kategori, JSON_UNESCAPED_UNICODE);
     </div>
 
     <div class="form-footer">
-        <p>© <?= date('Y') ?> Dua Farma Group. All Rights Reserved.</p>
+        <p>© <?= date('Y') ?> DF GROUP. All Rights Reserved.</p>
     </div>
 </div>
 
@@ -334,7 +336,7 @@ function buildBarangOptions(kat) {
     const list = barangData[kat] || [];
     let html = '<option value="">-- Pilih Barang --</option>';
     list.forEach(b => {
-        html += `<option value="${b.id}" data-satuan="${b.satuan}">${b.nama}</option>`;
+        html += `<option value="${b.id}" data-satuan="${b.satuan}" data-stok="${b.stok}">${b.nama}</option>`;
     });
     return html;
 }
@@ -353,10 +355,13 @@ function getSelectedInBlock(kId, exceptEl) {
 function updateSatuanDisplay(sel) {
     const selectedOpt = [...sel.options].find(o => o.value === sel.value);
     const satuan = selectedOpt ? (selectedOpt.getAttribute('data-satuan') || '-') : '-';
+    const stok = selectedOpt ? (selectedOpt.getAttribute('data-stok') || '-') : '-';
     const row = sel.closest('tr');
     if (row) {
-        const span = row.querySelector('.satuan-display');
-        if (span) span.textContent = satuan;
+        const spanSat = row.querySelector('.satuan-display');
+        if (spanSat) spanSat.textContent = satuan;
+        const spanStok = row.querySelector('.stok-display');
+        if (spanStok) spanStok.textContent = stok;
     }
 }
 
@@ -437,6 +442,7 @@ function addKategoriBlock(selectedKat) {
             <thead>
                 <tr>
                     <th>Rincian Item</th>
+                    <th width="70">Stok</th>
                     <th width="80">Qty</th>
                     <th width="90">Satuan</th>
                     <th width="40"></th>
@@ -448,6 +454,9 @@ function addKategoriBlock(selectedKat) {
                         <select name="items[${iId}][id_barang]" class="form-control barang-select" required>
                             ${barangOpts}
                         </select>
+                    </td>
+                    <td>
+                        <span class="stok-display" style="font-size:13px;color:#4a5568;font-weight:bold;">-</span>
                     </td>
                     <td>
                         <input type="number" name="items[${iId}][qty_diminta]"
@@ -507,6 +516,9 @@ function addItemRow(kId) {
             <select name="items[${iId}][id_barang]" class="form-control barang-select" required>
                 ${buildBarangOptions(kat)}
             </select>
+        </td>
+        <td>
+            <span class="stok-display" style="font-size:13px;color:#4a5568;font-weight:bold;">-</span>
         </td>
         <td>
             <input type="number" name="items[${iId}][qty_diminta]"

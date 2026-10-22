@@ -45,11 +45,10 @@ if (in_array(strtolower($user_role), ['it', 'ga'])) {
 error_log("get_budget_categories: user_id=$user_id, division=$user_division, role=$user_role, year=$current_year, month=$current_month");
 
 // Ambil budget yang dibuat oleh user yang login atau divisi yang sama (untuk IT/GA/HR)
-// Hanya tampilkan kategori yang punya budget item dengan remaining > 0
-$budget_query = "SELECT bc.id_category, bc.category_name, bc.category_code,
-                        SUM(CASE WHEN mbi.remaining > 0 THEN mbi.remaining ELSE 0 END) as remaining, 
-                        SUM(mbi.allocation) as allocation, 
-                        SUM(mbi.allocation - mbi.remaining) as used_amount
+// Tampilkan kategori per Tipe Anggaran agar user bisa memilih budget mana yang digunakan
+$budget_query = "SELECT mbi.id_budget_item, bc.id_category, bc.category_name, bc.category_code,
+                        mb.tipe_anggaran, mbi.remaining, mbi.allocation,
+                        (mbi.allocation - mbi.remaining) as used_amount
                  FROM ppx_budget_category bc
                  JOIN ppx_monthly_budget_item mbi ON bc.id_category = mbi.id_category
                  JOIN ppx_monthly_budget mb ON mbi.id_budget = mb.id_budget
@@ -58,19 +57,20 @@ $budget_query = "SELECT bc.id_category, bc.category_name, bc.category_code,
                    AND mb.period_month = $current_month
                    AND mb.status IN ('Approved', 'Active')
                    AND bc.is_active = 1
+                   AND mbi.remaining > 0
                    $division_filter
-                 GROUP BY bc.id_category, bc.category_name, bc.category_code
-                 HAVING SUM(CASE WHEN mbi.remaining > 0 THEN mbi.remaining ELSE 0 END) > 0
-                 ORDER BY bc.category_name";
+                 ORDER BY bc.category_name, mb.tipe_anggaran";
 
 $budget_result = mysqli_query($conn, $budget_query);
 
 $categories = [];
 while ($cat = mysqli_fetch_assoc($budget_result)) {
     $categories[] = [
+        'id_budget_item' => $cat['id_budget_item'],
         'id_category' => $cat['id_category'],
         'category_name' => $cat['category_name'],
         'category_code' => $cat['category_code'],
+        'tipe_anggaran' => $cat['tipe_anggaran'],
         'remaining' => $cat['remaining'],
         'allocation' => $cat['allocation'],
         'used_amount' => $cat['used_amount']

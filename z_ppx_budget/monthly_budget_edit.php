@@ -192,8 +192,9 @@ $period_display = date('F Y', strtotime($budget['period_year'] . '-' . $budget['
                         <h4 class="card-title mb-0"><i class="fas fa-edit"></i> Edit Budget</h4>
                     </div>
                     <div class="card-body">
-                        <form action="monthly_budget_update.php" method="POST" enctype="multipart/form-data">
+                        <form action="monthly_budget_update.php" method="POST" enctype="multipart/form-data" id="editBudgetForm">
                             <input type="hidden" name="id_budget" value="<?= $id_budget ?>">
+                            <input type="hidden" name="action" id="form_action" value="submit">
 
                             <div class="row">
                                 <div class="col-md-6">
@@ -364,12 +365,17 @@ $period_display = date('F Y', strtotime($budget['period_year'] . '-' . $budget['
                             </div>
 
                             <div class="form-group mt-4">
-                                <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save"></i> Simpan Perubahan
-                                </button>
                                 <a href="monthly_budget_detail.php?id=<?= $id_budget ?>" class="btn btn-secondary">
                                     <i class="fas fa-times"></i> Batal
                                 </a>
+                                <?php if ($budget['status'] === 'Draft'): ?>
+                                <button type="button" class="btn btn-warning" onclick="submitForm('draft')">
+                                    <i class="fas fa-edit"></i> Simpan sebagai Draft
+                                </button>
+                                <?php endif; ?>
+                                <button type="button" class="btn btn-info" onclick="submitForm('submit')">
+                                    <i class="fas fa-save"></i> Simpan Perubahan
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -625,8 +631,30 @@ $(document).ready(function() {
     });
     updateTotals();
 
+    // Helper to trigger form submit with specific action
+    window.submitForm = function(action) {
+        $('#form_action').val(action);
+        if (action === 'draft') {
+            // For draft: only sync categories, skip full validation
+            $('.category-block').each(function() {
+                const $block = $(this);
+                const categoryVal = $block.find('.category-select').val();
+                if (categoryVal && categoryVal !== '0') {
+                    $block.find('.items-body tr').each(function() {
+                        $(this).find('.item-category-ref').val(categoryVal);
+                    });
+                }
+            });
+            $('#editBudgetForm').off('submit').submit();
+        } else {
+            $('#editBudgetForm').submit();
+        }
+    };
+
     // Form validation before submit
-    $('form').submit(function(e) {
+    $('#editBudgetForm').submit(function(e) {
+        // Skip validation if saving as draft
+        if ($('#form_action').val() === 'draft') return true;
         let hasErrors = false;
         let errorMessages = [];
         
@@ -651,7 +679,8 @@ $(document).ready(function() {
             if (!categoryVal || categoryVal === '0') {
                 let hasValidItems = false;
                 $block.find('.items-body tr').each(function() {
-                    const rincian = $(this).find('.item-rincian').val().trim();
+                    const rincianVal = $(this).find('.item-rincian').val();
+                    const rincian = rincianVal ? rincianVal.trim() : '';
                     const price = parseRupiah($(this).find('.item-price').val());
                     if (rincian || price > 0) {
                         hasValidItems = true;
@@ -677,7 +706,8 @@ $(document).ready(function() {
             
             // Remove empty items
             $block.find('.items-body tr').each(function() {
-                const rincian = $(this).find('.item-rincian').val().trim();
+                const rincianVal = $(this).find('.item-rincian').val();
+                const rincian = rincianVal ? rincianVal.trim() : '';
                 const price = parseRupiah($(this).find('.item-price').val());
                 
                 if (!rincian && price <= 0) {
@@ -695,9 +725,10 @@ $(document).ready(function() {
             
             // Validate items
             $block.find('.items-body tr').each(function(itemIndex) {
-                const rincian = $(this).find('.item-rincian').val().trim();
+                const rincianVal = $(this).find('.item-rincian').val();
+                const rincian = rincianVal ? rincianVal.trim() : '';
                 const priceField = $(this).find('.item-price');
-                const priceValue = priceField.val();
+                const priceValue = priceField.val() || '';
                 const price = parseRupiah(priceValue);
                 
                 if (!rincian) {

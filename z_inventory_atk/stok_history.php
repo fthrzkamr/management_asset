@@ -8,7 +8,7 @@ if (!$auth->isLoggedIn()) {
     header("Location: ../../login.php");
     exit();
 }
-$auth->requirePermission('inventory_atk', 'read');
+$auth->requirePermission('inventory_atk_stok', 'read');
 
 $id_user = $_SESSION['id_user'];
 
@@ -39,12 +39,20 @@ if (!isset($barang['satuan']) || empty(trim($barang['satuan']))) {
 // Ambil Histori Pergerakan (Gabungan In dan Out) dengan UNION ALL
 $query_history = "
     SELECT 
-        'Masuk (Dari PO)' as tipe_transaksi,
+        CASE 
+            WHEN nomor_masuk LIKE 'ADD-%' THEN 'Masuk (Manual)'
+            ELSE 'Masuk (Dari PO)'
+        END as tipe_transaksi,
         tanggal_masuk as tanggal,
         nomor_masuk as nomor_referensi,
         qty_masuk as qty_in,
         0 as qty_out,
-        'Penerimaan Barang dr BST' as keterangan
+        COALESCE(keterangan, 
+            CASE 
+                WHEN nomor_masuk LIKE 'ADD-%' THEN 'Tambah Stok Manual / Koreksi'
+                ELSE 'Penerimaan Barang dr BST'
+            END
+        ) as keterangan
     FROM atk_barang_masuk 
     WHERE id_barang = $id_barang
 

@@ -57,9 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                 // Cek apakah stok fisik (barang ini) sudah teregistrasi di Gudang BST?
                 $cek_stok = mysqli_query($conn, "SELECT id_stok_bst FROM bst_stok WHERE id_barang = $id_bst");
                 if (mysqli_num_rows($cek_stok) > 0) {
-                    mysqli_query($conn, "UPDATE bst_stok SET quantity = quantity - $qty, updated_at = NOW() WHERE id_barang = $id_bst");
+                    // Gunakan GREATEST(0, ...) agar tidak minus
+                    mysqli_query($conn, "UPDATE bst_stok SET quantity = GREATEST(0, quantity - $qty), updated_at = NOW() WHERE id_barang = $id_bst");
                 } else {
-                    mysqli_query($conn, "INSERT INTO bst_stok (id_barang, quantity) VALUES ($id_bst, -$qty)");
+                    // Jika belum ada, stok baru adalah 0 (karena pesanan mengeluarkan apa yang tidak ada)
+                    mysqli_query($conn, "INSERT INTO bst_stok (id_barang, quantity) VALUES ($id_bst, 0)");
                 }
                 
                 // Set qty yang dikirim sama dengan qty pesanan (asumsi full fulfillment)

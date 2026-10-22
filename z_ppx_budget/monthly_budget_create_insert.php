@@ -57,10 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Minimal isi satu item atau pilih satu kategori");
         }
         
-        // Validate we have valid items (if using new UI)
-        if (!empty($items) && $validItemCount === 0) {
-            throw new Exception("Tidak ada item yang valid. Pastikan setiap item memiliki kategori dan harga yang valid.");
-        }
+
         
         // Prevent the same user from creating another budget in the same period if they
         // still have remaining allocation (total_remaining > 0).
@@ -109,10 +106,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $total_raw = isset($it['total']) ? $it['total'] : '0';
                 
                 // Parse harga & manual total - remove ALL non-numeric characters
-                $harga_clean = str_replace(['Rp', 'rp', 'RP', '.', ',', ' '], '', $harga_raw);
+                $harga_clean = preg_replace('/[^\d]/', '', $harga_raw);
                 $harga = intval($harga_clean);
                 
-                $total_clean = str_replace(['Rp', 'rp', 'RP', '.', ',', ' '], '', $total_raw);
+                $total_clean = preg_replace('/[^\d]/', '', $total_raw);
                 $manual_total = intval($total_clean);
                 
                 // Gunakan manual total jika diisi, jika tidak fallback ke qty * harga
@@ -148,6 +145,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $categoryAllocations[$cat] += $line_total;
             }
+            if ($validItemCount === 0) {
+                throw new Exception("Tidak ada item yang valid. Pastikan setiap item memiliki kategori dan harga yang valid.");
+            }
         } else {
             // legacy per-category allocation
             foreach ($categories as $cat_id) {
@@ -163,18 +163,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Keep this check commented for now; if you want early validation against master balance,
         // implement a non-destructive check (optional).
         
-        // Determine initial status based on routing
-        $id_cabang_session = $_SESSION['id_cabang'] ?? $_SESSION['cabang'] ?? '';
-        $id_divisi_session = $_SESSION['id_divisi'] ?? $_SESSION['divisi'] ?? null;
+        // Determine initial status based on routing or action
+        $submitted_action = $_POST['action'] ?? 'submit';
         
-        // TRANSITION LOGIC: Bypass routing for March 2026 as per user request
-        if ($period_year == 2026 && $period_month == 3) {
-            $initial_status = 'Active';
+        if ($submitted_action === 'draft') {
+            $initial_status = 'Draft';
         } else {
-            $initial_status = $helper->getInitialStatus($id_cabang_session, $id_divisi_session);
+            $id_cabang_session = $_SESSION['id_cabang'] ?? $_SESSION['cabang'] ?? '';
+            $id_divisi_session = $_SESSION['id_divisi'] ?? $_SESSION['divisi'] ?? null;
+            
+            // TRANSITION LOGIC: Bypass routing for March 2026 as per user request
+            if ($period_year == 2026 && $period_month == 3) {
+                $initial_status = 'Active';
+            } else {
+                $initial_status = $helper->getInitialStatus($id_cabang_session, $id_divisi_session);
+            }
         }
         
-        // Safety fallback if status is empty (should not happen with updated helper, but for robustness)
+        // Safety fallback if status is empty
         if (empty($initial_status)) {
             $initial_status = 'Pending';
         }
@@ -207,7 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                               master_allocation, total_remaining, status, created_by, notes, file_excel) 
                              VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = mysqli_prepare($conn, $insert_budget);
-            mysqli_stmt_bind_param($stmt, 'iisdddsssss', 
+            mysqli_stmt_bind_param($stmt, 'iissddsssss', 
                 $period_year, $period_month, $budget_name, $tipe_anggaran,
                 $total_allocation, $total_allocation, $total_allocation, $initial_status, $created_by, $notes, $file_excel_name);
         } else {
@@ -216,7 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                               master_allocation, total_remaining, status, created_by, notes, file_excel) 
                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = mysqli_prepare($conn, $insert_budget);
-            mysqli_stmt_bind_param($stmt, 'siisdddsssss', 
+            mysqli_stmt_bind_param($stmt, 'siissddsssss', 
                 $master_id, $period_year, $period_month, $budget_name, $tipe_anggaran,
                 $total_allocation, $total_allocation, $total_allocation, $initial_status, $created_by, $notes, $file_excel_name);
         }
@@ -265,10 +271,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $total_raw = isset($it['total']) ? $it['total'] : '0';
                 
                 // Parse harga - same method
-                $harga_clean = str_replace(['Rp', 'rp', 'RP', '.', ',', ' '], '', $harga_raw);
+                $harga_clean = preg_replace('/[^\d]/', '', $harga_raw);
                 $harga = intval($harga_clean);
                 
-                $total_clean = str_replace(['Rp', 'rp', 'RP', '.', ',', ' '], '', $total_raw);
+                $total_clean = preg_replace('/[^\d]/', '', $total_raw);
                 $manual_total = intval($total_clean);
                 
                 $line_total = $manual_total > 0 ? $manual_total : ($qty * $harga);

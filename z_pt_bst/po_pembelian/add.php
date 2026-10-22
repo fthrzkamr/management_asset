@@ -180,8 +180,27 @@ while($b = mysqli_fetch_assoc($q_brg)){
         newSelect.select2({width: '100%'});
 
         newSelect.on('change', function() {
+            let selectedVal = $(this).val();
+            let currentRow = $(this).closest('tr');
+            
+            // Periksa apakah barang sudah dipilih di baris lain
+            let isDuplicate = false;
+            $('.select2-item').not(this).each(function() {
+                if ($(this).val() == selectedVal && selectedVal !== '') {
+                    isDuplicate = true;
+                    return false; // break loop
+                }
+            });
+
+            if (isDuplicate) {
+                alert('Barang ini sudah dimasukkan di baris lain! Silakan pilih barang lain.');
+                $(this).val('').trigger('change.select2'); // Reset value melalui select2
+                currentRow.find('.row-satuan').val('');
+                return;
+            }
+
             let sat = $(this).find(':selected').data('satuan');
-            $(this).closest('tr').find('.row-satuan').val(sat || '');
+            currentRow.find('.row-satuan').val(sat || '');
         });
 
         // Event: Harga Satuan diedit manual -> Update Harga Total

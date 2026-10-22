@@ -13,8 +13,11 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Hanya yang punya approve permission yang bisa kelola distribusi
-if (!$auth->hasPermission('pengajuan_asset', 'approve')) {
+$isGlobalApprover = $auth->hasPermission('pengajuan_asset', 'approve');
+$canApproveIT = $auth->isIT() || $auth->hasPermission('approval_asset_it', 'approve');
+$canApproveGA = $auth->isGa() || $auth->hasPermission('approval_asset_ga', 'approve');
+
+if (!$isGlobalApprover && !$canApproveIT && !$canApproveGA) {
     $_SESSION['error'] = 'Anda tidak memiliki izin untuk mengelola pendistribusian asset!';
     header('Location: dashboard.php');
     exit();
@@ -71,14 +74,17 @@ try {
         throw new Exception('Hanya pengajuan yang sudah disetujui yang dapat dikelola distribusinya!');
     }
     
-    // Jika user adalah GA, cek sub_kategori
-    if ($auth->isGa() && $asset_data['sub_kategori'] === 'IT') {
-        throw new Exception('GA hanya dapat mengelola distribusi untuk asset dengan sub kategori GA!');
-    }
-    
-    // Jika user adalah IT, cek sub_kategori
-    if ($auth->isIT() && $asset_data['sub_kategori'] !== 'IT') {
-        throw new Exception('IT hanya dapat mengelola distribusi untuk asset dengan sub kategori IT!');
+    // Cek sub_kategori jika bukan global approver
+    if (!$isGlobalApprover) {
+        // Jika user punya GA tapi tidak IT
+        if ($canApproveGA && !$canApproveIT && $asset_data['sub_kategori'] === 'IT') {
+            throw new Exception('Anda hanya dapat mengelola distribusi untuk asset dengan sub kategori GA!');
+        }
+        
+        // Jika user punya IT tapi tidak GA
+        if ($canApproveIT && !$canApproveGA && $asset_data['sub_kategori'] !== 'IT') {
+            throw new Exception('Anda hanya dapat mengelola distribusi untuk asset dengan sub kategori IT!');
+        }
     }
     
     // Update status pendistribusian

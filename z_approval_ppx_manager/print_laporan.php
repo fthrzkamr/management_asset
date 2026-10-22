@@ -254,7 +254,7 @@ if (!empty($no_ppx)) {
         </div>
 
         <div class="header">
-            <div class="company-name">PT. DUA FARMA MAHAKARSA</div>
+            <div class="company-name">DF GROUP</div>
             <div class="document-title">DETAIL PENGAJUAN PPX</div>
         </div>
 
@@ -381,7 +381,7 @@ if (!empty($no_ppx)) {
 
         <div class="footer">
             <p>Dokumen dicetak pada: <?= date('d/m/Y H:i:s') ?> oleh: <?= htmlspecialchars($_SESSION['nama_user']) ?></p>
-            <p>Sistem Pengajuan PPX - PT. Dua Farma Mahakarsa</p>
+            <p>Sistem Pengajuan PPX - DF GROUP</p>
         </div>
 
         <script>
@@ -597,7 +597,7 @@ if (!empty($no_ppx)) {
         </div>
 
         <div class="header">
-            <div class="company-name">PT. DUA FARMA MAHAKARSA</div>
+            <div class="company-name">DF GROUP</div>
             <div class="document-title">LAPORAN PENGAJUAN PPX</div>
             <div class="print-info">Dicetak: <?= date('d/m/Y H:i:s') ?></div>
         </div>
@@ -724,7 +724,7 @@ if (!empty($no_ppx)) {
 
         <div class="footer">
             <p>Dokumen dicetak pada: <?= date('d/m/Y H:i:s') ?> oleh: <?= htmlspecialchars($_SESSION['nama_user']) ?></p>
-            <p>Sistem Pengajuan PPX - PT. Dua Farma Mahakarsa</p>
+            <p>Sistem Pengajuan PPX - DF GROUP</p>
         </div>
 
         <script>

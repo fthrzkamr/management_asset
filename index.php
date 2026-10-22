@@ -22,7 +22,7 @@ $norm_role = strtolower(str_replace(' ', '_', $user_role));
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0">
-    <title>Dashboard - DFM</title>
+    <title>Dashboard - DF GROUP</title>
     <link rel="shortcut icon" type="image/x-icon" href="assets/img/dua.png">
     <link rel="stylesheet" href="assets/plugins/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/plugins/fontawesome/css/fontawesome.min.css">
@@ -63,7 +63,7 @@ $norm_role = strtolower(str_replace(' ', '_', $user_role));
                                             <i class="fas fa-user-circle text-primary"></i>
                                             <?= htmlspecialchars($user_name) ?>
                                         </h5>
-                                        <p>Sistem Manajemen Asset Digital Farmasi - Dua Farma Groups</p>
+                                        <p>Sistem Manajemen Asset Digital Farmasi - DF GROUP</p>
                                     </div>
                                     <div class="col-md-4 text-right">
                                         <p class="text-muted">

@@ -23,11 +23,12 @@ if (!$auth->isManagerFinance() && !$auth->isSuperAdmin()) {
 
 // Query untuk mengambil data monthly budget dengan status yang perlu di-approve
 $query = "SELECT 
-    mb.id_monthly_budget,
+    mb.id_budget,
     mb.master_id,
     mb.period_year,
     mb.period_month,
     mb.budget_name,
+    mb.tipe_anggaran,
     mb.total_allocation,
     mb.master_allocation,
     mb.total_remaining,
@@ -36,12 +37,12 @@ $query = "SELECT
     mb.created_by,
     mb.notes,
     u.nama_user as creator_name,
-    COUNT(mbi.id_item) as total_items
+    COUNT(mbi.id_budget_item) as total_items
 FROM ppx_monthly_budget mb
 LEFT JOIN user_dfm u ON mb.created_by = u.id_user
-LEFT JOIN ppx_monthly_budget_item mbi ON mb.id_monthly_budget = mbi.monthly_budget_id
+LEFT JOIN ppx_monthly_budget_item mbi ON mb.id_budget = mbi.id_budget
 WHERE mb.status IN ('Pending', 'Approved', 'Rejected')
-GROUP BY mb.id_monthly_budget
+GROUP BY mb.id_budget
 ORDER BY 
     FIELD(mb.status, 'Pending', 'Approved', 'Rejected'),
     mb.created_at DESC";
@@ -231,7 +232,8 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                                                 <th width="8%">Items</th>
                                                 <th width="12%">Dibuat Oleh</th>
                                                 <th width="10%">Tanggal</th>
-                                                <th width="8%">Status</th>
+                                                <th width="12%">Tipe</th>
+                                                <th width="10%">Status</th>
                                                 <th width="13%">Aksi</th>
                                             </tr>
                                         </thead>
@@ -267,15 +269,18 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                                                             </span>
                                                         </td>
                                                         <td>
+                                                            <span class="badge badge-info badge-sm"><?= htmlspecialchars($row['tipe_anggaran'] ?? 'N/A') ?></span>
+                                                        </td>
+                                                        <td>
                                                             <div class="btn-group" role="group">
                                                                 <!-- Detail Button -->
-                                                                <a href="detail.php?id=<?= $row['id_monthly_budget'] ?>"
+                                                                <a href="detail.php?id=<?= $row['id_budget'] ?>"
                                                                     class="btn btn-outline-info btn-action" title="Detail">
                                                                     <i class="fas fa-eye fa-xs"></i>
                                                                 </a>
 
                                                                 <!-- Print Button -->
-                                                                <a href="print_laporan.php?id=<?= $row['id_monthly_budget'] ?>"
+                                                                <a href="print_laporan.php?id=<?= $row['id_budget'] ?>"
                                                                     class="btn btn-outline-info btn-action" title="Print Detail" target="_blank">
                                                                     <i class="fas fa-print fa-xs"></i>
                                                                 </a>
@@ -283,7 +288,7 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                                                                 <!-- Approval button untuk status Pending -->
                                                                 <?php if ($row['status'] === 'Pending'): ?>
                                                                     <button type="button" class="btn btn-outline-success btn-action"
-                                                                        onclick="processAction(<?= $row['id_monthly_budget'] ?>)" title="Proses Approval">
+                                                                        onclick="processAction(<?= $row['id_budget'] ?>)" title="Proses Approval">
                                                                         <i class="fas fa-check fa-xs"></i>
                                                                     </button>
                                                                 <?php endif; ?>

@@ -8,10 +8,22 @@
 $PERMISSION_MODULES = [
     // === PENGAJUAN ===
     'pengajuan_asset' => [
-        'label' => 'Pengajuan Aset',
+        'label' => 'Pengajuan Aset (Umum)',
         'icon'  => 'fas fa-clipboard-list',
         'group' => 'Pengajuan',
         'actions' => ['create', 'read', 'update', 'delete', 'approve'],
+    ],
+    'approval_asset_it' => [
+        'label' => 'Approval Pengajuan Aset IT',
+        'icon'  => 'fas fa-laptop-code',
+        'group' => 'Pengajuan',
+        'actions' => ['read', 'approve'],
+    ],
+    'approval_asset_ga' => [
+        'label' => 'Approval Pengajuan Aset GA',
+        'icon'  => 'fas fa-building',
+        'group' => 'Pengajuan',
+        'actions' => ['read', 'approve'],
     ],
     'pengajuan_renovasi' => [
         'label' => 'Pengajuan Renovasi',
@@ -44,6 +56,18 @@ $PERMISSION_MODULES = [
         'icon'  => 'fa-solid fa-money-bill-1-wave',
         'group' => 'PPX',
         'actions' => ['create', 'read', 'update', 'delete', 'approve', 'process'],
+    ],
+    'realisasi_ppx' => [
+        'label' => 'Realisasi Anggaran (User)',
+        'icon'  => 'fa-solid fa-check-double',
+        'group' => 'Realisasi Anggaran',
+        'actions' => ['create', 'read', 'update', 'delete'],
+    ],
+    'approval_realisasi_asmen' => [
+        'label' => 'Approval Realisasi Anggaran (Asmen)',
+        'icon'  => 'fa-solid fa-stamp',
+        'group' => 'Realisasi Anggaran',
+        'actions' => ['read', 'approve'],
     ],
     'report_ppx' => [
         'label' => 'Laporan Anggaran Bulanan',
@@ -230,7 +254,7 @@ $PERMISSION_MODULES = [
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
     'analytics' => [
-        'label' => 'Dashboard Analitik',
+        'label' => 'Dashboard Aset',
         'icon'  => 'fas fa-chart-pie',
         'group' => 'Lainnya',
         'actions' => ['read'],

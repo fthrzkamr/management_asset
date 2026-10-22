@@ -7,7 +7,7 @@ if (!$auth->isLoggedIn()) { header("Location: ../login.php"); exit(); }
 $auth->requirePermission('budget_besar', 'read');
 
 $query = "SELECT mb.id_budget, mb.period_year, mb.period_month, mb.budget_name,
-                 mb.total_allocation, mb.status, mb.created_at, mb.notes,
+                 mb.total_allocation, mb.status, mb.created_at, mb.notes, mb.created_by,
                  u.nama_user as creator_name, mc.nama_cabang
           FROM ppx_monthly_budget mb
           LEFT JOIN user_dfm u ON mb.created_by = u.id_user
@@ -131,9 +131,16 @@ $status_badge = [
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <a href="detail.php?id=<?= $row['id_budget'] ?>" class="btn btn-outline-info btn-sm" title="Detail">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
+                                                    <div class="btn-group" role="group">
+                                                        <a href="detail.php?id=<?= $row['id_budget'] ?>" class="btn btn-outline-info btn-sm" title="Detail">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                        <?php if ($auth->hasPermission('budget_besar','update') && !in_array($row['status'], ['Selesai', 'Finance (Realisasi)']) && (isset($_SESSION['id_user']) && $row['created_by'] ?? 0 == $_SESSION['id_user'] || $auth->isSuperAdmin())): ?>
+                                                        <a href="edit.php?id=<?= $row['id_budget'] ?>" class="btn btn-outline-warning btn-sm" title="Edit">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         <?php endwhile; endif; ?>

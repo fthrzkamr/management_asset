@@ -61,7 +61,7 @@ $result = mysqli_query($conn, $query);
                 <div class="page-header">
                     <div class="row align-items-center">
                         <div class="col">
-                            <h3 class="page-title">Stok Gudang ATK Riil</h3>
+                            <h3 class="page-title">Stok Gudang ATK</h3>
                             <ul class="breadcrumb">
                                 <li class="breadcrumb-item"><a href="../../index.php">Dashboard</a></li>
                                 <li class="breadcrumb-item active">Stok Tersedia</li>
@@ -109,9 +109,18 @@ $result = mysqli_query($conn, $query);
                                                     </span>
                                                 </td>
                                                 <td class="text-center">
-                                                    <a href="stok_history.php?id=<?= $row['id_barang'] ?>" class="btn btn-sm btn-info">
-                                                        <i class="fas fa-history"></i> Lihat Detail Jejak
-                                                    </a>
+                                                    <div class="btn-group">
+                                                        <?php if ($auth->hasPermission('inventory_atk_stok', 'read')): ?>
+                                                        <a href="stok_history.php?id=<?= $row['id_barang'] ?>" class="btn btn-sm btn-info" title="Lihat Histori Detail">
+                                                            <i class="fas fa-history"></i>
+                                                        </a>
+                                                        <?php endif; ?>
+                                                        <?php if ($auth->hasPermission('inventory_atk_stok', 'update')): ?>
+                                                        <a href="stok_masuk_add.php?id=<?= $row['id_barang'] ?>" class="btn btn-sm btn-success" title="Tambah Qty Stok">
+                                                            <i class="fas fa-plus"></i>
+                                                        </a>
+                                                        <?php endif; ?>
+                                                    </div>
                                                 </td>
                                             </tr>
                                             <?php endwhile; ?>

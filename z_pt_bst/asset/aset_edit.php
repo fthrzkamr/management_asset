@@ -222,8 +222,20 @@ if (!empty($asset['foto_asset'])) {
                                              </div>
                                          </div>
 
-                                         <!-- Kondisi -->
+                                         <!-- Status Barang -->
                                          <div class="col-md-4">
+                                             <div class="form-group">
+                                                 <label for="status_barang">Status Barang <span class="text-danger">*</span></label>
+                                                 <select name="status_barang" id="status_barang" class="form-control" required onchange="toggleKondisi()">
+                                                     <option value="Asset" <?= ($asset['status_barang'] == 'Asset') ? 'selected' : '' ?>>Asset</option>
+                                                     <option value="Sewa" <?= ($asset['status_barang'] == 'Sewa') ? 'selected' : '' ?>>Sewa</option>
+                                                 </select>
+                                                 <small class="text-muted">Pilih "Sewa" jika barang adalah barang sewa</small>
+                                             </div>
+                                         </div>
+
+                                         <!-- Kondisi -->
+                                         <div class="col-md-4" id="div_kondisi">
                                              <div class="form-group">
                                                  <label for="kondisi">Informasi Kondisi <span class="text-danger">*</span></label>
                                                  <select name="kondisi" id="kondisi" class="form-control" required>
@@ -238,14 +250,14 @@ if (!empty($asset['foto_asset'])) {
                                          </div>
 
                                          <!-- Kondisi Barang (Acquisition) -->
-                                         <div class="col-md-8">
+                                         <div class="col-md-4">
                                              <div class="form-group">
                                                  <label for="informasi_barang">Kondisi Barang <span class="text-danger">*</span></label>
                                                  <select name="informasi_barang" id="informasi_barang" class="form-control" required>
                                                      <option value="Baru" <?= ($asset['informasi_barang'] == 'Baru') ? 'selected' : '' ?>>Baru</option>
                                                      <option value="Second" <?= ($asset['informasi_barang'] == 'Second') ? 'selected' : '' ?>>Second</option>
                                                  </select>
-                                                 <small class="text-muted">Status barang saat pengadaan</small>
+                                                 <small class="text-muted">Kondisi barang saat pengadaan</small>
                                              </div>
                                          </div>
 
@@ -423,6 +435,24 @@ if (!empty($asset['foto_asset'])) {
         const price = parseFloat(document.getElementById('nilai_pengadaan_satuan').value) || 0;
         document.getElementById('total_nilai_pengadaan').value = qty * price;
     }
+
+    function toggleKondisi() {
+        const status = document.getElementById('status_barang').value;
+        const divKondisi = document.getElementById('div_kondisi');
+        const selectKondisi = document.getElementById('kondisi');
+        if (status === 'Sewa') {
+            divKondisi.style.display = 'none';
+            selectKondisi.removeAttribute('required');
+        } else {
+            divKondisi.style.display = '';
+            selectKondisi.setAttribute('required', 'required');
+        }
+    }
+
+    // Run on load to set initial state
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleKondisi();
+    });
 
     // Also trigger on qty change
     document.getElementById('jumlah').addEventListener('input', calculateTotal);

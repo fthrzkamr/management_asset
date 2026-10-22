@@ -31,6 +31,28 @@ if ($akun_result) {
     }
 }
 
+// --- ADDED: ambil daftar kategori budget dari tabel ppx_budget_category ---
+$categories_query = "SELECT * FROM ppx_budget_category WHERE is_active = 1 ORDER BY category_name";
+$categories_result = mysqli_query($conn, $categories_query);
+$categories = [];
+if ($categories_result) {
+    while ($r = mysqli_fetch_assoc($categories_result)) {
+        $categories[] = $r;
+    }
+} else {
+    error_log("Error fetching budget categories: " . mysqli_error($conn));
+}
+
+$categoryOptionsHtml = '';
+$kategoriNameOptionsHtml = '';
+foreach ($categories as $cat) {
+    $cat_code = isset($cat['category_code']) ? $cat['category_code'] : '';
+    $cat_tipe = isset($cat['tipe_anggaran']) ? $cat['tipe_anggaran'] : '';
+    
+    $categoryOptionsHtml .= '<option value="' . htmlspecialchars($cat['id_category']) . '" data-code="' . htmlspecialchars($cat_code) . '" data-tipe="' . htmlspecialchars($cat_tipe) . '">' . htmlspecialchars($cat['category_name']) .'</option>';
+    $kategoriNameOptionsHtml .= '<option value="' . htmlspecialchars($cat['category_name']) . '">' . htmlspecialchars($cat['category_name']) .'</option>';
+}
+
 // TAMBAHAN: Query untuk ambil pengajuan asset yang sudah disetujui dan BELUM direlasikan dengan PPX
 $asset_query = "SELECT 
     ar.no_pengajuan, 
@@ -334,42 +356,42 @@ $preselected_asset = $_GET['asset'] ?? '';
                                         </h5>
                                         <div class="row">
                                             <!-- Nama PIC -->
-                                            <div class="col-12 col-md-6 mb-3">
+                                            <!-- <div class="col-12 col-md-6 mb-3">
                                                 <div class="form-group">
                                                     <label class="font-weight-bold">Nama<span class="required">*</span></label>
                                                     <input type="text" name="nama_pic" class="form-control"
                                                         value="<?= htmlspecialchars($user_data['nama_user'] ?? $_SESSION['nama_user']) ?>"
                                                         placeholder="Nama Person In Charge" required readonly>
                                                 </div>
-                                            </div>
+                                            </div> -->
 
                                             <!-- Jabatan (otomatis dari user_dfm) -->
-                                            <div class="col-12 col-md-6 mb-3">
+                                            <!-- <div class="col-12 col-md-6 mb-3">
                                                 <div class="form-group">
                                                     <label class="font-weight-bold">Jabatan <span class="required">*</span></label>
                                                     <input type="text" name="jabatan" class="form-control"
                                                         value="<?= htmlspecialchars($jabatan_user) ?>" readonly>
                                                     <small class="text-muted">Jabatan diambil otomatis dari profil user</small>
                                                 </div>
-                                            </div>
+                                            </div> -->
 
                                             <!-- Divisi -->
-                                            <div class="col-12 col-md-4 mb-3">
+                                            <!-- <div class="col-12 col-md-4 mb-3">
                                                 <div class="form-group">
                                                     <label class="font-weight-bold">Divisi <span class="required">*</span></label>
                                                     <input type="text" class="form-control" value="<?= htmlspecialchars($user_data['nama_divisi'] ?? 'Tidak ada divisi') ?>" readonly>
                                                     <input type="hidden" name="divisi" value="<?= $user_data['divisi'] ?>">
                                                 </div>
-                                            </div>
+                                            </div> -->
 
                                             <!-- Departemen -->
-                                            <div class="col-12 col-md-4 mb-3">
+                                            <!-- <div class="col-12 col-md-4 mb-3">
                                                 <div class="form-group">
                                                     <label class="font-weight-bold">Departemen <span class="required">*</span></label>
                                                     <input type="text" class="form-control" value="<?= htmlspecialchars($user_data['nama_departemen'] ?? 'Tidak ada departemen') ?>" readonly>
                                                     <input type="hidden" name="departemen" value="<?= $user_data['departemen'] ?>">
                                                 </div>
-                                            </div>
+                                            </div> -->
 
                                             <!-- Cabang -->
                                             <div class="col-12 col-md-4 mb-3">
@@ -388,36 +410,83 @@ $preselected_asset = $_GET['asset'] ?? '';
                                                 </div>
                                             </div>
 
-                                            <!-- Bank / Rekening -->
+                                            <!-- Tujuan Pencarian -->
+                                            <div class="col-12 col-md-8 mb-3">
+                                                <div class="form-group">
+                                                    <label class="font-weight-bold">Tujuan Pencarian <span class="required">*</span></label>
+                                                    <input type="text" name="tujuan_pencarian" class="form-control"
+                                                        placeholder="Contoh: Pembelian ATK untuk operasional kantor" required>
+                                                </div>
+                                            </div>
+
+                                            <!-- Metode Pembayaran -->
                                             <div class="col-12 col-md-4 mb-3">
                                                 <div class="form-group">
-                                                    <label class="font-weight-bold">Nama Bank</label>
-                                                    <select name="nama_bank" id="nama_bank" class="form-control" onchange="setRekeningPlaceholder()">
-                                                        <option value="">-- Pilih Bank --</option>
-                                                        <option value="BCA">BCA</option>
-                                                        <option value="Mandiri">Mandiri</option>
+                                                    <label class="font-weight-bold">Metode Pembayaran <span class="required">*</span></label>
+                                                    <select name="metode_pembayaran" id="metode_pembayaran" class="form-control" required onchange="toggleMetodePembayaran()">
+                                                        <option value="">-- Pilih Metode --</option>
+                                                        <option value="Transfer">Transfer</option>
+                                                        <option value="Cash">Cash</option>
                                                     </select>
                                                 </div>
                                             </div>
 
-                                            <div class="col-12 col-md-4 mb-3">
-                                                <div class="form-group">
-                                                    <label class="font-weight-bold">Nama Rekening</label>
-                                                    <input type="text" name="nama_rek" class="form-control"
-                                                        placeholder="Nama pemilik rekening">
+                                            <!-- Fields Transfer (muncul kalau pilih Transfer) -->
+                                            <div id="transfer_fields" class="col-12" style="display:none;">
+                                                <div class="row">
+                                                    <div class="col-12 col-md-4 mb-3">
+                                                        <div class="form-group">
+                                                            <label class="font-weight-bold">Nama Bank / VA</label>
+                                                            <select name="nama_bank" id="nama_bank" class="form-control" onchange="setRekeningPlaceholder()">
+                                                                <option value="">-- Pilih Bank --</option>
+                                                                <option value="BCA">BCA</option>
+                                                                <option value="Mandiri">Mandiri</option>
+                                                                <option value="BNI">BNI</option>
+                                                                <option value="BRI">BRI</option>
+                                                                <option value="CIMB Niaga">CIMB Niaga</option>
+                                                                <option value="Permata">Permata</option>
+                                                                <option value="Lainnya">Lainnya</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12 col-md-4 mb-3">
+                                                        <div class="form-group">
+                                                            <label class="font-weight-bold">Nama Rekening / VA</label>
+                                                            <input type="text" name="nama_rek" id="nama_rek" class="form-control"
+                                                                placeholder="Nama pemilik rekening">
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-12 col-md-4 mb-3">
+                                                        <div class="form-group">
+                                                            <label class="font-weight-bold">No. Rekening / VA</label>
+                                                            <input type="text" name="no_rek" id="no_rek" class="form-control"
+                                                                placeholder="Nomor rekening" oninput="validateNumber(this)">
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <div class="col-12 col-md-4 mb-3">
+                                            <!-- Field Cash (muncul kalau pilih Cash) -->
+                                            <div id="cash_fields" class="col-12 col-md-8" style="display:none;">
                                                 <div class="form-group">
-                                                    <label class="font-weight-bold">No. Rekening</label>
-                                                    <input type="text" name="no_rek" id="no_rek" class="form-control"
-                                                        placeholder="Nomor rekening" oninput="validateNumber(this)">
+                                                    <label class="font-weight-bold">Nama Penerima</label>
+                                                    <input type="text" name="nama_rek" id="nama_rek_cash" class="form-control"
+                                                        placeholder="Nama penerima uang cash">
+                                                    <small class="text-muted"><i class="fas fa-info-circle"></i> Isi nama lengkap penerima dana cash.</small>
                                                 </div>
                                             </div>
 
-                                            <!-- Nomor PPX (Auto) -->
-                                            <div class="col-12 col-md-6 mb-3">
+                                            <!-- ===== Hidden inputs: data terkirim tapi tidak tampil di layar ===== -->
+                                            <input type="hidden" name="no_ppx"
+                                                value="PPX-<?= date('Ymd') ?>-<?= str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT) ?>">
+                                            <input type="hidden" name="user_id"    value="<?= (int)$user_id ?>">
+                                            <input type="hidden" name="status"     value="Menunggu Approval">
+                                            <input type="hidden" name="nama_pic"   value="<?= htmlspecialchars($user_data['nama_user'] ?? '') ?>">
+                                            <input type="hidden" name="jabatan"    value="<?= htmlspecialchars($user_data['jabatan'] ?? '') ?>">
+                                            <input type="hidden" name="divisi"     value="<?= htmlspecialchars($user_data['divisi'] ?? '') ?>">
+                                            <input type="hidden" name="departemen" value="<?= htmlspecialchars($user_data['departemen'] ?? '') ?>">
+                                            <!-- ===== End hidden inputs ===== -->
+                                            <!-- <div class="col-12 col-md-6 mb-3">
                                                 <div class="form-group">
                                                     <label class="font-weight-bold">Nomor PPX</label>
                                                     <input type="text" name="no_ppx" class="form-control"
@@ -425,7 +494,7 @@ $preselected_asset = $_GET['asset'] ?? '';
                                                         readonly>
                                                     <small class="text-muted">Otomatis dibuat sistem</small>
                                                 </div>
-                                            </div>
+                                            </div> -->
 
                                             <!-- Tanggal Pengajuan -->
                                             <div class="col-12 col-md-6 mb-3">
@@ -438,105 +507,12 @@ $preselected_asset = $_GET['asset'] ?? '';
                                         </div>
                                     </div>
 
-                                    <!-- SECTION: Tipe PPX & Budget Bulanan -->
-                                    <div class="form-section">
-                                        <h5 class="mb-3 h6 h5-md">
-                                            <i class="fas fa-wallet"></i> Tipe PPX & Anggaran Bulanan
-                                        </h5>
-                                        
-                                        <div class="row">
-                                            <!-- Tipe Request -->
-                                            <div class="col-12 col-md-6 mb-3">
-                                                <div class="form-group">
-                                                    <label class="font-weight-bold">Tipe Pengajuan <span class="required">*</span></label>
-                                                    <select name="request_type" id="request_type" class="form-control" required onchange="toggleBudgetCategory()">
-                                                        <option value="">-- Pilih Tipe --</option>
-                                                        <option value="Regular" selected>Regular PPX (Tanpa Anggaran Bulanan)</option>
-                                                        <option value="Monthly_Budget">Monthly Budget PPX (Gunakan Anggaran Bulanan)</option>
-                                                    </select>
-                                                    <small class="text-muted">
-                                                        <strong>Regular:</strong> PPX normal tanpa memotong budget bulanan<br>
-                                                        <strong>Monthly Budget:</strong> PPX yang akan memotong dari alokasi budget bulanan
-                                                    </small>
-                                                </div>
-                                            </div>
-
-                                            <!-- Pilih Kategori (hanya muncul jika Monthly_Budget) -->
-                                            <div class="col-12 col-md-6 mb-3" id="category_section" style="display:none;">
-                                                <div class="form-group">
-                                                    <label class="font-weight-bold">Kategori Anggaran <span class="required">*</span></label>
-                                                    <select name="id_category" id="id_category" class="form-control" onchange="showBudgetInfo()">
-                                                        <option value="">-- Pilih Kategori --</option>
-                                                        <?php
-                                                        // Query kategori yang ada budgetnya untuk bulan ini dengan filter divisi
-                                                        $current_year = date('Y');
-                                                        $current_month = date('n');
-                                                        
-                                                        // Get current user's division, role for filtering
-                                                        $user_id = $_SESSION['id_user'];
-                                                        $user_query = "SELECT u.divisi, d.nama_divisi, r.nama_role 
-                                                                       FROM user_dfm u 
-                                                                       LEFT JOIN divisi d ON u.divisi = d.id_divisi 
-                                                                       LEFT JOIN roles r ON u.id_role = r.id_role
-                                                                       WHERE u.id_user = $user_id";
-                                                        $user_result = mysqli_query($conn, $user_query);
-                                                        $user_data = mysqli_fetch_assoc($user_result);
-                                                        $user_division_id = $user_data['divisi'];
-                                                        $user_division = $user_data['nama_divisi'];
-                                                        $user_role = $user_data['nama_role'];
-                                                        
-                                                        // Build division filter - sama seperti get_budget_categories.php
-                                                        if (in_array(strtolower($user_role), ['it', 'ga'])) {
-                                                            $division_filter = "AND ub.divisi = 7";
-                                                        } elseif ($user_division_id == 7) {
-                                                            $division_filter = "AND ub.divisi = 7";
-                                                        } else {
-                                                            $division_filter = "AND mb.created_by = $user_id";
-                                                        }
-                                                        
-                                                        // Ambil budget sesuai filter role
-                                                        // Hanya tampilkan kategori yang punya budget item dengan remaining > 0
-                                                        $budget_query = "SELECT bc.id_category, bc.category_name, bc.category_code,
-                                                                                SUM(CASE WHEN mbi.remaining > 0 THEN mbi.remaining ELSE 0 END) as remaining, 
-                                                                                SUM(mbi.allocation) as allocation, 
-                                                                                SUM(mbi.allocation - mbi.remaining) as used_amount
-                                                                         FROM ppx_budget_category bc
-                                                                         JOIN ppx_monthly_budget_item mbi ON bc.id_category = mbi.id_category
-                                                                         JOIN ppx_monthly_budget mb ON mbi.id_budget = mb.id_budget
-                                                                         LEFT JOIN user_dfm ub ON mb.created_by = ub.id_user
-                                                                         WHERE mb.period_year = $current_year
-                                                                           AND mb.period_month = $current_month
-                                                                           AND mb.status IN ('Approved', 'Active')
-                                                                           AND bc.is_active = 1
-                                                                           $division_filter
-                                                                         GROUP BY bc.id_category, bc.category_name, bc.category_code
-                                                                         HAVING SUM(CASE WHEN mbi.remaining > 0 THEN mbi.remaining ELSE 0 END) > 0
-                                                                         ORDER BY bc.category_name";
-                                                        $budget_result = mysqli_query($conn, $budget_query);
-                                                        while ($cat = mysqli_fetch_assoc($budget_result)):
-                                                        ?>
-                                                            <option value="<?= $cat['id_category'] ?>" 
-                                                                    data-remaining="<?= $cat['remaining'] ?>"
-                                                                    data-allocation="<?= $cat['allocation'] ?>"
-                                                                    data-used="<?= $cat['used_amount'] ?>"
-                                                                    data-code="<?= htmlspecialchars($cat['category_code']) ?>">
-                                                                [<?= htmlspecialchars($cat['category_code']) ?>] <?= htmlspecialchars($cat['category_name']) ?> 
-                                                                (Sisa: Rp <?= number_format($cat['remaining'], 0, ',', '.') ?>)
-                                                            </option>
-                                                        <?php endwhile; ?>
-                                                    </select>
-                                                    <div id="budget_info" class="alert alert-info mt-2" style="display:none;">
-                                                        <!-- Info budget akan muncul di sini -->
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div class="alert alert-warning" id="no_budget_alert" style="display:none;">
-                                            <i class="fas fa-exclamation-triangle"></i> 
-                                            <strong>Tidak ada budget aktif untuk bulan ini.</strong> Silakan gunakan tipe "Regular PPX" atau hubungi Manager Finance untuk membuat budget bulanan.
-                                        </div>
-                                    </div>
+                                    <!-- Hidden inputs agar insert logic tidak error -->
+                                    <input type="hidden" name="request_type" id="request_type" value="Regular">
+                                    <input type="hidden" name="id_category" id="id_category" value="">
+                                    <div id="category_section" style="display:none;"></div>
+                                    <div id="budget_info" style="display:none;"></div>
+                                    <div id="no_budget_alert" style="display:none;"></div>
 
                                     <!-- TAMBAHAN: Relasi dengan Pengajuan Asset -->
                                     <div class="form-section">
@@ -721,127 +697,33 @@ $preselected_asset = $_GET['asset'] ?? '';
                                         <h5 class="mb-3 h6 h5-md">
                                             <i class="fas fa-list"></i> Detail Item PPX
                                         </h5>
-
-                                        <div id="detailContainer">
-                                            <!-- Item pertama -->
-                                            <div class="detail-item position-relative" data-index="0">
-                                                <button type="button" class="btn btn-sm btn-danger btn-remove-item" data-index="0" title="Hapus item">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
-
-                                                <div class="row">
-                                                    <!-- No Akun -->
-                                                    <div class="col-md-3 mb-2">
-                                                        <div class="form-group">
-                                                            <label class="font-weight-bold small">No. Akun <span class="required">*</span></label>
-                                                            <select name="detail[0][no_akun]" class="form-control form-control-sm" required>
-                                                                <option value="">-- Pilih --</option>
-                                                                <?= $akun_options_html ?>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-
-                                                    <!-- Rincian -->
-                                                    <div class="col-md-3 mb-2">
-                                                        <div class="form-group">
-                                                            <label class="font-weight-bold small">Rincian Item <span class="required">*</span></label>
-                                                            <input type="text" name="detail[0][rincian]" class="form-control form-control-sm"
-                                                                placeholder="Nama item" required>
-                                                        </div>
-                                                    </div>
-
-                                                    <!-- Jumlah -->
-                                                    <div class="col-md-1 mb-2">
-                                                        <div class="form-group">
-                                                            <label class="font-weight-bold small">Qty <span class="required">*</span></label>
-                                                            <input type="number" name="detail[0][jumlah]" class="form-control form-control-sm"
-                                                                min="0" placeholder="0" required onchange="calculateTotal(0)">
-                                                        </div>
-                                                    </div>
-
-                                                    <!-- Satuan -->
-                                                    <div class="col-md-1 mb-2">
-                                                        <div class="form-group">
-                                                            <label class="font-weight-bold small">Satuan <span class="required">*</span></label>
-                                                            <select name="detail[0][satuan]" class="form-control form-control-sm" required>
-                                                                <option value="">--</option>
-                                                                <option value="Pcs">Pcs</option>
-                                                                <option value="Unit">Unit</option>
-                                                                <option value="Set">Set</option>
-                                                                <option value="Buah">Buah</option>
-                                                                <option value="Paket">Paket</option>
-                                                                <option value="Kg">Kg</option>
-                                                                <option value="Meter">Meter</option>
-                                                                <option value="Liter">Liter</option>
-                                                                <option value="Box">Box</option>
-                                                                <option value="Roll">Roll</option>
-                                                                <option value="Lembar">Lembar</option>
-                                                                <option value="Dus">Dus</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-
-                                                    <!-- Harga Satuan -->
-                                                    <div class="col-md-2 mb-2">
-                                                        <div class="form-group">
-                                                            <label class="font-weight-bold small">Harga Satuan <span class="required">*</span></label>
-                                                            <input type="text" name="detail[0][harga_satuan]" class="form-control form-control-sm harga-input"
-                                                                placeholder="Rp 0" required onkeyup="formatRupiah(this); calculateTotal(0)">
-                                                        </div>
-                                                    </div>
-
-                                                    <!-- Total Harga -->
-                                                    <div class="col-md-2 mb-2">
-                                                        <div class="form-group">
-                                                            <label class="font-weight-bold small">Total Harga <small class="text-muted">(bisa diubah)</small></label>
-                                                            <input type="text" name="detail[0][total_harga]" class="form-control form-control-sm total-harga"
-                                                                placeholder="Rp 0" onkeyup="formatRupiah(this); calculateGrandTotal();"
-                                                                title="Otomatis dari Qty × Harga Satuan, tapi bisa diedit manual">
-                                                        </div>
-                                                    </div>
-
-                                                    <!-- Deskripsi -->
-                                                    <div class="col-md-12 mb-2">
-                                                        <div class="form-group">
-                                                            <label class="font-weight-bold small">Deskripsi Detail</label>
-                                                            <textarea name="detail[0][deskripsi]" class="form-control form-control-sm" rows="1"
-                                                                placeholder="Deskripsi tambahan..."></textarea>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                        
+                                        <!-- Alokasi per Kategori -->
+                                        <div id="categoriesContainer">
+                                            <!-- Category groups will be added here -->
                                         </div>
-
-                                        <!-- Tombol Tambah Item -->
-                                        <div class="row mt-2">
-                                            <div class="col-12">
-                                                <div class="d-flex justify-content-start">
-                                                    <button type="button" class="btn btn-sm btn-success" onclick="addDetailItem()">
-                                                        <i class="fas fa-plus"></i> Tambah Item
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Total Keseluruhan -->
-                                        <div class="row mt-3">
-                                            <div class="col-12">
-                                                <div class="alert alert-info">
-                                                    <div class="row">
-                                                        <div class="col-md-6">
-                                                            <strong>Total Nominal PPX:</strong>
-                                                        </div>
-                                                        <div class="col-md-6 text-right">
-                                                            <h5 id="grandTotal" class="mb-0">Rp 0</h5>
-                                                        </div>
+                                        
+                                        <button type="button" id="addCategory" class="btn btn-primary btn-sm mt-3" style="width: auto; min-width: 150px;">
+                                            <i class="fa fa-plus"></i> Tambah Akun Baru
+                                        </button>
+                                        
+                                        <hr class="mt-4">
+                                        <div class="row">
+                                            <div class="col-md-6 offset-md-6">
+                                                <div class="card bg-light">
+                                                    <div class="card-body">
+                                                        <h5 class="text-right mb-0"><strong>Total Alokasi:</strong></h5>
+                                                        <h4 class="text-primary text-right mb-0" id="totalAllocation">Rp 0</h4>
+                                                        <input type="hidden" name="total_allocation" id="total_allocation" value="0">
                                                     </div>
                                                 </div>
-                                                
-                                                <!-- Warning jika melebihi budget -->
-                                                <div id="budget_warning" style="display:none;"></div>
                                             </div>
                                         </div>
                                     </div>
+                                    
+                                    <!-- Hidden fields for category and item data -->
+                                    <input type="hidden" name="items_data" id="items_data" value="">
+                                    
 
                                     <!-- SECTION 3: Justifikasi -->
                                     <div class="form-section">
@@ -854,7 +736,7 @@ $preselected_asset = $_GET['asset'] ?? '';
                                                 <div class="form-group">
                                                     <label class="font-weight-bold">Alasan Pengajuan <span class="required">*</span></label>
                                                     <textarea name="alasan_pengajuan" class="form-control" rows="4"
-                                                        placeholder="Jelaskan alasan mengapa PPX ini dibutuhkan..." required></textarea>
+                                                        placeholder="Jelaskan alasan mengapa PPX ini dibutuhkan..." ></textarea>
                                                 </div>
                                             </div>
 
@@ -894,7 +776,7 @@ $preselected_asset = $_GET['asset'] ?? '';
                                                 <div class="form-group">
                                                     <label class="font-weight-bold">Upload File Pendukung</label>
                                                     <input type="file" name="upload_file" class="form-control"
-                                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" required>
+                                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" >
                                                     <small class="text-muted">
                                                         Format: PDF, DOC, XLS, JPG, PNG. Maksimal 5MB.
                                                     </small>
@@ -905,7 +787,6 @@ $preselected_asset = $_GET['asset'] ?? '';
 
                                     <!-- Hidden fields -->
                                     <input type="hidden" name="user_id" value="<?= $_SESSION['id_user'] ?>">
-                                    <input type="hidden" name="status" value="Leader">
                                     <input type="hidden" name="id_divisi" value="<?= $user_data['divisi'] ?? '' ?>">
                                     <input type="hidden" name="id_departemen" value="<?= $user_data['departemen'] ?? '' ?>">
                                     <!-- Tambahan: simpan data asset terkait agar submit langsung membawa nilai -->
@@ -939,8 +820,224 @@ $preselected_asset = $_GET['asset'] ?? '';
     </div>
 
     <script>
-        let detailIndex = 1;
+        // Format Rupiah function
+        function formatRupiah(angka) {
+            if (!angka) return '';
+            let number_string = angka.toString().replace(/[^,\d]/g, '');
+            let split = number_string.split(',');
+            let sisa = split[0].length % 3;
+            let rupiah = split[0].substr(0, sisa);
+            let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
+
+            if (ribuan) {
+                let separator = sisa ? '.' : '';
+                rupiah += separator + ribuan.join('.');
+            }
+
+            rupiah = split[1] != undefined ? rupiah + ',' + split[1] : rupiah;
+            return rupiah ? 'Rp ' + rupiah : '';
+        }
+
+        // Parse Rupiah to number
+        function parseRupiah(rupiah) {
+            if (!rupiah) return 0;
+            return parseInt(rupiah.toString().replace(/[^0-9]/g, '')) || 0;
+        }
+
         const akunOptions = <?= json_encode($akun_options_html) ?>;
+        const categoryOptions = `<?= str_replace("`", "\\`", $categoryOptionsHtml) ?>`;
+        const kategoriNameOptions = `<?= str_replace("`", "\\`", $kategoriNameOptionsHtml) ?>`;
+        let categoryCounter = 0;
+
+        function addCategory() {
+            categoryCounter++;
+            const catId = 'cat_' + Date.now() + '_' + categoryCounter;
+            
+            const categoryBlock = `
+                <div class="border rounded p-3 mb-3 category-block" data-category-id="${catId}" style="background-color: #f8f9fa;">
+                    <div class="row align-items-center mb-2">
+                        <div class="col-md-5">
+                            <label class="mb-1" style="font-size: 13px;"><strong>Kategori:</strong></label>
+                            <select class="form-control form-control-sm category-select" data-category-id="${catId}" required>
+                                <option value="">-- Pilih Kategori --</option>
+                                ${kategoriNameOptions}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="mb-1" style="font-size: 13px;"><strong>Subtotal Akun:</strong></label><br>
+                            <span class="category-subtotal text-primary font-weight-bold h5" data-category-id="${catId}">Rp 0</span>
+                        </div>
+                        <div class="col-md-3 text-right" style="padding-top: 24px;">
+                            <button type="button" class="btn btn-sm btn-danger remove-category-btn" title="Hapus Akun">
+                                <i class="fa fa-trash"></i> Hapus Akun
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th style="width: 35%;">Rincian Item</th>
+                                    <th style="width: 10%;">Qty</th>
+                                    <th style="width: 15%;">Satuan</th>
+                                    <th style="width: 17%;">Harga Satuan</th>
+                                    <th style="width: 17%;">Total</th>
+                                    <th style="width: 6%;"></th>
+                                </tr>
+                            </thead>
+                            <tbody class="items-body" data-category-id="${catId}">
+                                <!-- Items will be added here -->
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="6" class="p-2">
+                                        <button type="button" class="btn btn-xs btn-success add-item-btn" data-category-id="${catId}">
+                                            <i class="fa fa-plus"></i> Item Baru
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            `;
+            
+            $('#categoriesContainer').append(categoryBlock);
+            bindCategoryEvents();
+            addItemToCategory(catId);
+            updateCategoryForItems(catId);
+            initAkunSelects();
+        }
+
+        function addItemToCategory(categoryId) {
+            const itemId = 'item_' + Date.now() + '_' + Math.random();
+            const itemIndex = Date.now() + '_' + Math.floor(Math.random() * 10000);
+            
+            const itemRow = `
+                <tr data-item-id="${itemId}" data-category-id="${categoryId}" data-item-index="${itemIndex}">
+                    <td>
+                        <input type="hidden" name="detail[${itemIndex}][no_akun]" class="item-category-ref" data-category-id="${categoryId}" value="">
+                        <input type="text" name="detail[${itemIndex}][rincian]" class="form-control form-control-sm item-rincian" placeholder="Deskripsi item" required>
+                    </td>
+                    <td><input type="number" name="detail[${itemIndex}][jumlah]" class="form-control form-control-sm item-qty" value="1" min="1"></td>
+                    <td>
+                        <select name="detail[${itemIndex}][satuan]" class="form-control form-control-sm item-satuan">
+                            <option value="">-</option>
+                            <option value="Pcs">Pcs</option>
+                            <option value="Unit">Unit</option>
+                            <option value="Set">Set</option>
+                            <option value="Buah">Buah</option>
+                            <option value="Paket">Paket</option>
+                            <option value="Kg">Kg</option>
+                            <option value="Meter">Meter</option>
+                            <option value="Liter">Liter</option>
+                            <option value="Box">Box</option>
+                            <option value="Roll">Roll</option>
+                            <option value="Lembar">Lembar</option>
+                            <option value="Dus">Dus</option>
+                        </select>
+                    </td>
+                    <td><input type="text" name="detail[${itemIndex}][harga_satuan]" class="form-control form-control-sm item-price" value="" placeholder="Rp 0"></td>
+                    <td><input type="text" name="detail[${itemIndex}][total_harga]" class="form-control form-control-sm item-total" value="" placeholder="Rp 0"></td>
+                    <td><button type="button" class="btn btn-sm btn-danger remove-item-btn">&times;</button></td>
+                </tr>
+            `;
+            
+            $(`.items-body[data-category-id="${categoryId}"]`).append(itemRow);
+            bindItemEvents();
+            updateCategoryForItems(categoryId);
+        }
+
+        function updateCategoryForItems(categoryId) {
+            const selectedValue = $(`.category-select[data-category-id="${categoryId}"]`).val();
+            $(`.items-body[data-category-id="${categoryId}"]`).find('.item-category-ref').val(selectedValue || '');
+        }
+
+        function bindCategoryEvents() {
+            $('.add-item-btn').off('click').on('click', function() {
+                const catId = $(this).data('category-id');
+                addItemToCategory(catId);
+            });
+            
+            $('.remove-category-btn').off('click').on('click', function() {
+                if (confirm('Hapus kategori ini beserta semua itemnya?')) {
+                    $(this).closest('.category-block').remove();
+                    updateTotals();
+                }
+            });
+            
+            $('.category-select').off('change').on('change', function() {
+                $(this).removeClass('is-invalid');
+                const catId = $(this).data('category-id');
+                updateCategoryForItems(catId);
+            });
+        }
+
+        function bindItemEvents() {
+            $('.item-price').off('keyup input').on('keyup input', function() {
+                $(this).removeClass('is-invalid');
+                const num = parseRupiah($(this).val());
+                $(this).val(formatRupiah(num));
+                updateItemTotal($(this).closest('tr'));
+            });
+            
+            $('.item-qty').off('change input').on('change input', function() {
+                updateItemTotal($(this).closest('tr'));
+            });
+            
+            $('.remove-item-btn').off('click').on('click', function() {
+                const $tbody = $(this).closest('tbody');
+                $(this).closest('tr').remove();
+                if ($tbody.find('tr').length === 0) {
+                    const catId = $tbody.data('category-id');
+                    addItemToCategory(catId);
+                }
+                updateTotals();
+            });
+            
+            $('.item-total').off('keyup input').on('keyup input', function() {
+                $(this).removeClass('is-invalid');
+                const num = parseRupiah($(this).val());
+                $(this).val(formatRupiah(num));
+                const catId = $(this).closest('tr').data('category-id');
+                updateCategorySubtotal(catId);
+            });
+        }
+
+        function updateItemTotal($row) {
+            const qty = parseInt($row.find('.item-qty').val()) || 0;
+            const price = parseRupiah($row.find('.item-price').val()) || 0;
+            const total = qty * price;
+            $row.find('.item-total').val(formatRupiah(total));
+            const catId = $row.data('category-id');
+            updateCategorySubtotal(catId);
+        }
+
+        function updateCategorySubtotal(categoryId) {
+            let subtotal = 0;
+            $(`.items-body[data-category-id="${categoryId}"] tr`).each(function() {
+                subtotal += parseRupiah($(this).find('.item-total').val());
+            });
+            $(`.category-subtotal[data-category-id="${categoryId}"]`).text('Rp ' + subtotal.toLocaleString('id-ID'));
+            updateTotals();
+        }
+
+        function updateTotals() {
+            let total = 0;
+            $('.items-body tr').each(function() {
+                total += parseRupiah($(this).find('.item-total').val());
+            });
+            $('#totalAllocation').text('Rp ' + total.toLocaleString('id-ID'));
+            $('#total_allocation').val(total);
+        }
+
+        $(document).ready(function() {
+            $('#addCategory').on('click', function() {
+                addCategory();
+            });
+            // Add first category on load
+            addCategory();
+        });
 
         // TAMBAHAN: Show relation info (asset or renovasi) when select changes
         function showRelationInfo(selectElem) {
@@ -1037,107 +1134,67 @@ $preselected_asset = $_GET['asset'] ?? '';
             }
         }
 
-        // populateDetailFromItems expects items with harga_satuan numeric (it sets harga input value with "Rp ...")
+        // populateDetailFromItems updated for category-based structure
         function populateDetailFromItems(items) {
-            const container = document.getElementById('detailContainer');
-            container.innerHTML = ''; // clear existing
-            detailIndex = 0;
+            // Clear existing categories
+            $('#categoriesContainer').empty();
+            categoryCounter = 0;
+
+            // Create one category for these items
+            addCategory();
+            const catId = $('.category-block').last().data('category-id');
+
             items.forEach(function(it) {
-                const idx = detailIndex;
-                const harga = (it.harga_satuan !== undefined) ? String(it.harga_satuan) : '0';
-                const formattedHarga = formatNumberDisplay(harga);
-                const totalComputed = (parseInt(it.jumlah || 0, 10) * parseInt(harga || 0, 10));
-                const formattedTotal = formatNumberDisplay(String(totalComputed));
+                const itemId = 'item_auto_' + Date.now() + '_' + Math.random();
+                const itemIndex = Date.now() + '_' + Math.floor(Math.random() * 100000);
+                
+                const hargaFormatted = formatRupiah(it.harga_satuan);
+                const totalFormatted = formatRupiah(it.total_harga);
 
-                const itemHtml = `
-                    <div class="detail-item position-relative" data-index="${idx}">
-                        <button type="button" class="btn btn-sm btn-danger btn-remove-item" data-index="${idx}" title="Hapus item">
-                            <i class="fas fa-times"></i>
-                        </button>
-                        <div class="row">
-                            <div class="col-12 col-md-4 mb-3">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">No. Akun <span class="required">*</span></label>
-                                    <select name="detail[${idx}][no_akun]" class="form-control" required>
-                                        <option value="">-- Pilih No. Akun --</option>
-                                        ${akunOptions}
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-8 mb-3">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Rincian Item <span class="required">*</span></label>
-                                    <input type="text" name="detail[${idx}][rincian]" class="form-control" value="${escapeHtml(it.rincian || '')}" required>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-3 mb-3">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Jumlah <span class="required">*</span></label>
-                                    <input type="number" name="detail[${idx}][jumlah]" class="form-control" min="0" placeholder="0" required onchange="calculateTotal(${idx})" value="${escapeHtml(String(it.jumlah || 0))}">
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-3 mb-3">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Satuan <span class="required">*</span></label>
-                                    <select name="detail[${idx}][satuan]" class="form-control" required>
-                                        <option value="">-- Pilih Satuan --</option>
-                                        <option value="Pcs" ${it.satuan==='Pcs'?'selected':''}>Pcs</option>
-                                        <option value="Unit" ${it.satuan==='Unit'?'selected':''}>Unit</option>
-                                        <option value="Set" ${it.satuan==='Set'?'selected':''}>Set</option>
-                                        <option value="Buah" ${it.satuan==='Buah'?'selected':''}>Buah</option>
-                                        <option value="Paket" ${it.satuan==='Paket'?'selected':''}>Paket</option>
-                                        <option value="Kg" ${it.satuan==='Kg'?'selected':''}>Kg</option>
-                                        <option value="Meter" ${it.satuan==='Meter'?'selected':''}>Meter</option>
-                                        <option value="Liter" ${it.satuan==='Liter'?'selected':''}>Liter</option>
-                                        <option value="Box" ${it.satuan==='Box'?'selected':''}>Box</option>
-                                        <option value="Roll" ${it.satuan==='Roll'?'selected':''}>Roll</option>
-                                        <option value="Lembar" ${it.satuan==='Lembar'?'selected':''}>Lembar</option>
-                                        <option value="Dus" ${it.satuan==='Dus'?'selected':''}>Dus</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-3 mb-3">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Harga Satuan <span class="required">*</span></label>
-                                    <input type="text" name="detail[${idx}][harga_satuan]" class="form-control harga-input" placeholder="Rp 0" required onkeyup="formatRupiah(this); calculateTotal(${idx})" value="Rp ${formattedHarga}">
-                                </div>
-                            </div>
-                            <div class="col-12 col-md-3 mb-3">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Total Harga <small class="text-muted">(bisa diubah)</small></label>
-                                    <input type="text" name="detail[${idx}][total_harga]" class="form-control total-harga" placeholder="Rp 0"
-                                        onkeyup="formatRupiah(this); this.dataset.manualEdit='1'; calculateGrandTotal();"
-                                        value="Rp ${formattedTotal}"
-                                        title="Otomatis dari Qty × Harga Satuan, tapi bisa diedit manual">
-                                </div>
-                            </div>
-                            <div class="col-12 mb-3">
-                                <div class="form-group">
-                                    <label class="font-weight-bold">Deskripsi Detail</label>
-                                    <textarea name="detail[${idx}][deskripsi]" class="form-control" rows="2">${escapeHtml(it.deskripsi || '')}</textarea>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                const itemRow = `
+                    <tr data-item-id="${itemId}" data-category-id="${catId}" data-item-index="${itemIndex}">
+                        <td>
+                            <input type="hidden" name="detail[${itemIndex}][no_akun]" class="item-category-ref" data-category-id="${catId}" value="">
+                            <input type="text" name="detail[${itemIndex}][rincian]" class="form-control form-control-sm item-rincian" value="${escapeHtml(it.rincian || '')}" placeholder="Deskripsi item" required>
+                        </td>
+                        <td><input type="number" name="detail[${itemIndex}][jumlah]" class="form-control form-control-sm item-qty" value="${it.jumlah || 1}" min="1"></td>
+                        <td>
+                            <select name="detail[${itemIndex}][satuan]" class="form-control form-control-sm item-satuan">
+                                <option value="">-</option>
+                                <option value="Pcs" ${it.satuan==='Pcs'?'selected':''}>Pcs</option>
+                                <option value="Unit" ${it.satuan==='Unit'?'selected':''}>Unit</option>
+                                <option value="Set" ${it.satuan==='Set'?'selected':''}>Set</option>
+                                <option value="Buah" ${it.satuan==='Buah'?'selected':''}>Buah</option>
+                                <option value="Paket" ${it.satuan==='Paket'?'selected':''}>Paket</option>
+                                <option value="Kg" ${it.satuan==='Kg'?'selected':''}>Kg</option>
+                                <option value="Meter" ${it.satuan==='Meter'?'selected':''}>Meter</option>
+                                <option value="Liter" ${it.satuan==='Liter'?'selected':''}>Liter</option>
+                                <option value="Box" ${it.satuan==='Box'?'selected':''}>Box</option>
+                                <option value="Roll" ${it.satuan==='Roll'?'selected':''}>Roll</option>
+                                <option value="Lembar" ${it.satuan==='Lembar'?'selected':''}>Lembar</option>
+                                <option value="Dus" ${it.satuan==='Dus'?'selected':''}>Dus</option>
+                            </select>
+                        </td>
+                        <td><input type="text" name="detail[${itemIndex}][harga_satuan]" class="form-control form-control-sm item-price" value="${hargaFormatted}" placeholder="0"></td>
+                        <td><input type="text" name="detail[${itemIndex}][total_harga]" class="form-control form-control-sm item-total" value="${totalFormatted}" placeholder="0"></td>
+                        <td><button type="button" class="btn btn-sm btn-danger remove-item-btn">&times;</button></td>
+                    </tr>
                 `;
-                container.insertAdjacentHTML('beforeend', itemHtml);
-
-                // set selected akun if present
-                if (it.no_akun) {
-                    const sel = container.querySelector(`.detail-item[data-index="${idx}"] select[name="detail[${idx}][no_akun]"]`);
-                    if (sel) {
-                        const opt = sel.querySelector(`option[value="${it.no_akun}"]`);
-                        if (opt) opt.selected = true;
-                    }
-                }
-
-                detailIndex++;
+                
+                $(`.items-body[data-category-id="${catId}"]`).append(itemRow);
             });
 
-            updateRemoveButtons();
-            calculateGrandTotal();
-            // initialize searchable akun selects
-            if (typeof initAkunSelects === 'function') initAkunSelects();
+            // Set the account for the main category dropdown
+            items.forEach((it, idx) => {
+                if (it.no_akun && idx === 0) {
+                    $(`.category-select[data-category-id="${catId}"]`).val(it.no_akun);
+                    updateCategoryForItems(catId);
+                }
+            });
+
+            bindItemEvents();
+            updateCategorySubtotal(catId);
+            initAkunSelects();
         }
 
         // helper to format number string without prefix, used in modal
@@ -1153,246 +1210,6 @@ $preselected_asset = $_GET['asset'] ?? '';
             return div.innerHTML;
         }
 
-        // Format Rupiah
-        function formatRupiah(input) {
-            let value = input.value.replace(/[^,\d]/g, "").toString();
-            let split = value.split(",");
-            let sisa = split[0].length % 3;
-            let rupiah = split[0].substr(0, sisa);
-            let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
-
-            if (ribuan) {
-                let separator = sisa ? "." : "";
-                rupiah += separator + ribuan.join(".");
-            }
-
-            rupiah = split[1] != undefined ? rupiah + "," + split[1] : rupiah;
-            input.value = rupiah ? "Rp " + rupiah : "";
-        }
-
-        // Calculate total for each item (only auto-fills if total is empty or user didn't manually edit)
-        function calculateTotal(index) {
-            const jumlahInput = document.querySelector(`input[name="detail[${index}][jumlah]"]`);
-            const hargaInput = document.querySelector(`input[name="detail[${index}][harga_satuan]"]`);
-            const totalInput = document.querySelector(`input[name="detail[${index}][total_harga]"]`);
-
-            if (!jumlahInput || !hargaInput || !totalInput) return;
-            
-            // Only auto-calculate if total hasn't been manually edited
-            if (totalInput.dataset.manualEdit === '1') {
-                calculateGrandTotal();
-                return;
-            }
-
-            let jumlah = parseInt(jumlahInput.value) || 0;
-            let harga = parseInt(hargaInput.value.replace(/[^\d]/g, '')) || 0;
-            let total = jumlah * harga;
-
-            let formattedTotal = total.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-            totalInput.value = total > 0 ? "Rp " + formattedTotal : "Rp 0";
-
-            calculateGrandTotal();
-        }
-
-        // Calculate grand total
-        function calculateGrandTotal() {
-            let grandTotal = 0;
-            document.querySelectorAll('.total-harga').forEach(function(input) {
-                let value = input.value.replace(/[^,\d]/g, "") || 0;
-                grandTotal += parseInt(value);
-            });
-
-            let formattedGrandTotal = grandTotal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-            document.getElementById('grandTotal').textContent = grandTotal > 0 ? "Rp " + formattedGrandTotal : "Rp 0";
-            
-            // Check budget limit if Monthly_Budget type is selected
-            checkBudgetLimit(grandTotal);
-        }
-        
-        // Check if total exceeds budget limit
-        function checkBudgetLimit(grandTotal) {
-            const requestType = document.getElementById('request_type').value;
-            const categorySelect = document.getElementById('id_category');
-            const warningDiv = document.getElementById('budget_warning');
-            
-            if (requestType === 'Monthly_Budget' && categorySelect.value) {
-                const selectedOption = categorySelect.options[categorySelect.selectedIndex];
-                const remaining = parseFloat(selectedOption.dataset.remaining) || 0;
-                
-                if (grandTotal > remaining) {
-                    const excess = grandTotal - remaining;
-                    const formattedExcess = excess.toLocaleString('id-ID');
-                    const formattedRemaining = remaining.toLocaleString('id-ID');
-                    const formattedTotal = grandTotal.toLocaleString('id-ID');
-                    
-                    warningDiv.innerHTML = `
-                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                            <h5 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> PERINGATAN: Nominal Melebihi Budget!</h5>
-                            <hr>
-                            <p class="mb-2"><strong>Total Nominal PPX:</strong> Rp ${formattedTotal}</p>
-                            <p class="mb-2"><strong>Sisa Budget Tersedia:</strong> Rp ${formattedRemaining}</p>
-                            <p class="mb-3"><strong>Kelebihan:</strong> <span class="text-danger">Rp ${formattedExcess}</span></p>
-                            <hr>
-                            <p class="mb-2"><i class="fas fa-info-circle"></i> <strong>Silakan lakukan salah satu dari berikut:</strong></p>
-                            <ul class="mb-2">
-                                <li>Kurangi nominal item di bawah sisa budget, atau</li>
-                                <li>Pilih kategori anggaran lain yang memiliki budget cukup, atau</li>
-                                <li>Hubungi <strong>IT</strong> untuk penambahan alokasi budget</li>
-                            </ul>
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                                <span aria-hidden="true">&times;</span>
-                            </button>
-                        </div>
-                    `;
-                    warningDiv.style.display = 'block';
-                } else {
-                    warningDiv.style.display = 'none';
-                }
-            } else {
-                warningDiv.style.display = 'none';
-            }
-        }
-
-        // Remove detail item and reindex
-        function removeDetailItem(btnOrIndex) {
-            let item = null;
-            if (!btnOrIndex) return;
-            if (typeof btnOrIndex === 'number' || /^\d+$/.test(String(btnOrIndex))) {
-                item = document.querySelector('.detail-item[data-index="' + btnOrIndex + '"]');
-            } else if (btnOrIndex instanceof Element) {
-                item = btnOrIndex.closest('.detail-item');
-            }
-            if (!item) return;
-
-            item.parentNode.removeChild(item);
-
-            const items = document.querySelectorAll('.detail-item');
-            items.forEach(function(it, idx) {
-                it.setAttribute('data-index', idx);
-                const removeBtn = it.querySelector('.btn-remove-item');
-                if (removeBtn) removeBtn.setAttribute('data-index', idx);
-
-                it.querySelectorAll('[name]').forEach(function(el) {
-                    el.name = el.name.replace(/detail\[\d+\]/, 'detail[' + idx + ']');
-                });
-            });
-
-            detailIndex = document.querySelectorAll('.detail-item').length;
-            calculateGrandTotal();
-            updateRemoveButtons();
-        }
-
-        // Add new detail item
-        function addDetailItem() {
-            const container = document.getElementById('detailContainer');
-            const newItem = document.createElement('div');
-            newItem.className = 'detail-item position-relative';
-            newItem.setAttribute('data-index', detailIndex);
-
-            newItem.innerHTML = `
-                <button type="button" class="btn btn-sm btn-danger btn-remove-item" data-index="${detailIndex}" title="Hapus item">
-                     <i class="fas fa-times"></i>
-                 </button>
-                
-                <div class="row">
-                    <div class="col-12 col-md-2 mb-2">
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold">No. Akun <span class="required">*</span></label>
-                            <select name="detail[${detailIndex}][no_akun]" class="form-control form-control-sm" required>
-                                <option value="">-- Pilih --</option>
-                                ${akunOptions}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-3 mb-2">
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold">Rincian Item <span class="required">*</span></label>
-                            <input type="text" name="detail[${detailIndex}][rincian]" class="form-control form-control-sm"
-                                placeholder="Nama item" required>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-1 mb-2">
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold">Jumlah <span class="required">*</span></label>
-                            <input type="number" name="detail[${detailIndex}][jumlah]" class="form-control form-control-sm"
-                                min="0" placeholder="0" required onchange="calculateTotal(${detailIndex})">
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-1 mb-2">
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold">Satuan <span class="required">*</span></label>
-                            <select name="detail[${detailIndex}][satuan]" class="form-control form-control-sm" required>
-                                <option value="">--</option>
-                                <option value="Pcs">Pcs</option>
-                                <option value="Unit">Unit</option>
-                                <option value="Set">Set</option>
-                                <option value="Buah">Buah</option>
-                                <option value="Paket">Paket</option>
-                                <option value="Kg">Kg</option>
-                                <option value="Meter">Meter</option>
-                                <option value="Liter">Liter</option>
-                                <option value="Box">Box</option>
-                                <option value="Roll">Roll</option>
-                                <option value="Lembar">Lembar</option>
-                                <option value="Dus">Dus</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-2 mb-2">
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold">Harga Satuan <span class="required">*</span></label>
-                            <input type="text" name="detail[${detailIndex}][harga_satuan]" class="form-control form-control-sm harga-input"
-                                placeholder="Rp 0" required onkeyup="formatRupiah(this); calculateTotal(${detailIndex})">
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-2 mb-2">
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold">Total Harga <small class="text-muted">(bisa diubah)</small></label>
-                            <input type="text" name="detail[${detailIndex}][total_harga]" class="form-control form-control-sm total-harga"
-                                placeholder="Rp 0" onkeyup="formatRupiah(this); this.dataset.manualEdit='1'; calculateGrandTotal();"
-                                title="Otomatis dari Qty × Harga Satuan, tapi bisa diedit manual">
-                        </div>
-                    </div>
-                    <div class="col-12 mb-3">
-                        <div class="form-group mb-0">
-                            <label class="small font-weight-bold">Deskripsi Detail</label>
-                            <textarea name="detail[${detailIndex}][deskripsi]" class="form-control form-control-sm" rows="2"
-                                placeholder="Deskripsi tambahan untuk item ini..."></textarea>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            container.appendChild(newItem);
-            detailIndex++;
-            updateRemoveButtons();
-            // initialize searchable akun selects for the newly added row
-            if (typeof initAkunSelects === 'function') initAkunSelects();
-        }
-
-        // Update remove buttons visibility
-        function updateRemoveButtons() {
-            const items = document.querySelectorAll('.detail-item');
-            items.forEach(function(item, index) {
-                const removeBtn = item.querySelector('.btn-remove-item');
-                if (items.length > 1) {
-                    removeBtn.style.display = 'block';
-                } else {
-                    removeBtn.style.display = 'none';
-                }
-                if (removeBtn) removeBtn.setAttribute('data-index', item.getAttribute('data-index'));
-            });
-        }
-
-        // Event delegation for remove button
-        document.getElementById('detailContainer').addEventListener('click', function(e) {
-            const btn = e.target.closest ? e.target.closest('.btn-remove-item') : null;
-            if (!btn || !this.contains(btn)) return;
-            e.preventDefault();
-            removeDetailItem(btn);
-        });
-
-        updateRemoveButtons();
 
         // Update Priority Badge
         function updatePriorityBadge() {
@@ -1441,7 +1258,7 @@ $preselected_asset = $_GET['asset'] ?? '';
                 return false;
             }
 
-            const detailItems = document.querySelectorAll('.detail-item');
+            const detailItems = document.querySelectorAll('.items-body tr');
             if (detailItems.length === 0) {
                 e.preventDefault();
                 alert('Minimal harus ada satu item detail!');
@@ -1508,12 +1325,14 @@ $preselected_asset = $_GET['asset'] ?? '';
                         if (data.categories.length > 0) {
                             data.categories.forEach(cat => {
                                 const option = document.createElement('option');
-                                option.value = cat.id_category;
+                                option.value = cat.id_budget_item;
+                                option.dataset.categoryId = cat.id_category;
                                 option.dataset.remaining = cat.remaining;
                                 option.dataset.allocation = cat.allocation;
                                 option.dataset.used = cat.used_amount;
                                 option.dataset.code = cat.category_code;
-                                option.textContent = `[${cat.category_code}] ${cat.category_name} (Sisa: Rp ${parseInt(cat.remaining).toLocaleString('id-ID')})`;
+                                option.dataset.tipe = cat.tipe_anggaran;
+                                option.textContent = `[${cat.tipe_anggaran}] ${cat.category_name} (Sisa: Rp ${parseInt(cat.remaining).toLocaleString('id-ID')})`;
                                 categorySelect.appendChild(option);
                             });
                             noBudgetAlert.style.display = 'none';
@@ -1540,11 +1359,12 @@ $preselected_asset = $_GET['asset'] ?? '';
                 const used = parseFloat(option.dataset.used) || 0;
                 const percent = allocation > 0 ? ((used / allocation) * 100).toFixed(2) : 0;
                 const code = option.dataset.code || '';
+                const tipe = option.dataset.tipe || '';
                 
                 const progressColor = percent > 80 ? 'danger' : (percent > 50 ? 'warning' : 'success');
                 
                 info.innerHTML = `
-                    <strong>Info Budget Kategori: ${code}</strong><br>
+                    <strong>Info Budget: ${tipe} - [${code}]</strong><br>
                     <div class="row mt-2">
                         <div class="col-4">
                             <small><strong>Alokasi:</strong></small><br>
@@ -1642,7 +1462,7 @@ $preselected_asset = $_GET['asset'] ?? '';
                 return false;
             }
 
-            const detailItems = document.querySelectorAll('.detail-item');
+            const detailItems = document.querySelectorAll('.items-body tr');
             if (detailItems.length === 0) {
                 e.preventDefault();
                 alert('Minimal harus ada satu item detail!');
@@ -1653,8 +1473,43 @@ $preselected_asset = $_GET['asset'] ?? '';
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
             toggleBudgetCategory();
+            toggleMetodePembayaran();
             if (typeof initAkunSelects === 'function') initAkunSelects();
         });
+
+        // Sync nama penerima (cash) ke field nama_rek saat submit
+        document.getElementById('formPengajuan').addEventListener('submit', function() {
+            const metode = document.getElementById('metode_pembayaran').value;
+            if (metode === 'Cash') {
+                const cashVal = document.getElementById('nama_rek_cash');
+                const namaRek = document.getElementById('nama_rek');
+                if (cashVal && namaRek) namaRek.value = cashVal.value;
+            }
+        });
+        // Toggle metode pembayaran: Transfer vs Cash
+        function toggleMetodePembayaran() {
+            const metode = document.getElementById('metode_pembayaran').value;
+            const transferFields = document.getElementById('transfer_fields');
+            const cashFields = document.getElementById('cash_fields');
+
+            // Reset nama_rek values to avoid submitting stale data
+            const namaRekTransfer  = document.getElementById('nama_rek');
+            const namaRekCash      = document.getElementById('nama_rek_cash');
+
+            if (metode === 'Transfer') {
+                transferFields.style.display = 'block';
+                cashFields.style.display = 'none';
+                if (namaRekCash) namaRekCash.value = '';
+            } else if (metode === 'Cash') {
+                transferFields.style.display = 'none';
+                cashFields.style.display = 'block';
+                // sync nama_rek_cash value into the hidden transfer nama_rek so it gets submitted
+                if (namaRekTransfer) namaRekTransfer.value = '';
+            } else {
+                transferFields.style.display = 'none';
+                cashFields.style.display = 'none';
+            }
+        }
     </script>
 
     <!-- Select2 JS -->
@@ -1665,10 +1520,8 @@ $preselected_asset = $_GET['asset'] ?? '';
             // use jQuery if available
             if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') return;
 
-            // selector: any select whose name contains [no_akun]
-            jQuery('select[name^="detail"]').filter(function() {
-                return (this.name || '').indexOf('[no_akun]') !== -1;
-            }).each(function() {
+            // Initialize select2 on the main category/account select
+            jQuery('.category-select').each(function() {
                 const $s = jQuery(this);
                 // avoid double-init
                 if ($s.data('select2')) return;
@@ -1682,6 +1535,33 @@ $preselected_asset = $_GET['asset'] ?? '';
             });
         }
     </script>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <?php if (isset($_SESSION['error'])): ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                icon: 'error',
+                title: 'Peringatan',
+                text: '<?= addslashes($_SESSION['error']) ?>',
+                confirmButtonText: 'Tutup'
+            });
+        });
+    </script>
+    <?php unset($_SESSION['error']); endif; ?>
+    <?php if (isset($_SESSION['success'])): ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            Swal.fire({
+                icon: 'success',
+                title: 'Berhasil',
+                text: '<?= addslashes($_SESSION['success']) ?>',
+                confirmButtonText: 'Tutup'
+            });
+        });
+    </script>
+    <?php unset($_SESSION['success']); endif; ?>
 
 </body>
 

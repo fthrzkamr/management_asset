@@ -22,6 +22,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if ($kategori == 'Konsumsi')   $prefix = 'KONS';
     elseif ($kategori == 'Elektronik') $prefix = 'ELEK';
     elseif ($kategori == 'Lainnya')    $prefix = 'LAIN';
+    elseif ($kategori == 'Inventaris')    $prefix = 'INV';
+    elseif ($kategori == 'Alat Tulis Kantor')    $prefix = 'ATK';
+    elseif ($kategori == 'Peralatan Rumah Tangga')    $prefix = 'PRT';
 
     $last_res = mysqli_query($conn, "SELECT kode_barang FROM inventory_atk WHERE kode_barang LIKE '$prefix-%' ORDER BY id_barang DESC LIMIT 1");
     if ($last_res && mysqli_num_rows($last_res) > 0) {
@@ -104,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <label>Kategori <span class="text-danger">*</span></label>
                             <select name="kategori" class="form-control" required>
                                 <option value="">-- Pilih Kategori --</option>
-                                <?php foreach (['ATK', 'Konsumsi', 'Elektronik', 'Lainnya'] as $kat): ?>
+                                <?php foreach (['ATK', 'Konsumsi', 'Elektronik', 'Lainnya', 'Inventaris', 'Alat Tulis Kantor', 'Peralatan Rumah Tangga'] as $kat): ?>
                                     <option value="<?= $kat ?>" <?= (($_POST['kategori'] ?? '') == $kat) ? 'selected' : '' ?>><?= $kat ?></option>
                                 <?php endforeach; ?>
                             </select>

@@ -92,10 +92,10 @@ $acq_config = [
                     <div class="row">
                         <div class="col-sm-12">
                             <h3 class="page-title">
-                                <i class="fas fa-chart-pie"></i> Dashboard Analitik
+                                <i class="fas fa-chart-pie"></i> Dashboard Aset
                             </h3>
                             <ul class="breadcrumb">
-                                <li class="breadcrumb-item active">Dashboard Analitik</li>
+                                <li class="breadcrumb-item active">Dashboard Aset</li>
                             </ul>
                         </div>
                     </div>

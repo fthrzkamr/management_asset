@@ -58,7 +58,7 @@ mysqli_data_seek($users_result, 0);
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Manajemen Pengguna - Dua Farma Mahakarsa</title>
+    <title>Manajemen Pengguna - DF GROUP</title>
     <link rel="icon" href="../assets/img/dua.png" type="image/png">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins&display=swap">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">

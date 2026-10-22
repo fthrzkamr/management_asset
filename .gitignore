@@ -10,6 +10,10 @@ uploads/
 # Temporary and Logs
 tmp/
 *.log
+error_log
+scratch/
+debug_*.php
+*.txt
 .system_generated/
 
 # OS and IDE files

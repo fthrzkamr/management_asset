@@ -12,16 +12,18 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-$auth->requirePermission('ppx', 'process');
+$auth->requirePermission('approval_ppx_hr', 'approve');
 
-if (!isset($_GET['no_ppx']) || !isset($_GET['action'])) {
+$no_ppx = $_POST['no_pengajuan'] ?? $_GET['no_ppx'] ?? null;
+$action = $_POST['action'] ?? $_GET['action'] ?? null;
+
+if (!$no_ppx || !$action) {
     $_SESSION['error'] = 'Parameter tidak lengkap!';
     header("Location: dashboard.php");
     exit();
 }
 
-$no_ppx = mysqli_real_escape_string($conn, $_GET['no_ppx']);
-$action = $_GET['action'];
+$no_ppx = mysqli_real_escape_string($conn, $no_ppx);
 
 try {
     mysqli_begin_transaction($conn);
@@ -39,8 +41,8 @@ try {
     $divisi_id = $ppx['divisi'];
     
     if ($action === 'approve') {
-        // HR approves IT/HR/GA dari status Leader
-        if ($current_status === 'Leader' && in_array($divisi_id, [1, 6, 7])) {
+        // HR approves anything that currently requires HR approval, irrespective of division
+        if ($current_status === 'HR') {
             $new_status = 'Selesai'; // Default lama
             
             // Cek final_status dari routing table
@@ -48,7 +50,7 @@ try {
             // kita gunakan query termudah mencocokkan divisi dsb.
             $q_route = "SELECT final_status FROM ppx_approval_routing 
                         WHERE divisi_id = " . (int)$divisi_id . " 
-                        AND initial_status IN ('HR', 'Leader')
+                        AND initial_status IN ('HR')
                         AND is_active = 1 
                         ORDER BY id DESC LIMIT 1";
             $r_route = mysqli_query($conn, $q_route);

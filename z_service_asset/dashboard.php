@@ -17,60 +17,57 @@ if (!$auth->isLoggedIn()) {
 // Cek permission
 $auth->requirePermission('pengajuan_service', 'read');
 
-// Query untuk statistik service
-$total_service_query = mysqli_query($conn, "SELECT COUNT(*) as total FROM service_asset");
-$total_service = mysqli_fetch_assoc($total_service_query)['total'];
+// Pagination untuk Service Aktif
+$limit_aktif = 10;
+$page_aktif = isset($_GET['pa']) ? (int)$_GET['pa'] : 1;
+$offset_aktif = ($page_aktif - 1) * $limit_aktif;
 
-$service_aktif_query = mysqli_query($conn, "SELECT COUNT(*) as total FROM service_asset WHERE status_service = 'Service'");
-$service_aktif = mysqli_fetch_assoc($service_aktif_query)['total'];
-
-$service_selesai_query = mysqli_query($conn, "SELECT COUNT(*) as total FROM service_asset WHERE status_service = 'Selesai'");
-$service_selesai = mysqli_fetch_assoc($service_selesai_query)['total'];
+$count_aktif_res = mysqli_query($conn, "SELECT COUNT(*) as total FROM service_asset WHERE status_service = 'Service'");
+$total_aktif = mysqli_fetch_assoc($count_aktif_res)['total'];
+$total_pages_aktif = ceil($total_aktif / $limit_aktif);
 
 // Query untuk service yang sedang aktif dengan join asset dan cek relasi PPX
 $service_aktif_list = mysqli_query($conn, "
     SELECT 
-        s.id_service,
-        s.no_service,
-        s.kode_aset,
-        s.tanggal_service,
-        s.jenis_service,
-        s.keluhan,
-        s.status_service,
-        a.nama_aset,
-        a.merk,
-        a.kategori_aset,
-        a.lokasi,
-        a.kondisi,
-        a.foto_asset,
+        s.id_service, s.no_service, s.kode_aset, s.tanggal_service, s.jenis_service, s.keluhan, s.status_service,
+        a.nama_aset, a.merk, a.kategori_aset, a.lokasi, a.lokasi_detail, a.kondisi, a.foto_asset,
         DATEDIFF(CURDATE(), s.tanggal_service) as durasi_hari,
-        ppx.no_ppx,
-        ppx.status as ppx_status
+        ppx.no_ppx, ppx.status as ppx_status
     FROM service_asset s
-    LEFT JOIN asset_dfm a ON s.kode_aset COLLATE utf8mb4_unicode_ci = a.kode_aset COLLATE utf8mb4_unicode_ci
-    LEFT JOIN ppx_request ppx ON s.no_service COLLATE utf8mb4_unicode_ci = ppx.no_service COLLATE utf8mb4_unicode_ci 
-                               OR s.no_service COLLATE utf8mb4_unicode_ci = ppx.no_service COLLATE utf8mb4_unicode_ci
+    LEFT JOIN (
+        SELECT kode_aset, nama_aset, merk, kategori_aset, lokasi, lokasi_detail, kondisi, foto_asset FROM asset_dfm
+        UNION ALL
+        SELECT kode_aset, nama_aset, merk, kategori_aset, lokasi, lokasi_detail, kondisi, foto_asset FROM asset_ga
+    ) a ON s.kode_aset = a.kode_aset
+    LEFT JOIN ppx_request ppx ON s.no_service = ppx.no_service
     WHERE s.status_service = 'Service'
     ORDER BY s.tanggal_service ASC
+    LIMIT $limit_aktif OFFSET $offset_aktif
 ");
 
-// Query untuk service yang baru selesai (5 terakhir)
+// Pagination untuk Service Selesai
+$limit_selesai = 10;
+$page_selesai = isset($_GET['ps']) ? (int)$_GET['ps'] : 1;
+$offset_selesai = ($page_selesai - 1) * $limit_selesai;
+
+$count_selesai_res = mysqli_query($conn, "SELECT COUNT(*) as total FROM service_asset WHERE status_service = 'Selesai'");
+$total_selesai_rec = mysqli_fetch_assoc($count_selesai_res)['total'];
+$total_pages_selesai = ceil($total_selesai_rec / $limit_selesai);
+
+// Query untuk service yang baru selesai
 $service_selesai_recent = mysqli_query($conn, "
     SELECT 
-        s.id_service,
-        s.no_service,
-        s.kode_aset,
-        s.tanggal_service,
-        s.tanggal_selesai,
-        s.jenis_service,
-        s.biaya_service,
-        a.nama_aset,
-        a.merk
+        s.id_service, s.no_service, s.kode_aset, s.tanggal_service, s.tanggal_selesai, s.jenis_service, s.biaya_service,
+        a.nama_aset, a.merk, a.lokasi, a.lokasi_detail
     FROM service_asset s
-    LEFT JOIN asset_dfm a ON s.kode_aset = a.kode_aset
+    LEFT JOIN (
+        SELECT kode_aset, nama_aset, merk, lokasi, lokasi_detail FROM asset_dfm
+        UNION ALL
+        SELECT kode_aset, nama_aset, merk, lokasi, lokasi_detail FROM asset_ga
+    ) a ON s.kode_aset = a.kode_aset
     WHERE s.status_service = 'Selesai'
     ORDER BY s.tanggal_selesai DESC
-    LIMIT 5
+    LIMIT $limit_selesai OFFSET $offset_selesai
 ");
 
 // Handle success/error messages
@@ -207,7 +204,7 @@ if (isset($_GET['error'])) {
                                     <div class="col">
                                         <h5 class="card-title">
                                             <i class="fas fa-wrench text-warning"></i> Asset Sedang Di Service
-                                            <span class="badge badge-warning ml-2"><?= $service_aktif ?></span>
+                                            <span class="badge badge-warning ml-2"><?= $total_aktif ?></span>
                                         </h5>
                                     </div>
                                 </div>
@@ -225,13 +222,12 @@ if (isset($_GET['error'])) {
                                                     <th>Tanggal</th>
                                                     <th>Durasi</th>
                                                     <th>Status</th>
-                                                    <th>Status PPX</th>
                                                     <th>Aksi</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <?php 
-                                                $no = 1;
+                                                $no = $offset_aktif + 1;
                                                 while ($row = mysqli_fetch_assoc($service_aktif_list)): 
                                                 ?>
                                                     <tr>
@@ -244,7 +240,7 @@ if (isset($_GET['error'])) {
                                                                         <?= htmlspecialchars($row['kode_aset']) ?> | <?= htmlspecialchars($row['merk']) ?>
                                                                     </div>
                                                                     <div class="small text-muted">
-                                                                        <i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars($row['lokasi']) ?>
+                                                                        <i class="fas fa-map-marker-alt"></i> <?= htmlspecialchars($row['lokasi']) ?> - <?= htmlspecialchars($row['lokasi_detail']) ?>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -272,27 +268,7 @@ if (isset($_GET['error'])) {
                                                                 <i class="fas fa-clock"></i> Service
                                                             </span>
                                                         </td>
-                                                        <td>
-                                                            <?php if (!empty($row['no_ppx'])): ?>
-                                                                <div class="text-center">
-                                                                    <span class="badge badge-primary mb-1">
-                                                                        <i class="fas fa-link"></i> <?= htmlspecialchars($row['no_ppx']) ?>
-                                                                    </span>
-                                                                    <br>
-                                                                    <!-- <small class="badge badge-secondary">
-                                                                        <?= htmlspecialchars($row['ppx_status']) ?>
-                                                                    </small>
-                                                                    <br>
-                                                                    <small class="text-danger font-weight-bold">
-                                                                        <i class="fas fa-exclamation-triangle"></i> Terhubung PPX
-                                                                    </small> -->
-                                                                </div>
-                                                            <?php else: ?>
-                                                                <span class="badge badge-light">
-                                                                    <i class="fas fa-minus-circle"></i> Belum ada PPX
-                                                                </span>
-                                                            <?php endif; ?>
-                                                        </td>
+
                                                         <td>
                                                             <div class="btn-group" role="group">
                                                                 <button type="button" 
@@ -331,6 +307,29 @@ if (isset($_GET['error'])) {
                                             </tbody>
                                         </table>
                                     </div>
+                                    
+                                    <?php if ($total_pages_aktif > 1): ?>
+                                        <div class="mt-4">
+                                            <nav aria-label="Page navigation">
+                                                <ul class="pagination pagination-sm justify-content-center">
+                                                    <?php if ($page_aktif > 1): ?>
+                                                        <li class="page-item"><a class="page-link" href="?pa=<?= $page_aktif - 1 ?>&ps=<?= $page_selesai ?>">Previous</a></li>
+                                                    <?php endif; ?>
+                                                    
+                                                    <?php for ($i = 1; $i <= $total_pages_aktif; $i++): ?>
+                                                        <li class="page-item <?= ($i == $page_aktif) ? 'active' : '' ?>">
+                                                            <a class="page-link" href="?pa=<?= $i ?>&ps=<?= $page_selesai ?>"><?= $i ?></a>
+                                                        </li>
+                                                    <?php endfor; ?>
+                                                    
+                                                    <?php if ($page_aktif < $total_pages_aktif): ?>
+                                                        <li class="page-item"><a class="page-link" href="?pa=<?= $page_aktif + 1 ?>&ps=<?= $page_selesai ?>">Next</a></li>
+                                                    <?php endif; ?>
+                                                </ul>
+                                            </nav>
+                                        </div>
+                                    <?php endif; ?>
+
                                 <?php else: ?>
                                     <div class="text-center py-5">
                                         <i class="fas fa-tools fa-3x text-muted mb-3"></i>
@@ -380,7 +379,7 @@ if (isset($_GET['error'])) {
                                                 <?php 
                                                 // Reset query pointer
                                                 mysqli_data_seek($service_selesai_recent, 0);
-                                                $no = 1;
+                                                $no = $offset_selesai + 1;
                                                 while ($row = mysqli_fetch_assoc($service_selesai_recent)): 
                                                 ?>
                                                     <tr>
@@ -388,17 +387,23 @@ if (isset($_GET['error'])) {
                                                         <td>
                                                             <span class="badge badge-dark"><?= htmlspecialchars($row['no_service']) ?></span>
                                                         </td>
-                                                        <td>
-                                                            <div class="font-weight-bold"><?= htmlspecialchars($row['nama_aset']) ?></div>
+                                                         <td>
+                                                            <div class="font-weight-bold text-dark mb-1"><?= htmlspecialchars($row['nama_aset']) ?></div>
+                                                            <div class="small text-muted mb-1">
+                                                                <span class="badge badge-light p-1" style="font-size: 10px;">
+                                                                    <i class="fas fa-tag"></i> <?= htmlspecialchars($row['kode_aset']) ?>
+                                                                </span>
+                                                                <span class="ml-1"><?= htmlspecialchars($row['merk']) ?></span>
+                                                            </div>
                                                             <div class="small text-muted">
-                                                                <?= htmlspecialchars($row['kode_aset']) ?> | <?= htmlspecialchars($row['merk']) ?>
+                                                                <i class="fas fa-map-marker-alt text-danger"></i> <?= htmlspecialchars($row['lokasi']) ?> - <?= htmlspecialchars($row['lokasi_detail']) ?>
                                                             </div>
                                                         </td>
                                                         <td>
                                                             <span class="badge badge-info"><?= htmlspecialchars($row['jenis_service']) ?></span>
                                                         </td>
                                                         <td>
-                                                            <?= date('d-m-Y', strtotime($row['tanggal_selesai'])) ?>
+                                                            <?= ($row['tanggal_selesai'] && $row['tanggal_selesai'] != '0000-00-00') ? date('d-m-Y', strtotime($row['tanggal_selesai'])) : '-' ?>
                                                         </td>
                                                         <td>
                                                             <span class="font-weight-bold text-success">
@@ -423,6 +428,28 @@ if (isset($_GET['error'])) {
                                             </tbody>
                                         </table>
                                     </div>
+
+                                    <?php if ($total_pages_selesai > 1): ?>
+                                        <div class="mt-4">
+                                            <nav aria-label="Page navigation">
+                                                <ul class="pagination pagination-sm justify-content-center">
+                                                    <?php if ($page_selesai > 1): ?>
+                                                        <li class="page-item"><a class="page-link" href="?ps=<?= $page_selesai - 1 ?>&pa=<?= $page_aktif ?>">Previous</a></li>
+                                                    <?php endif; ?>
+                                                    
+                                                    <?php for ($i = 1; $i <= $total_pages_selesai; $i++): ?>
+                                                        <li class="page-item <?= ($i == $page_selesai) ? 'active' : '' ?>">
+                                                            <a class="page-link" href="?ps=<?= $i ?>&pa=<?= $page_aktif ?>"><?= $i ?></a>
+                                                        </li>
+                                                    <?php endfor; ?>
+                                                    
+                                                    <?php if ($page_selesai < $total_pages_selesai): ?>
+                                                        <li class="page-item"><a class="page-link" href="?ps=<?= $page_selesai + 1 ?>&pa=<?= $page_aktif ?>">Next</a></li>
+                                                    <?php endif; ?>
+                                                </ul>
+                                            </nav>
+                                        </div>
+                                    <?php endif; ?>
                                 <?php else: ?>
                                     <div class="text-center py-3">
                                         <i class="fas fa-info-circle fa-2x text-muted mb-2"></i>

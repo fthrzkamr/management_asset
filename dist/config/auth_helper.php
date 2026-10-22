@@ -516,12 +516,26 @@ class AuthHelper
         return $this->canApproveAsset() || $this->canApproveRenovasi() || $this->canApprovePPX() || $this->canApproveService();
     }
 
-    // Redirect jika tidak ada permission
-    public function requirePermission($module, $action, $redirect = '../index.php')
+    // Redirect jika tidak ada permission dengan pesan alert
+    public function requirePermission($module, $action, $redirect = null)
     {
         if (!$this->checkAccess($module, $action)) {
-            $_SESSION['error'] = 'Anda tidak memiliki akses untuk melakukan tindakan ini!';
-            header("Location: $redirect");
+            // Tentukan halaman kembali
+            $back_url = $redirect ?: ($_SERVER['HTTP_REFERER'] ?? '../index.php');
+            
+            // Set pesan error di session
+            $_SESSION['error_title'] = "Akses Ditolak!";
+            $_SESSION['error'] = "Maaf, Anda tidak memiliki izin untuk mengakses fitur ini ($module:$action).";
+            
+            // Jika ini request AJAX, kirim JSON
+            if(!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => $_SESSION['error']]);
+                exit;
+            }
+
+            // Redirect ke halaman sebelumnya atau index dengan membawa pesan
+            header("Location: $back_url");
             exit();
         }
     }

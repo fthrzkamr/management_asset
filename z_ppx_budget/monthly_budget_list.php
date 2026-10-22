@@ -175,7 +175,7 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
                                         <?php if (mysqli_num_rows($result) > 0): ?>
                                             <?php while ($row = mysqli_fetch_assoc($result)): ?>
                                                 <tr>
-                                                    <td><?= date('F Y', strtotime($row['period'] . '-01')) ?></td>
+                                                    <td data-order="<?= $row['period'] ?>"><?= date('F Y', strtotime($row['period'] . '-01')) ?></td>
                                                     <td><?= htmlspecialchars($row['budget_name']) ?></td>
                                                     <td>Rp <?= number_format($row['total_allocation'], 0, ',', '.') ?></td>
                                                     <td class="text-danger">Rp <?= number_format($row['total_used'], 0, ',', '.') ?></td>

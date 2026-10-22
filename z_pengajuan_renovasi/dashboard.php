@@ -65,7 +65,7 @@ unset($_SESSION['success'], $_SESSION['error']);
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Dashboard Pengajuan Renovasi - Dua Farma Mahakarsa</title>
+    <title>Dashboard Pengajuan Renovasi - DF GROUP</title>
     <link rel="icon" href="../assets/img/dua.png" type="image/png">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.10.24/css/dataTables.bootstrap4.min.css" rel="stylesheet">
@@ -267,8 +267,8 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 <i class="fas fa-eye fa-xs"></i>
                                                             </a>
 
-                                                            <!-- Process Action untuk HR/GA/Super Admin -->
-                                                            <?php if (($auth->isHr() || $auth->isGa() || $auth->isSuperAdmin()) && $row['status'] == 'Pending'): ?>
+                                                            <!-- Process Action untuk user yang punya permission approve -->
+                                                            <?php if ($canApprove && $row['status'] == 'Pending'): ?>
                                                                 <button type="button" class="btn btn-outline-primary btn-action"
                                                                     onclick="processAction('<?= $row['no_pengajuan'] ?>')" title="Proses Pengajuan">
                                                                     <i class="fas fa-cog fa-xs"></i>
@@ -294,8 +294,8 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 if ($row['user_id'] == $_SESSION['id_user']) {
                                                                     // User yang mengajukan bisa hapus pengajuan sendiri
                                                                     $can_delete = true;
-                                                                } elseif ($auth->isHr() || $auth->isGa()) {
-                                                                    // HR dan GA bisa hapus pengajuan Pending
+                                                                } elseif ($canApprove || $auth->isHr() || $auth->isGa()) {
+                                                                    // User dengan permission approve, HR, dan GA bisa hapus pengajuan Pending
                                                                     $can_delete = true;
                                                                 }
                                                             }

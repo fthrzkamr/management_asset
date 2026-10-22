@@ -23,15 +23,26 @@ $status_labels = [
     'Revisi'   => 'Revisi',
 ];
 
-// HR meng-approve PPX dari divisi IT, HR, GA dengan status='Leader'
+// HR meng-approve PPX dari divisi IT, HR, GA dengan status='HR'
 $userCabang = mysqli_real_escape_string($conn, $_SESSION['cabang'] ?? '');
 
-$whereClause = "WHERE pr.status IN ('Leader', 'Selesai', 'Revisi')";
-// Filter divisi IT(1), GA(6), HR(7)
-$whereClause .= " AND pr.divisi IN (1, 6, 7)";
+$whereClause = "WHERE pr.status IN ('HR', 'Selesai', 'Revisi')";
+
+// Cek divisi apa saja yang saat ini rutenya di-setting ke 'HR' atau 'Selesai' oleh HR
+$divisiHrArr = [1, 6, 7]; // Default
+$q_rute_hr = mysqli_query($conn, "SELECT DISTINCT divisi_id FROM ppx_approval_routing WHERE initial_status = 'HR' OR final_status = 'HR'");
+if ($q_rute_hr && mysqli_num_rows($q_rute_hr) > 0) {
+    while($rute_row = mysqli_fetch_assoc($q_rute_hr)) {
+        if (!in_array($rute_row['divisi_id'], $divisiHrArr)) {
+            $divisiHrArr[] = $rute_row['divisi_id'];
+        }
+    }
+}
+$in_divisi = implode(',', $divisiHrArr);
+$whereClause .= " AND pr.divisi IN ($in_divisi)";
 
 if (!empty($userCabang)) {
-    $whereClause .= " AND pr.cabang = '" . $userCabang . "'";
+    $whereClause .= " AND pr.cabang_user = '" . $userCabang . "'";
 }
 
 $query = "SELECT
@@ -58,7 +69,7 @@ LEFT JOIN departemen dep ON pr.departemen = dep.id_departemen
 $whereClause
 GROUP BY pr.no_ppx
 ORDER BY
-    FIELD(pr.status, 'Leader', 'Revisi', 'Selesai'),
+    FIELD(pr.status, 'HR', 'Revisi', 'Selesai'),
     pr.tanggal_pengajuan DESC";
 
 $result = mysqli_query($conn, $query);
@@ -233,8 +244,8 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                     <i class="fas fa-eye fa-xs"></i>
                                                                 </a>
 
-                                                                <!-- Approve Button - hanya jika status = Leader -->
-                                                                <?php if ($st === 'Leader'): ?>
+                                                                <!-- Approve Button - hanya jika status = HR -->
+                                                                <?php if ($st === 'HR' && $auth->hasPermission('approval_ppx_hr', 'approve')): ?>
                                                                     <button type="button" class="btn btn-outline-success btn-action"
                                                                         onclick="processAction('<?= htmlspecialchars($row['no_ppx']) ?>')"
                                                                         title="Approve PPX">

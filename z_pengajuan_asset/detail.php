@@ -14,12 +14,14 @@ $query = "SELECT
     ka.kategori_asset,
     la.lokasi_asset,
     u.nama_user as nama_pengaju,
-    ua.nama_user as nama_approver
+    ua.nama_user as nama_approver,
+    d.nama_divisi
 FROM asset_request ar
 LEFT JOIN kategori_asset ka ON ar.kategori_asset = ka.id_kategori
 LEFT JOIN lokasi_asset la ON ar.lokasi_penggunaan = la.id_lokasi
 LEFT JOIN user_dfm u ON ar.user_id = u.id_user
 LEFT JOIN user_dfm ua ON ar.approved_by = ua.id_user
+LEFT JOIN divisi d ON ar.divisi = d.id_divisi
 WHERE ar.no_pengajuan = '$no_pengajuan'";
 
 $result = mysqli_query($conn, $query);
@@ -57,6 +59,12 @@ if (!$data) {
 }
 </style>
 
+<div class="text-right mb-3">
+    <a href="print.php?id=<?= urlencode($data['no_pengajuan']) ?>" target="_blank" class="btn btn-info btn-sm">
+        <i class="fas fa-print fa-sm"></i> Print Form Pengajuan
+    </a>
+</div>
+
 <div class="detail-section">
     <div class="section-title">Informasi Pengajuan</div>
     <div class="row">
@@ -92,7 +100,7 @@ if (!$data) {
                 </tr>
                 <tr>
                     <td>Divisi</td>
-                    <td>: <?= htmlspecialchars($data['divisi']) ?></td>
+                    <td>: <?= htmlspecialchars($data['nama_divisi'] ?? $data['divisi']) ?></td>
                 </tr>
                 <tr>
                     <td>Prioritas</td>

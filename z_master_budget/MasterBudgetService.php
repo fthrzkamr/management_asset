@@ -412,7 +412,10 @@ class MasterBudgetService {
      * @return array
      */
     public function getAllMasterBudgets() {
-        $query = "SELECT * FROM vw_master_budget_summary ORDER BY tanggal DESC";
+        $query = "SELECT *, 
+                  CASE WHEN amount_in > 0 THEN (amount_out / amount_in) * 100 ELSE 0 END AS usage_percentage 
+                  FROM master_budget 
+                  ORDER BY tanggal DESC";
         $result = $this->conn->query($query);
         
         $data = [];

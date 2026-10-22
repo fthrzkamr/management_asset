@@ -13,26 +13,54 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Cek permission
-$auth->requirePermission('pengajuan_asset', 'read');
+// Cek permission (Bisa masuk jika punya izin Pengajuan Umum ATAU Approver IT/GA)
+if (!$auth->hasPermission('pengajuan_asset', 'read') && 
+    !$auth->hasPermission('approval_asset_it', 'read') && 
+    !$auth->hasPermission('approval_asset_ga', 'read')) {
+    $auth->requirePermission('pengajuan_asset', 'read'); // Ini akan memicu alert akses ditolak
+}
 
 // Buat kondisi WHERE berdasarkan permission
-// User dengan 'approve' bisa lihat semua data
-$canApproveAsset = $auth->hasPermission('pengajuan_asset', 'approve');
+// User dengan 'approve'
+$isGlobalApprover = $auth->hasPermission('pengajuan_asset', 'approve');
 
 // Build WHERE conditions
 $where_conditions = [];
+$user_id = (int)$_SESSION['id_user'];
+$own_request_condition = "ar.user_id = $user_id";
 
-// Filter berdasarkan user_id jika tidak punya permission approve
-if (!$canApproveAsset) {
-    $where_conditions[] = "ar.user_id = " . (int)$_SESSION['id_user'];
-}
+// Permission spesifik untuk sub kategori (menggunakan permission baru dari config)
+$canApproveIT = $auth->hasPermission('approval_asset_it', 'approve');
+$canApproveGA = $auth->hasPermission('approval_asset_ga', 'approve');
 
-// Filter berdasarkan sub_kategori untuk IT atau GA
-if ($auth->isIT() && $canApproveAsset) {
-    $where_conditions[] = "ka.sub_kategori = 'IT'";
-} elseif ($auth->isGa() && $canApproveAsset) {
-    $where_conditions[] = "ka.sub_kategori = 'GA'";
+$canApproveAsset = $isGlobalApprover || $canApproveIT || $canApproveGA;
+
+if ($auth->isSuperAdmin() || $auth->isHr()) {
+    // Super Admin & HR see everything
+} elseif ($canApproveAsset) {
+    // User dengan approve permission
+    $role_filters = [];
+    if ($canApproveIT && !$canApproveGA) {
+        $role_filters[] = "ka.sub_kategori = 'IT'";
+    } elseif ($canApproveGA && !$canApproveIT) {
+        $role_filters[] = "ka.sub_kategori = 'GA'";
+    }
+    
+    if (!empty($role_filters)) {
+        // Jika user adalah approver spesifik (punya IT atau GA tapi BUKAN global approver)
+        if (!$isGlobalApprover) {
+            $where_conditions[] = "(" . implode(" OR ", $role_filters) . " OR $own_request_condition)";
+        }
+        // Jika isGlobalApprover == true, kondisi tidak ditambahkan (sehingga bisa melihat semua data)
+    } else {
+        // Jika tidak punya IT atau GA, tapi punya global approver -> lihat semua
+        if (!$isGlobalApprover) {
+            $where_conditions[] = $own_request_condition;
+        }
+    }
+} else {
+    // Normal users ONLY see their own
+    $where_conditions[] = $own_request_condition;
 }
 
 // Filter soft-delete
@@ -74,19 +102,31 @@ $stats_joins = "";
 $stats_where_conditions = [];
 
 // Filter berdasarkan sub_kategori untuk GA atau IT (hanya jika punya permission approve)
-if (($auth->isGa() || $auth->isIT()) && $canApproveAsset) {
-    $stats_joins = "LEFT JOIN kategori_asset ka ON ar.kategori_asset = ka.id_kategori";
-    
-    if ($auth->isGa()) {
-        $stats_where_conditions[] = "ka.sub_kategori = 'GA'";
-    } elseif ($auth->isIT()) {
-        $stats_where_conditions[] = "ka.sub_kategori = 'IT'";
-    }
-}
+$user_id = (int)$_SESSION['id_user'];
+$own_request_condition = "ar.user_id = $user_id";
 
-// Filter berdasarkan user_id jika tidak punya permission approve
-if (!$canApproveAsset) {
-    $stats_where_conditions[] = "ar.user_id = " . (int)$_SESSION['id_user'];
+if ($auth->isSuperAdmin() || $auth->isHr()) {
+    // No filter
+} elseif ($canApproveAsset) {
+    $stats_joins = "LEFT JOIN kategori_asset ka ON ar.kategori_asset = ka.id_kategori";
+    $role_filters = [];
+    if ($canApproveIT && !$canApproveGA) {
+        $role_filters[] = "ka.sub_kategori = 'IT'";
+    } elseif ($canApproveGA && !$canApproveIT) {
+        $role_filters[] = "ka.sub_kategori = 'GA'";
+    }
+    
+    if (!empty($role_filters)) {
+        if (!$isGlobalApprover) {
+            $stats_where_conditions[] = "(" . implode(" OR ", $role_filters) . " OR $own_request_condition)";
+        }
+    } else {
+        if (!$isGlobalApprover) {
+            $stats_where_conditions[] = $own_request_condition;
+        }
+    }
+} else {
+    $stats_where_conditions[] = $own_request_condition;
 }
 
 // Filter soft-delete
@@ -221,6 +261,9 @@ function getDistributionBadge($status) {
                                                 <i class="fas fa-plus fa-sm"></i> Tambah Pengajuan
                                             </a>
                                         <?php endif; ?>
+                                        <a href="print.php" target="_blank" class="btn btn-info btn-sm">
+                                            <i class="fas fa-print fa-sm"></i> Print Laporan
+                                        </a>
                                     </div>
                                 </div>
                                 </div>
@@ -251,16 +294,16 @@ function getDistributionBadge($status) {
                         <strong>Info:</strong> Anda hanya melihat pengajuan asset yang Anda ajukan sendiri.
                         <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
                     </div>
-                <?php elseif ($auth->isIT()): ?>
+                <?php elseif ($canApproveIT && !$canApproveGA): ?>
                     <div class="alert alert-info alert-dismissible fade show">
                         <i class="fas fa-laptop-code fa-sm"></i> 
-                        <strong>Info IT:</strong> Anda melihat semua pengajuan asset dengan sub kategori IT.
+                        <strong>Info IT:</strong> Anda melihat pengajuan asset sub kategori IT & pengajuan milik Anda sendiri.
                         <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
                     </div>
-                <?php elseif ($auth->isGa()): ?>
+                <?php elseif ($canApproveGA && !$canApproveIT): ?>
                     <div class="alert alert-success alert-dismissible fade show">
                         <i class="fas fa-building fa-sm"></i> 
-                        <strong>Info GA:</strong> Anda melihat semua pengajuan asset dengan sub kategori GA.
+                        <strong>Info GA:</strong> Anda melihat pengajuan asset sub kategori GA & pengajuan milik Anda sendiri.
                         <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
                     </div>
                 <?php elseif ($auth->isHr() || $auth->isSuperAdmin()): ?>
@@ -367,16 +410,16 @@ function getDistributionBadge($status) {
                             <div class="card-header">
                                 <h5 class="card-title mb-0">
                                     <i class="fas fa-list fa-sm"></i> Daftar Pengajuan Asset
-                                    <?php if ($auth->isKoordinator()): ?>
+                                    <?php if (!$canApproveAsset): ?>
                                         <small class="text-muted">- Pengajuan Saya</small>
-                                    <?php elseif ($auth->isIT()): ?>
-                                        <small class="text-muted">- Sub Kategori IT</small>
-                                    <?php elseif ($auth->isGa()): ?>
-                                        <small class="text-muted">- Sub Kategori GA</small>
-                                    <?php elseif ($auth->isHr() || $auth->isSuperAdmin()): ?>
+                                    <?php elseif ($canApproveIT && !$canApproveGA): ?>
+                                        <small class="text-muted">- Sub Kategori IT & Milik Saya</small>
+                                    <?php elseif ($canApproveGA && !$canApproveIT): ?>
+                                        <small class="text-muted">- Sub Kategori GA & Milik Saya</small>
+                                    <?php elseif ($auth->isHr() || $auth->isSuperAdmin() || ($canApproveIT && $canApproveGA)): ?>
                                         <small class="text-muted">- Semua Pengajuan</small>
                                     <?php else: ?>
-                                        <small class="text-muted">- Pengajuan Saya</small>
+                                        <small class="text-muted">- Semua Pengajuan</small>
                                     <?php endif; ?>
                                 </h5>
                             </div>
@@ -395,7 +438,7 @@ function getDistributionBadge($status) {
                                                 <th>Status Distribusi</th>
                                                 <th>Status PPX</th>
                                                 <!-- Kolom khusus GA, IT & Super Admin -->
-                                                <?php if ($auth->isGa() || $auth->isSuperAdmin() || $auth->isIT()): ?>
+                                                <?php if ($canApproveGA || $auth->isSuperAdmin() || $canApproveIT): ?>
                                                     <th>Kelola Distribusi</th>
                                                 <?php endif; ?>
                                                 <th>Aksi</th>
@@ -493,15 +536,15 @@ function getDistributionBadge($status) {
                                                     </td>
                                                     
                                                     <!-- Kolom Kelola Distribusi - DITAMBAH UNTUK IT -->
-                                                    <?php if ($auth->isGa() || $auth->isSuperAdmin() || $auth->isIT()): ?>
+                                                    <?php if ($canApproveGA || $auth->isSuperAdmin() || $canApproveIT): ?>
                                                         <td class="text-center">
                                                             <?php 
                                                             // GA hanya bisa distribusi GA asset
                                                             // IT hanya bisa distribusi IT asset
                                                             $canDistribute = true;
-                                                            if ($auth->isGa() && $row['sub_kategori'] == 'IT') {
+                                                            if ($canApproveGA && !$canApproveIT && $row['sub_kategori'] == 'IT') {
                                                                 $canDistribute = false;
-                                                            } elseif ($auth->isIT() && $row['sub_kategori'] != 'IT') {
+                                                            } elseif ($canApproveIT && !$canApproveGA && $row['sub_kategori'] != 'IT') {
                                                                 $canDistribute = false;
                                                             }
                                                             ?>
@@ -527,6 +570,12 @@ function getDistributionBadge($status) {
                                                                 <i class="fas fa-eye fa-xs"></i>
                                                             </button>
 
+                                                            <!-- Print Button -->
+                                                            <a href="print.php?id=<?= urlencode($row['no_pengajuan']) ?>" 
+                                                               target="_blank" class="btn btn-outline-secondary btn-action" title="Print Form">
+                                                                <i class="fas fa-print fa-xs"></i>
+                                                            </a>
+
                                                             <!-- Process Button untuk HR/GA/IT/Admin -->
                                                             <?php 
                                                             $canApprove = false;
@@ -537,12 +586,19 @@ function getDistributionBadge($status) {
                                                             } elseif ($auth->isHr()) {
                                                                 // HR approve semua
                                                                 $canApprove = true;
-                                                            } elseif ($auth->isGa() && $row['sub_kategori'] == 'GA') {
-                                                                // GA approve sub_kategori GA
-                                                                $canApprove = true;
-                                                            } elseif ($auth->isIT() && $row['sub_kategori'] == 'IT') {
-                                                                // IT approve sub_kategori IT
-                                                                $canApprove = true;
+                                                            } elseif ($canApproveAsset) {
+                                                                // Jika dia adalah approver, cek sub_kategori yang boleh diapprove
+                                                                if ($canApproveGA && $row['sub_kategori'] == 'GA') {
+                                                                    $canApprove = true;
+                                                                } elseif ($canApproveIT && $row['sub_kategori'] == 'IT') {
+                                                                    $canApprove = true;
+                                                                } elseif ($canApproveGA && $canApproveIT) {
+                                                                    // Jika punya dua-duanya, bisa approve semuanya
+                                                                    $canApprove = true;
+                                                                } elseif (!$canApproveGA && !$canApproveIT) {
+                                                                    // Punya 'approve' tapi bukan IT/GA (misal manager), approve semua
+                                                                    $canApprove = true;
+                                                                }
                                                             }
                                                             
                                                             if ($canApprove && $row['status'] == 'Pending'):
@@ -576,10 +632,10 @@ function getDistributionBadge($status) {
                                                                 } elseif ($auth->isHr()) {
                                                                     // HR bisa hapus semua pengajuan Pending
                                                                     $can_delete = true;
-                                                                } elseif ($auth->isGa() && $row['sub_kategori'] == 'GA') {
+                                                                } elseif ($canApproveGA && $row['sub_kategori'] == 'GA') {
                                                                     // GA bisa hapus pengajuan Pending sub_kategori GA
                                                                     $can_delete = true;
-                                                                } elseif ($auth->isIT() && $row['sub_kategori'] == 'IT') {
+                                                                } elseif ($canApproveIT && $row['sub_kategori'] == 'IT') {
                                                                     // IT bisa hapus pengajuan Pending sub_kategori IT
                                                                     $can_delete = true;
                                                                 }
@@ -629,7 +685,7 @@ function getDistributionBadge($status) {
     </div>
 
     <!-- Modal Aksi - Untuk HR/GA/IT/Super Admin -->
-    <?php if ($auth->isHr() || $auth->isGa() || $auth->isSuperAdmin() || $auth->isIT()): ?>
+    <?php if ($auth->isHr() || $canApproveGA || $auth->isSuperAdmin() || $canApproveIT): ?>
         <div class="modal fade" id="actionModal" tabindex="-1" role="dialog" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -655,12 +711,12 @@ function getDistributionBadge($status) {
                             </div>
                             
                             <!-- Info peran -->
-                            <?php if ($auth->isIT()): ?>
+                            <?php if ($canApproveIT && !$canApproveGA): ?>
                                 <div class="alert alert-info">
                                     <i class="fas fa-laptop-code fa-sm"></i> 
                                     <small>Anda bertindak sebagai <strong>IT</strong> untuk menyetujui pengajuan ini.</small>
                                 </div>
-                            <?php elseif ($auth->isGa()): ?>
+                            <?php elseif ($canApproveGA && !$canApproveIT): ?>
                                 <div class="alert alert-success">
                                     <i class="fas fa-building fa-sm"></i> 
                                     <small>Anda bertindak sebagai <strong>GA</strong> untuk menyetujui pengajuan ini.</small>
@@ -731,7 +787,7 @@ function getDistributionBadge($status) {
     <?php endif; ?>
 
     <!-- Modal Pendistribusian - Untuk GA, IT & Super Admin -->
-    <?php if ($auth->isGa() || $auth->isSuperAdmin() || $auth->isIT()): ?>
+    <?php if ($canApproveGA || $auth->isSuperAdmin() || $canApproveIT): ?>
         <div class="modal fade" id="distributionModal" tabindex="-1" role="dialog" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -754,12 +810,12 @@ function getDistributionBadge($status) {
                             </div>
 
                             <!-- Info peran -->
-                            <?php if ($auth->isIT()): ?>
+                            <?php if ($canApproveIT && !$canApproveGA): ?>
                                 <div class="alert alert-info">
                                     <i class="fas fa-laptop-code fa-sm"></i> 
                                     <small>Anda mengelola distribusi sebagai <strong>IT Support</strong>.</small>
                                 </div>
-                            <?php elseif ($auth->isGa()): ?>
+                            <?php elseif ($canApproveGA && !$canApproveIT): ?>
                                 <div class="alert alert-success">
                                     <i class="fas fa-building fa-sm"></i> 
                                     <small>Anda mengelola distribusi sebagai <strong>GA</strong>.</small>

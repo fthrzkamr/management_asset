@@ -54,7 +54,7 @@ if ($canDelete) {
     $can_delete = true;
 } elseif ($canCreate) {
     // Hanya punya create: hanya bisa hapus milik sendiri yang Pending
-    if ($pengajuan['id_user'] != $user_id) {
+    if ($pengajuan['user_id'] != $user_id) {
         $error_message = 'Anda hanya bisa menghapus pengajuan milik Anda sendiri!';
     } elseif (strtolower($pengajuan['status']) != 'pending') {
         $error_message = 'Hanya pengajuan berstatus Pending yang dapat dihapus!';

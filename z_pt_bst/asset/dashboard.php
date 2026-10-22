@@ -72,7 +72,7 @@ $total_pages = ceil($total_records / $limit);
 // Main query with pagination and sorting
 $query = mysqli_query($conn, "
    SELECT kode_aset, `user`, nama_aset, kategori_aset, lokasi, merk, 
-         jumlah, satuan, kondisi
+         jumlah, satuan, kondisi, status_barang
    FROM asset_bst 
    $where_clause
    ORDER BY $sort_column $sort_order
@@ -266,17 +266,13 @@ function getSortIcon($column, $current_sort, $current_order)
                                           Merk <?= getSortIcon('merk', $sort_column, $sort_order) ?>
                                        </a>
                                     </th>
-                                    <th>
-                                       <a href="<?= getSortUrl('jumlah', $sort_column, $sort_order) ?>" class="text-dark text-decoration-none">
-                                          Jumlah <?= getSortIcon('jumlah', $sort_column, $sort_order) ?>
-                                       </a>
-                                    </th>
+                                    <th class="text-center">Status</th>
                                     <th>
                                        <a href="<?= getSortUrl('kondisi', $sort_column, $sort_order) ?>" class="text-dark text-decoration-none">
                                           Kondisi <?= getSortIcon('kondisi', $sort_column, $sort_order) ?>
                                        </a>
                                     </th>
-                                     <th class="text-center action-col">Action</th>
+                                                                           <th class="text-center action-col">Action</th>
                                  </tr>
                               </thead>
                               <tbody>
@@ -291,7 +287,10 @@ function getSortIcon($column, $current_sort, $current_order)
                                        echo "<td>" . htmlspecialchars($row['kategori_aset']) . "</td>";
                                        echo "<td>" . htmlspecialchars($row['lokasi']) . "</td>";
                                        echo "<td>" . htmlspecialchars($row['merk'] ?: '-') . "</td>";
-                                       echo "<td>" . number_format($row['jumlah'], 0, ',', '.') . " " . htmlspecialchars($row['satuan']) . "</td>";
+                                       // Badge status barang
+                                       $status_val = $row['status_barang'] ?? 'Asset';
+                                       $status_cl = ($status_val === 'Sewa') ? 'badge-warning' : 'badge-primary';
+                                       echo "<td class='text-center'><span class='badge {$status_cl}'>" . htmlspecialchars($status_val) . "</span></td>";
 
                                        // Badge kondisi dengan warna
                                        $kondisi_class = '';
@@ -315,6 +314,7 @@ function getSortIcon($column, $current_sort, $current_order)
                                              $kondisi_class = 'badge-secondary';
                                        }
                                        echo "<td><span class='badge {$kondisi_class}'>" . htmlspecialchars($row['kondisi']) . "</span></td>";
+
 
 
                                        echo "<td class='text-center action-col'>
@@ -540,15 +540,24 @@ function getSortIcon($column, $current_sort, $current_order)
             });
          });
 
-         // Auto-submit search after 500ms delay
+         // Auto-submit search after 2000ms delay
          let searchTimeout;
          $('input[name="search"]').on('input', function() {
             clearTimeout(searchTimeout);
             const form = $(this).closest('form');
             searchTimeout = setTimeout(function() {
                form.submit();
-            }, 500);
+            }, 2000);
          });
+
+         // Restore focus to search input and set cursor to the end
+         const searchInput = $('input[name="search"]');
+         if (searchInput.length && searchInput.val().length > 0) {
+            searchInput.focus();
+            const val = searchInput.val();
+            searchInput.val('');
+            searchInput.val(val);
+         }
 
          // Tooltip for action buttons
          $('[title]').tooltip();

@@ -11,11 +11,7 @@ require_once $base_path . '/dist/config/auth_helper.php';
 $auth = new AuthHelper($conn);
 
 // Check if user is logged in and has permission to approve
-$can_approve = method_exists($auth, 'canApproveATK') ? $auth->canApproveATK() : $auth->isGA() || $auth->isSuperAdmin();
-if (!$auth->isLoggedIn() || !$can_approve) {
-    header("Location: ../login.php");
-    exit();
-}
+$auth->requirePermission('inventory_atk_pengambilan', 'approve');
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $id_pengambilan = intval($_POST['id_pengambilan']);
@@ -40,6 +36,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     mysqli_begin_transaction($conn);
 
     try {
+        // Handle edited quantities
+        if (isset($_POST['qty']) && is_array($_POST['qty'])) {
+            foreach ($_POST['qty'] as $id_barang => $new_qty) {
+                $new_qty = intval($new_qty);
+                $id_barang = intval($id_barang);
+                if ($new_qty > 0) {
+                    $sql_upd_qty = "UPDATE atk_pengambilan_detail SET qty_diminta = ? WHERE id_pengambilan = ? AND id_barang = ?";
+                    $stmt_upd = mysqli_prepare($conn, $sql_upd_qty);
+                    mysqli_stmt_bind_param($stmt_upd, 'iii', $new_qty, $id_pengambilan, $id_barang);
+                    mysqli_stmt_execute($stmt_upd);
+                } else {
+                    $sql_del_qty = "DELETE FROM atk_pengambilan_detail WHERE id_pengambilan = ? AND id_barang = ?";
+                    $stmt_del = mysqli_prepare($conn, $sql_del_qty);
+                    mysqli_stmt_bind_param($stmt_del, 'ii', $id_pengambilan, $id_barang);
+                    mysqli_stmt_execute($stmt_del);
+                }
+            }
+        }
+
         // Update status pengajuan
         $sql_update = "UPDATE atk_pengambilan 
                        SET status = ?

@@ -10,12 +10,8 @@ require_once $base_path . '/dist/config/auth_helper.php';
 // Create auth instance
 $auth = new AuthHelper($conn);
 
-// Check if user is logged in and has permission
-$can_view = method_exists($auth, 'canViewInventoryATK') ? $auth->canViewInventoryATK() : $auth->isGA() || $auth->isSuperAdmin();
-if (!$auth->isLoggedIn() || !$can_view) {
-    header("Location: ../login.php");
-    exit();
-}
+// Check permission for ATK (same as dashboard)
+$auth->requirePermission('inventory_atk_pengambilan', 'read');
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
@@ -154,6 +150,7 @@ $items = mysqli_stmt_get_result($stmt_detail);
                                 <div class="alert alert-warning">
                                     <i class="fas fa-clock"></i> Pengajuan menunggu approval
                                 </div>
+                                <?php if ($auth->hasPermission('inventory_atk_pengambilan', 'approve')): ?>
                                 <div class="text-center">
                                     <button type="button" class="btn btn-success btn-lg mr-2" 
                                             onclick="approveItem(<?= $pengajuan['id_pengambilan'] ?>, 'Approved')">
@@ -164,6 +161,7 @@ $items = mysqli_stmt_get_result($stmt_detail);
                                         <i class="fas fa-times"></i> Reject
                                     </button>
                                 </div>
+                                <?php endif; ?>
                                 <?php else: ?>
                                 <div class="alert alert-info">
                                     <i class="fas fa-info-circle"></i> 
@@ -203,7 +201,13 @@ $items = mysqli_stmt_get_result($stmt_detail);
                                                 <td><?= $no++ ?></td>
                                                 <td><code><?= $item['kode_barang'] ?></code></td>
                                                 <td><?= $item['nama_barang'] ?></td>
-                                                <td><strong><?= $item['jumlah'] ?></strong></td>
+                                                <td>
+                                                    <?php if ($pengajuan['status'] == 'Pending' && $auth->hasPermission('inventory_atk_pengambilan', 'approve')): ?>
+                                                        <input type="number" class="form-control form-control-sm qty-edit" data-id_barang="<?= $item['id_barang'] ?>" value="<?= $item['jumlah'] ?>" min="0" style="width: 80px;">
+                                                    <?php else: ?>
+                                                        <strong><?= $item['jumlah'] ?></strong>
+                                                    <?php endif; ?>
+                                                </td>
                                                 <td><?= $item['satuan'] ?></td>
                                                 <td>
                                                     <?php if ($item['stok_aktual'] < $item['jumlah']): ?>
@@ -253,6 +257,16 @@ $items = mysqli_stmt_get_result($stmt_detail);
             
             form.appendChild(idInput);
             form.appendChild(statusInput);
+            
+            // Append updated quantities
+            const qtyInputs = document.querySelectorAll('.qty-edit');
+            qtyInputs.forEach(input => {
+                const hiddenQty = document.createElement('input');
+                hiddenQty.type = 'hidden';
+                hiddenQty.name = `qty[${input.dataset.id_barang}]`;
+                hiddenQty.value = input.value;
+                form.appendChild(hiddenQty);
+            });
             
             document.body.appendChild(form);
             form.submit();

@@ -1,6 +1,6 @@
 </div> <!-- penutup .page-wrapper -->
 <footer>
-   <p>Copyright © <?= date("Y") ?> Dua Farma Group.</p>
+   <p>Copyright © <?= date("Y") ?> DF GROUP.</p>
 </footer>
 </div> <!-- penutup .main-wrapper -->
 

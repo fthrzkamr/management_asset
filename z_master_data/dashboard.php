@@ -151,6 +151,23 @@ $auth->requirePermission('master_data', 'read');
                         </div>
                     </div>
 
+                    <!-- Kendaraan (Baru) -->
+                    <div class="row">
+                        <div class="col-md-12 d-flex">
+                            <div class="card flex-fill">
+                                <div class="card-header d-flex justify-content-between align-items-center bg-info text-white">
+                                    <h5 class="card-title mb-0 text-white"><i class="fas fa-car mr-2"></i> Master Kendaraan</h5>
+                                    <a href="kendaraan_add.php" class="btn btn-light btn-sm font-weight-bold">
+                                        <i class="fas fa-plus"></i> Tambah Kendaraan
+                                    </a>
+                                </div>
+                                <div class="card-body">
+                                    <div id="kendaraan-content"></div> <!-- hasil AJAX kendaraan -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 <?php include '../layouts/footer.php'; ?>
             </div>
         </div>
@@ -187,12 +204,19 @@ $auth->requirePermission('master_data', 'read');
                 });
             }
 
+            function loadKendaraan(page = 1) {
+                $.get("load_kendaraan.php?page=" + page, function(data) {
+                    $("#kendaraan-content").html(data);
+                });
+            }
+
             $(document).ready(function() {
                 loadKategori();
                 loadLokasi();
                 loadDivisi();
                 loadDepartemen();
                 loadCabang();
+                loadKendaraan();
 
                 $(document).on('click', '.pagination-kategori a', function(e) {
                     e.preventDefault();
@@ -222,6 +246,12 @@ $auth->requirePermission('master_data', 'read');
                     e.preventDefault();
                     const page = $(this).data('page');
                     loadCabang(page);
+                });
+
+                $(document).on('click', '.pagination-kendaraan a', function(e) {
+                    e.preventDefault();
+                    const page = $(this).data('page');
+                    loadKendaraan(page);
                 });
             });
         </script>

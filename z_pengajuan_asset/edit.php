@@ -25,10 +25,12 @@ $no_pengajuan = mysqli_real_escape_string($conn, $_GET['id']);
 $query = "SELECT 
     ar.*,
     la.lokasi_asset,
-    u.nama_user as nama_pengaju
+    u.nama_user as nama_pengaju,
+    d.nama_divisi
 FROM asset_request ar
 LEFT JOIN lokasi_asset la ON ar.lokasi_penggunaan = la.id_lokasi
 LEFT JOIN user_dfm u ON ar.user_id = u.id_user
+LEFT JOIN divisi d ON ar.divisi = d.id_divisi
 WHERE ar.no_pengajuan = '$no_pengajuan'";
 
 $result = mysqli_query($conn, $query);
@@ -243,14 +245,16 @@ unset($_SESSION['success'], $_SESSION['error']);
                                             </div>
                                         </div>
 
-                                        <!-- Divisi -->
-                                        <div class="col-md-4">
-                                            <div class="form-group">
-                                                <label>Divisi <span class="text-danger">*</span></label>
-                                                <input type="text" class="form-control" name="divisi"
-                                                    value="<?= htmlspecialchars($pengajuan['divisi']) ?>" required>
-                                            </div>
-                                        </div>
+                                         <!-- Divisi (readonly, sudah tersimpan) -->
+                                         <div class="col-md-4">
+                                             <div class="form-group">
+                                                 <label>Divisi <span class="text-danger">*</span></label>
+                                                 <input type="text" class="form-control"
+                                                     value="<?= htmlspecialchars($pengajuan['nama_divisi'] ?? $pengajuan['divisi']) ?>" readonly>
+                                                 <input type="hidden" name="divisi" value="<?= htmlspecialchars($pengajuan['divisi']) ?>">
+                                                 <small class="text-muted">Divisi tidak dapat diubah</small>
+                                             </div>
+                                         </div>
                                     </div>
 
                                     <div class="row">
