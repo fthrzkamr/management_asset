@@ -469,7 +469,7 @@ function getSortIcon($column, $current_sort, $current_order)
                               <tbody>
                                  <?php
                                  $no = $offset + 1;
-                                 if (mysqli_num_rows($query) > 0) {
+                                 if ($query && mysqli_num_rows($query) > 0) {
                                     while ($row = mysqli_fetch_assoc($query)) {
                                        echo "<tr>";
                                        echo "<td>" . $no++ . "</td>";

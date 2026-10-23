@@ -42,30 +42,40 @@ if ($cabang_q) {
 // read filter from request
 $filter_cabang = isset($_GET['filter_cabang']) ? intval($_GET['filter_cabang']) : 0;
 
-$where_clause = "";
-// Apply division-based filtering
-if (stripos($user_division, 'HR') !== false || stripos($user_division, 'IT') !== false || stripos($user_division, 'GA') !== false) {
-    // HR, IT, GA can see each other's budgets (id_divisi: 1=IT, 6=GA, 7=HR)
-    $where_clause = "WHERE creator_div_name.id_divisi IN (1, 6, 7)";
-} else if (stripos($user_division, 'Finance AP') !== false) {
-    // Finance AP only sees their own (id_divisi: 9)
-    $where_clause = "WHERE creator_div_name.id_divisi = 9";
-} else if (stripos($user_division, 'Finance') !== false) {
-    // Finance only sees Finance (id_divisi: 16, 8)
-    $where_clause = "WHERE creator_div_name.id_divisi IN (16, 8)";
+$user_role = strtoupper($auth->getUserRole() ?? ($_SESSION['nama_role'] ?? ''));
+$is_superadmin = $auth->isSuperAdmin();
+$is_finance = $auth->isFinance() || (strpos($user_role, 'FINANCE') !== false);
+$is_manager = (strpos($user_role, 'MANAGER') !== false);
+$is_privileged = $is_superadmin || $is_finance || $is_manager;
+
+// Filter conditions
+$where_conditions = [];
+
+if ($is_superadmin) {
+    // Super Admin dapat melihat seluruh budget bulanan lintas divisi
+} elseif ($is_privileged) {
+    // Finance dan Manager: Finance melihat semua, Manager melihat divisi terkait
+    if (!$is_finance) {
+        if (stripos($user_division, 'HR') !== false || stripos($user_division, 'IT') !== false || stripos($user_division, 'GA') !== false) {
+            $where_conditions[] = "creator_div_name.id_divisi IN (1, 6, 7)";
+        } elseif (stripos($user_division, 'Finance AP') !== false) {
+            $where_conditions[] = "creator_div_name.id_divisi = 9";
+        } elseif (!empty($user_division)) {
+            $where_conditions[] = "creator_div_name.nama_divisi = '" . mysqli_real_escape_string($conn, $user_division) . "'";
+        }
+    }
 } else {
-    // Other divisions only see their own
-    $where_clause = "WHERE creator_div_name.nama_divisi = '" . mysqli_real_escape_string($conn, $user_division) . "'";
+    // User reguler: hanya melihat budget yang dibuat sendiri
+    $where_conditions[] = "mb.created_by = " . intval($user_id);
 }
 
-// Restrict visibility: non-privileged users should only see budgets they created.
-$role = isset($_SESSION['role']) ? strtoupper($_SESSION['role']) : '';
-$is_privileged = (strpos($role, 'ADMIN') !== false) || (strpos($role, 'FINANCE') !== false) || (strpos($role, 'MANAGER') !== false);
-
-if (!$is_privileged) {
-    // show only budgets created by this user
-    $where_clause = "WHERE mb.created_by = " . intval($user_id);
+// Filter cabang jika dipilih
+if (!empty($filter_cabang)) {
+    $where_conditions[] = "u.id_cabang = " . intval($filter_cabang);
 }
+
+$where_clause = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_conditions) : "";
+
 
 $query = "SELECT 
     mb.id_budget,

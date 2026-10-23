@@ -120,7 +120,7 @@ $recent_assets = mysqli_query($conn, "
                             <div class="card-body text-center">
                                 <!-- PERBAIKAN: Avatar dengan margin bottom responsif -->
                                 <div class="avatar avatar-xxl mb-3 d-inline-block">
-                                    <img src="<?= BASE_URL ?>/assets/img/profiles/monye.jpg"
+                                    <img src="<?= BASE_URL ?>/assets/img/profiles/default-avatar.svg"
                                         alt="User Avatar"
                                         class="avatar-img rounded-circle"
                                         style="width: 100px; height: 100px; object-fit: cover;">

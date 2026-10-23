@@ -66,8 +66,8 @@ if (!empty($filter_cabang) && $filter_cabang !== 'Semua Cabang') {
 
 // Count total records
 $count_query = mysqli_query($conn, "SELECT COUNT(*) as total FROM asset_dfm $where_clause");
-$total_records = mysqli_fetch_assoc($count_query)['total'];
-$total_pages = ceil($total_records / $limit);
+$total_records = ($count_query) ? (int)(mysqli_fetch_assoc($count_query)['total'] ?? 0) : 0;
+$total_pages = $total_records > 0 ? ceil($total_records / $limit) : 1;
 
 // Main query with pagination and sorting
 $query = mysqli_query($conn, "
@@ -279,7 +279,7 @@ function getSortIcon($column, $current_sort, $current_order)
                               <tbody>
                                  <?php
                                  $no = $offset + 1;
-                                 if (mysqli_num_rows($query) > 0) {
+                                 if ($query && mysqli_num_rows($query) > 0) {
                                     while ($row = mysqli_fetch_assoc($query)) {
                                        echo "<tr>";
                                        echo "<td>" . $no++ . "</td>";

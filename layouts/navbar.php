@@ -338,13 +338,13 @@ function is_active($patterns) {
         <li class="nav-item dropdown has-arrow">
             <a href="#" class="dropdown-toggle nav-link" data-toggle="dropdown">
                 <span class="user-img">
-                    <img class="rounded-circle" src="<?= BASE_URL ?>/assets/img/profiles/senku.jpg" width="31">
+                    <img class="rounded-circle" src="<?= BASE_URL ?>/assets/img/profiles/default-avatar.svg" width="31" height="31" alt="User Image">
                 </span>
             </a>
             <div class="dropdown-menu">
                 <div class="user-header">
                     <div class="avatar avatar-sm">
-                        <img src="<?= BASE_URL ?>/assets/img/profiles/senku.jpg" alt="User Image" class="avatar-img rounded-circle">
+                        <img src="<?= BASE_URL ?>/assets/img/profiles/default-avatar.svg" alt="User Image" class="avatar-img rounded-circle">
                     </div>
                     <div class="user-text">
                         <h6><?= htmlspecialchars($_SESSION['nama_user']) ?></h6>

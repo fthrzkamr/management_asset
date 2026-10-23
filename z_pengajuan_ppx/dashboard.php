@@ -32,11 +32,17 @@ if (!$auth->isLoggedIn()) {
 // Cek permission
 $auth->requirePermission('ppx', 'read');
 
-// PERBAIKI: Filter data sesuai dengan tujuan halaman pengajuan PPX
-$user_id = $_SESSION['id_user'];
+$user_id = (int)$_SESSION['id_user'];
+$is_superadmin = $auth->isSuperAdmin();
 
-// Halaman pengajuan: selalu tampilkan hanya milik user yang sedang login
-$whereClause = "WHERE pr.user_id = " . (int)$user_id;
+// Halaman pengajuan: Super Admin dapat melihat semua pengajuan, user biasa hanya melihat pengajuan miliknya sendiri
+$whereConditions = [];
+if (!$is_superadmin) {
+    $whereConditions[] = "pr.user_id = $user_id";
+}
+
+$whereClause = !empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "";
+
 
 // Cek apakah kolom request_type ada di tabel ppx_request dan ppx_approval_routing
 $check_pr = mysqli_query($conn, "SHOW COLUMNS FROM ppx_request LIKE 'request_type'");
