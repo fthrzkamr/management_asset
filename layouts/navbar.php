@@ -304,6 +304,62 @@ function is_active($patterns) {
         #sidebar-menu ul li a span:not(.menu-arrow):not(.nav-badge) {
             flex: 1;
         }
+
+        /* ═════════════════════════════════════════════════════════════════════
+           PERBAIKAN SCROLL SIDEBAR & LAYOUT (MENCEGAH TERPOTONG DI LAYAR 100%)
+           ═════════════════════════════════════════════════════════════════════ */
+        .sidebar {
+            bottom: 0 !important;
+            height: calc(100vh - 60px) !important;
+            overflow: hidden !important;
+        }
+        .sidebar-inner {
+            height: 100% !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        /* Scrollbar ramping & halus untuk menu sidebar */
+        .sidebar-inner::-webkit-scrollbar {
+            width: 5px;
+        }
+        .sidebar-inner::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar-inner::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .sidebar-inner::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Ruang padding bawah agar menu paling bawah (seperti PPX) tidak terpotong tepi layar */
+        #sidebar-menu {
+            padding-bottom: 70px !important;
+        }
+
+        /* Penyesuaian responsif desktop layar 100% */
+        @media (min-width: 992px) {
+            .page-wrapper > .content {
+                padding: 1.25rem 1.25rem 0 !important;
+            }
+        }
+
+        /* Scrollbar horizontal elegan untuk semua table-responsive */
+        .table-responsive::-webkit-scrollbar {
+            height: 7px;
+        }
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
     </style>
 </head>
 

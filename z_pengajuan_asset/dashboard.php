@@ -183,10 +183,75 @@ function getDistributionBadge($status) {
     <link href="https://cdn.datatables.net/1.10.24/css/dataTables.bootstrap4.min.css" rel="stylesheet">
 
     <style>
+        /* ═════════════════════════════════════════════════════════════════════
+           RESPONSIVE & COMPACT TABLE FIX (MENCEGAH TEKS TERPOTONG DI LAYAR 100%)
+           ═════════════════════════════════════════════════════════════════════ */
+        .table-responsive {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid #eef2f6;
+            border-radius: 8px;
+            padding-bottom: 4px;
+        }
+
+        #pengajuanTable {
+            width: 100% !important;
+            min-width: 1150px; /* Menjamin seluruh kolom tampil rapi tanpa terhimpit */
+            margin-bottom: 0 !important;
+        }
+
+        #pengajuanTable thead th {
+            white-space: nowrap !important;
+            vertical-align: middle !important;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #334155;
+            background-color: #f8fafc;
+            border-top: none;
+            border-bottom: 2px solid #e2e8f0;
+            padding: 10px 8px !important;
+        }
+
+        #pengajuanTable tbody td {
+            vertical-align: middle !important;
+            white-space: nowrap; /* Mencegah nomor, nama, tanggal, status terpotong berbaris-baris */
+            padding: 8px 8px !important;
+            font-size: 13px;
+        }
+
+        /* Kolom deskripsi boleh wrap secara terkontrol */
+        #pengajuanTable tbody td.col-deskripsi {
+            white-space: normal !important;
+            min-width: 150px;
+            max-width: 220px;
+            line-height: 1.35;
+        }
+
+        /* Group tombol aksi agar tetap berjejer rapi horizontal */
+        .action-btn-group {
+            display: inline-flex;
+            gap: 3px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: nowrap;
+        }
+
         .btn-action {
-            margin: 1px;
-            padding: 4px 8px;
-            font-size: 11px;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 28px !important;
+            height: 28px !important;
+            padding: 0 !important;
+            font-size: 11px !important;
+            line-height: 1 !important;
+            border-radius: 4px !important;
+            margin: 0 !important;
+            transition: all 0.15s ease;
+        }
+
+        .btn-action:hover {
+            transform: scale(1.08);
         }
 
         .card-stats {
@@ -428,20 +493,20 @@ function getDistributionBadge($status) {
                                     <table id="pengajuanTable" class="table table-striped table-sm">
                                         <thead>
                                             <tr>
-                                                <th>No</th>
-                                                <th>No. Pengajuan</th>
-                                                <th>Tanggal</th>
-                                                <th>Pengaju</th>
-                                                <th>Kategori</th>
-                                                <th>Deskripsi</th>
-                                                <th>Status</th>
-                                                <th>Status Distribusi</th>
-                                                <th>Status PPX</th>
+                                                <th class="text-center" style="width: 40px;">No</th>
+                                                <th style="min-width: 140px;">No. Pengajuan</th>
+                                                <th style="min-width: 90px;">Tanggal</th>
+                                                <th style="min-width: 130px;">Pengaju</th>
+                                                <th style="min-width: 130px;">Kategori</th>
+                                                <th style="min-width: 160px;">Deskripsi</th>
+                                                <th class="text-center" style="min-width: 90px;">Status</th>
+                                                <th class="text-center" style="min-width: 110px;">Status Distribusi</th>
+                                                <th class="text-center" style="min-width: 120px;">Status PPX</th>
                                                 <!-- Kolom khusus GA, IT & Super Admin -->
                                                 <?php if ($canApproveGA || $auth->isSuperAdmin() || $canApproveIT): ?>
-                                                    <th>Kelola Distribusi</th>
+                                                    <th class="text-center" style="min-width: 110px;">Kelola Distribusi</th>
                                                 <?php endif; ?>
-                                                <th>Aksi</th>
+                                                <th class="text-center" style="min-width: 135px;">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -450,11 +515,11 @@ function getDistributionBadge($status) {
                                             while ($row = mysqli_fetch_assoc($result)): 
                                             ?>
                                                 <tr>
-                                                    <td><small class="font-weight-bold"><?= $no++ ?></small></td>
-                                                    <td><small class="font-weight-bold"><?= htmlspecialchars($row['no_pengajuan']) ?></small></td>
-                                                    <td><small><?= date('d/m/Y', strtotime($row['tanggal_pengajuan'])) ?></small></td>
-                                                    <td><small><?= htmlspecialchars($row['nama_pic']) ?></small></td>
-                                                    <td>
+                                                    <td class="text-center text-nowrap"><small class="font-weight-bold"><?= $no++ ?></small></td>
+                                                    <td class="text-nowrap"><small class="font-weight-bold"><?= htmlspecialchars($row['no_pengajuan']) ?></small></td>
+                                                    <td class="text-nowrap"><small><?= date('d/m/Y', strtotime($row['tanggal_pengajuan'])) ?></small></td>
+                                                    <td class="text-nowrap"><small class="font-weight-bold"><?= htmlspecialchars($row['nama_pic']) ?></small></td>
+                                                    <td class="text-nowrap">
                                                         <small>
                                                             <?= htmlspecialchars($row['kategori_asset']) ?>
                                                             <?php if ($row['sub_kategori'] == 'IT'): ?>
@@ -464,10 +529,10 @@ function getDistributionBadge($status) {
                                                             <?php endif; ?>
                                                         </small>
                                                     </td>
-                                                    <td>
+                                                    <td class="col-deskripsi">
                                                         <small>
-                                                            <?= htmlspecialchars(substr($row['deskripsi_asset'], 0, 40)) ?>
-                                                            <?= strlen($row['deskripsi_asset']) > 40 ? '...' : '' ?>
+                                                            <?= htmlspecialchars(substr($row['deskripsi_asset'], 0, 50)) ?>
+                                                            <?= strlen($row['deskripsi_asset']) > 50 ? '...' : '' ?>
                                                         </small>
                                                     </td>
                                                     <!-- Status Pengajuan -->
@@ -522,7 +587,7 @@ function getDistributionBadge($status) {
                                                                     <i class="fas fa-file-invoice-dollar"></i> Buat PPX
                                                                 </span>
                                                             <?php } else { ?>
-                                                                <small class="text-muted">
+                                                                <small class="text-muted text-nowrap">
                                                                     <?php if ($row['status'] != 'Disetujui') { ?>
                                                                         Harus disetujui dulu
                                                                     <?php } elseif ($row['status_pendistribusian'] != 'Sudah diorder') { ?>
@@ -562,8 +627,8 @@ function getDistributionBadge($status) {
                                                     <?php endif; ?>
                                                     
                                                     <!-- Aksi -->
-                                                    <td>
-                                                        <div class="btn-group" role="group">
+                                                    <td class="text-center text-nowrap">
+                                                        <div class="action-btn-group">
                                                             <!-- Detail Button -->
                                                             <button type="button" class="btn btn-outline-info btn-action"
                                                                 onclick="showDetail('<?= $row['no_pengajuan'] ?>')" title="Detail">
@@ -893,6 +958,7 @@ $(document).ready(function() {
             "order": [],
             "ordering": false,
             "pageLength": 10,
+            "autoWidth": false,
             "language": {
                 "search": "Cari:",
                 "lengthMenu": "Tampilkan _MENU_ data",
