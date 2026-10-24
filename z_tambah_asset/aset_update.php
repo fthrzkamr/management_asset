@@ -2,6 +2,7 @@
 // filepath: c:\xampp\htdocs\asset_dfm\aset_update.php
 include('../dist/config/config.php');
 require_once('../dist/config/SentinelDeskSync.php');
+require_once('../dist/config/image_helper.php');
 date_default_timezone_set('Asia/Jakarta');
 
 // Cek session login
@@ -43,11 +44,6 @@ $informasi_barang       = mysqli_real_escape_string($conn, $_POST['informasi_bar
 $status_barang          = in_array($_POST['status_barang'] ?? '', ['Asset','Sewa']) ? $_POST['status_barang'] : 'Asset';
 $status_kepemilikan     = in_array($_POST['status_kepemilikan'] ?? '', ['DFM','MPF','PLM','DUI']) ? $_POST['status_kepemilikan'] : null;
 
-if (empty($status_kepemilikan)) {
-    echo "<script>alert('Error: Status Kepemilikan wajib dipilih!'); window.history.back();</script>";
-    exit;
-}
-
 // Update user_info dengan user yang sedang melakukan edit
 $user_info      = (int)$_SESSION['id_user'];
 $updated_at     = date("Y-m-d H:i:s");
@@ -65,59 +61,19 @@ if (!$check_query || mysqli_num_rows($check_query) == 0) {
     exit;
 }
 
-// TAMBAHAN: Handle upload foto asset baru
+// TAMBAHAN: Handle upload foto asset baru dengan optimasi WebP & resize otomatis
+$upload_dir = '../uploads/asset/';
 $foto_asset = $foto_lama; // Default menggunakan foto lama
 $foto_baru_diupload = false;
 
 if (isset($_FILES['foto_asset']) && $_FILES['foto_asset']['error'] == UPLOAD_ERR_OK && !empty($_FILES['foto_asset']['name'])) {
-    $upload_dir = '../uploads/asset/';
-    
-    // Buat folder jika belum ada
-    if (!is_dir($upload_dir)) {
-        mkdir($upload_dir, 0755, true);
-    }
-    
-    $file_tmp = $_FILES['foto_asset']['tmp_name'];
-    $file_name = $_FILES['foto_asset']['name'];
-    $file_size = $_FILES['foto_asset']['size'];
-    $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-    
-    // Validasi ekstensi file
-    $allowed_ext = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-    if (!in_array($file_ext, $allowed_ext)) {
-        echo "<script>alert('Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP'); history.back();</script>";
-        exit;
-    }
-    
-    // Validasi ukuran file (max 5MB)
-    if ($file_size > 5 * 1024 * 1024) {
-        echo "<script>alert('Ukuran file terlalu besar. Maksimal 5MB'); history.back();</script>";
-        exit;
-    }
-    
-    // Generate nama file unik
-    $timestamp = date('YmdHis');
-    $random = substr(md5(uniqid()), 0, 6);
-    $new_filename = "asset_{$timestamp}_{$random}.{$file_ext}";
-    $upload_path = $upload_dir . $new_filename;
-    
-    // Upload file baru
-    if (move_uploaded_file($file_tmp, $upload_path)) {
-        // Resize gambar jika terlalu besar
-        resizeImage($upload_path, $upload_path, 1200, 800);
-        
-        $foto_asset = $new_filename;
+    $uploadResult = optimizeAndSaveAssetPhoto($_FILES['foto_asset'], $upload_dir, 'asset_it_');
+    if ($uploadResult['success']) {
+        $foto_asset = $uploadResult['filename'];
         $foto_baru_diupload = true;
-        
-        // Hapus foto lama jika ada dan berbeda dengan foto baru
-        if (!empty($foto_lama) && $foto_lama !== $new_filename) {
-            $old_photo_path = $upload_dir . $foto_lama;
-            if (file_exists($old_photo_path)) {
-                unlink($old_photo_path);
-            }
-        }
     } else {
-        echo "<script>alert('Gagal upload foto baru'); history.back();</script>";
+        $errMsg = addslashes($uploadResult['error'] ?: 'Gagal upload foto baru.');
+        echo "<script>alert('{$errMsg}'); history.back();</script>";
         exit;
     }
 }
@@ -137,7 +93,7 @@ $sql = "UPDATE asset_dfm SET
             user = " . ($user_pemakai ? "'$user_pemakai'" : "NULL") . ",
             kondisi = '$kondisi',
             status_barang = '$status_barang',
-            status_kepemilikan = '$status_kepemilikan',
+            status_kepemilikan = " . ($status_kepemilikan ? "'$status_kepemilikan'" : "NULL") . ",
             keterangan = " . ($keterangan ? "'$keterangan'" : "NULL") . ",
             nilai_pengadaan_satuan = '$nilai_pengadaan_satuan',
             total_nilai_pengadaan = '$total_nilai_pengadaan',
@@ -149,6 +105,14 @@ $sql = "UPDATE asset_dfm SET
 $update = mysqli_query($conn, $sql);
 
 if ($update) {
+    // Hapus foto lama jika berhasil ganti foto baru
+    if ($foto_baru_diupload && !empty($foto_lama) && $foto_lama !== $foto_asset) {
+        $old_photo_path = $upload_dir . $foto_lama;
+        if (file_exists($old_photo_path)) {
+            @unlink($old_photo_path);
+        }
+    }
+
     // Best-effort push to SentinelDesk - see SentinelDeskSync.php. Never
     // blocks or alters this success response even if it fails.
     sentineldesk_sync_asset($kode_aset_lama, $kondisi, $status_barang, $user_pemakai, $lokasi, $nama_aset, $merk, $spesifikasi, $lokasi_detail);
@@ -172,83 +136,5 @@ if ($update) {
     // Tampilkan error detail untuk debugging
     $error = mysqli_error($conn);
     echo "<script>alert('Gagal update data: $error'); history.back();</script>";
-}
-
-// Function untuk resize gambar
-function resizeImage($source, $destination, $max_width, $max_height, $quality = 80) {
-    $info = getimagesize($source);
-    if (!$info) return false;
-    
-    $width = $info[0];
-    $height = $info[1];
-    $mime = $info['mime'];
-    
-    // Jika ukuran sudah kecil, tidak perlu resize
-    if ($width <= $max_width && $height <= $max_height) {
-        return true;
-    }
-    
-    // Hitung rasio
-    $ratio = min($max_width / $width, $max_height / $height);
-    $new_width = round($width * $ratio);
-    $new_height = round($height * $ratio);
-    
-    // Buat image resource berdasarkan tipe
-    switch ($mime) {
-        case 'image/jpeg':
-            $source_img = imagecreatefromjpeg($source);
-            break;
-        case 'image/png':
-            $source_img = imagecreatefrompng($source);
-            break;
-        case 'image/gif':
-            $source_img = imagecreatefromgif($source);
-            break;
-        case 'image/webp':
-            $source_img = imagecreatefromwebp($source);
-            break;
-        default:
-            return false;
-    }
-    
-    if (!$source_img) return false;
-    
-    // Buat canvas baru
-    $new_img = imagecreatetruecolor($new_width, $new_height);
-    
-    // Preserve transparency untuk PNG dan GIF
-    if ($mime == 'image/png' || $mime == 'image/gif') {
-        imagealphablending($new_img, false);
-        imagesavealpha($new_img, true);
-        $transparent = imagecolorallocatealpha($new_img, 255, 255, 255, 127);
-        imagefilledrectangle($new_img, 0, 0, $new_width, $new_height, $transparent);
-    }
-    
-    // Resize
-    imagecopyresampled($new_img, $source_img, 0, 0, 0, 0, $new_width, $new_height, $width, $height);
-    
-    // Simpan hasil resize
-    switch ($mime) {
-        case 'image/jpeg':
-            $result = imagejpeg($new_img, $destination, $quality);
-            break;
-        case 'image/png':
-            $result = imagepng($new_img, $destination, 9);
-            break;
-        case 'image/gif':
-            $result = imagegif($new_img, $destination);
-            break;
-        case 'image/webp':
-            $result = imagewebp($new_img, $destination, $quality);
-            break;
-        default:
-            $result = false;
-    }
-    
-    // Bersihkan memory
-    imagedestroy($source_img);
-    imagedestroy($new_img);
-    
-    return $result;
 }
 ?>

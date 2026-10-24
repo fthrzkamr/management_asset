@@ -217,9 +217,9 @@ $qLokasi = mysqli_query($conn, "SELECT id_lokasi, lokasi_asset FROM lokasi_asset
                                          <!-- Status Kepemilikan -->
                                          <div class="col-12 col-md-3 mb-3">
                                              <div class="form-group">
-                                                 <label for="status_kepemilikan" class="font-weight-bold">Status Kepemilikan <span class="text-danger">*</span></label>
-                                                 <select name="status_kepemilikan" id="status_kepemilikan" class="form-control" required>
-                                                     <option value="" disabled selected>-- Pilih Status Kepemilikan --</option>
+                                                 <label for="status_kepemilikan" class="font-weight-bold">Status Kepemilikan <span class="text-muted small font-weight-normal">(Opsional)</span></label>
+                                                 <select name="status_kepemilikan" id="status_kepemilikan" class="form-control">
+                                                     <option value="" selected>-- Pilih Status Kepemilikan (Opsional) --</option>
                                                      <option value="DFM">DFM</option>
                                                      <option value="MPF">MPF</option>
                                                      <option value="PLM">PLM</option>
@@ -288,8 +288,8 @@ $qLokasi = mysqli_query($conn, "SELECT id_lokasi, lokasi_asset FROM lokasi_asset
                                         <div class="col-12 mb-4">
                                             <div class="form-group">
                                                 <label for="foto_asset" class="font-weight-bold">Upload Foto Aset</label>
-                                                <input type="file" name="foto_asset" id="foto_asset" class="form-control-file" accept="image/*">
-                                                <small class="form-text text-muted">Format: JPG, JPEG, PNG. Maksimal 5MB.</small>
+                                                <input type="file" name="foto_asset" id="foto_asset" class="form-control-file" accept="image/jpeg,image/png,image/gif,image/webp">
+                                                <small class="form-text text-muted">Format: JPG, JPEG, PNG, WEBP. Maksimal 10MB (otomatis di-resize dan dikompres WebP untuk hemat penyimpanan).</small>
                                             </div>
                                         </div>
 

@@ -227,9 +227,9 @@ if (!empty($asset['foto_asset'])) {
                                          <!-- Status Kepemilikan -->
                                          <div class="col-12 col-md-3 mb-3">
                                              <div class="form-group">
-                                                 <label for="status_kepemilikan" class="font-weight-bold">Status Kepemilikan <span class="text-danger">*</span></label>
-                                                 <select name="status_kepemilikan" id="status_kepemilikan" class="form-control" required>
-                                                     <option value="" disabled <?= empty($asset['status_kepemilikan']) ? 'selected' : '' ?>>-- Pilih Status Kepemilikan --</option>
+                                                 <label for="status_kepemilikan" class="font-weight-bold">Status Kepemilikan <span class="text-muted small font-weight-normal">(Opsional)</span></label>
+                                                 <select name="status_kepemilikan" id="status_kepemilikan" class="form-control">
+                                                     <option value="" <?= empty($asset['status_kepemilikan']) ? 'selected' : '' ?>>-- Pilih Status Kepemilikan (Opsional) --</option>
                                                      <?php foreach (['DFM','MPF','PLM','DUI'] as $sk): ?>
                                                          <option value="<?= $sk ?>" <?= (($asset['status_kepemilikan'] ?? '') === $sk) ? 'selected' : '' ?>><?= $sk ?></option>
                                                      <?php endforeach; ?>
@@ -323,7 +323,7 @@ if (!empty($asset['foto_asset'])) {
                                                 <input type="file" name="foto_asset" id="foto_asset" class="form-control"
                                                     accept="image/jpeg,image/jpg,image/png,image/gif,image/webp">
                                                 <small class="form-text text-muted">
-                                                    Format: JPG, JPEG, PNG, GIF, WEBP. Maksimal 5MB.<br>
+                                                    Format: JPG, JPEG, PNG, GIF, WEBP. Maksimal 10MB (otomatis di-resize dan dikompres WebP).<br>
                                                     <strong>Kosongkan jika tidak ingin mengganti foto.</strong>
                                                 </small>
                                                 <!-- Preview foto baru -->
