@@ -262,9 +262,6 @@ $qLokasi = mysqli_query($conn, "SELECT id_lokasi, lokasi_asset FROM lokasi_asset
                                                  <input type="text" name="user" id="user" class="form-control" placeholder="Nama penanggung jawab aset">
                                              </div>
                                          </div>
-
-
-
                                         <!-- Keterangan -->
                                         <div class="col-12 mb-3">
                                             <div class="form-group">

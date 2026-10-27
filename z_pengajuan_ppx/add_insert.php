@@ -4,17 +4,6 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 
-// DEBUG: tulis log ke file untuk konfirmasi POST diterima
-$debug_log = __DIR__ . '/debug_submit.txt';
-file_put_contents($debug_log, 
-    date('Y-m-d H:i:s') . " METHOD=" . ($_SERVER['REQUEST_METHOD'] ?? 'NONE') . "\n" .
-    "POST keys: " . implode(', ', array_keys($_POST ?? [])) . "\n" .
-    "user_id=" . ($_POST['user_id'] ?? 'NOT SET') . " | " .
-    "no_ppx=" . ($_POST['no_ppx'] ?? 'NOT SET') . " | " .
-    "cabang=" . ($_POST['cabang'] ?? 'NOT SET') . "\n\n",
-    FILE_APPEND
-);
-
 include('../dist/config/config.php');
 
 // Cek session login
@@ -489,9 +478,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error_msg = $e->getMessage();
         error_log("PPX Insert: Exception caught - " . $error_msg);
         error_log("PPX Insert: Stack trace - " . $e->getTraceAsString());
-        // Tulis ke debug file juga
-        file_put_contents(__DIR__ . '/debug_submit.txt', 
-            date('Y-m-d H:i:s') . " EXCEPTION: " . $error_msg . "\n", FILE_APPEND);
         $_SESSION['error'] = $error_msg;
         header("Location: add.php");
         exit();
