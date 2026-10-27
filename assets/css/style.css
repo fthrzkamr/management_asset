@@ -3463,3 +3463,14 @@ table.table-inbox tbody tr.checked {
 		height: 355px;
 	}
 }
+
+/* ======================================================
+   CUSTOM: Scale seluruh tampilan aplikasi ke 80%
+   (setara browser zoom 80%) supaya lebih banyak konten
+   muat di layar untuk semua fitur.
+   ====================================================== */
+@media (min-width: 992px) {
+	html {
+		zoom: 80%;
+	}
+}
