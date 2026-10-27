@@ -21,3 +21,5 @@ debug_*.php
 Thumbs.db
 .vscode/
 .idea/
+*.zip
+
