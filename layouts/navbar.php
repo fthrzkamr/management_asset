@@ -310,7 +310,7 @@ function is_active($patterns) {
            ═════════════════════════════════════════════════════════════════════ */
         .sidebar {
             bottom: 0 !important;
-            height: calc(100vh - 60px) !important;
+            height: calc(100vh - 48px) !important;
             overflow: hidden !important;
         }
         .sidebar-inner {

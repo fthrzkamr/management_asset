@@ -1,7 +1,4 @@
 </div> <!-- penutup .page-wrapper -->
-<footer>
-   <p>Copyright © <?= date("Y") ?> DF GROUP.</p>
-</footer>
 </div> <!-- penutup .main-wrapper -->
 
 <!-- JS Scripts -->
