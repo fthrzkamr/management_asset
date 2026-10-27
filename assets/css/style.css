@@ -1631,7 +1631,7 @@ footer p {
 .sidebar-menu li a {
 	color: #6f6f6f;
 	display: block;
-	font-size: 16px;
+	font-size: 14.5px;
 	height: auto;
 	padding: 0 20px;
 }
@@ -1726,7 +1726,7 @@ footer p {
 	padding-left: 85px;
 }
 .sidebar-menu > ul > li {
-    margin-bottom: 3px;
+    margin-bottom: 1px;
     position: relative;
 }
 .sidebar-menu > ul > li:last-child {
@@ -1769,14 +1769,14 @@ footer p {
     align-items: center;
     display: flex;
     justify-content: flex-start;
-    padding: 12px 15px;
+    padding: 9px 15px;
     position: relative;
     transition: all 0.2s ease-in-out 0s;
 }
 .sidebar-menu ul li a i {
 	display: inline-block;
-	font-size: 16px;
-	line-height: 24px;
+	font-size: 15px;
+	line-height: 20px;
 	text-align: left;
 	vertical-align: middle;
 	width: 20px;
