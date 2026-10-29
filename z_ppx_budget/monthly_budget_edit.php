@@ -52,34 +52,40 @@ if (!$budget) {
     exit();
 }
 
-// Check if user can access this budget based on division
-$can_access = false;
-$creator_division = $budget['creator_division'];
+$user_role = strtoupper($auth->getUserRole() ?? ($_SESSION['nama_role'] ?? ''));
+$is_superadmin = $auth->isSuperAdmin();
+$is_finance = $auth->isFinance() || (strpos($user_role, 'FINANCE') !== false);
+$is_manager = (strpos($user_role, 'MANAGER') !== false);
+$is_privileged = $is_superadmin || $is_finance || $is_manager;
 
-if (stripos($user_division, 'HR') !== false || stripos($user_division, 'IT') !== false || stripos($user_division, 'GA') !== false) {
-    // HR, IT, GA can see each other's budgets
-    if (stripos($creator_division, 'HR') !== false || stripos($creator_division, 'IT') !== false || stripos($creator_division, 'GA') !== false) {
-        $can_access = true;
-    }
-} else if (stripos($user_division, 'Finance AP') !== false) {
-    // Finance AP can only see Finance AP budgets
-    if (stripos($creator_division, 'Finance AP') !== false) {
-        $can_access = true;
-    }
-} else if (stripos($user_division, 'Finance') !== false) {
-    // Finance can see Finance budgets
-    if (stripos($creator_division, 'Finance') !== false) {
+// Check if user can access this budget
+$can_access = false;
+$creator_division = $budget['creator_division'] ?? '';
+
+if ($is_superadmin || $is_finance) {
+    $can_access = true;
+} elseif ($budget['created_by'] == $user_id) {
+    $can_access = true;
+} elseif ($is_privileged) {
+    if (stripos($user_division, 'HR') !== false || stripos($user_division, 'IT') !== false || stripos($user_division, 'GA') !== false) {
+        if (stripos($creator_division, 'HR') !== false || stripos($creator_division, 'IT') !== false || stripos($creator_division, 'GA') !== false) {
+            $can_access = true;
+        }
+    } elseif (stripos($user_division, 'Finance AP') !== false) {
+        if (stripos($creator_division, 'Finance AP') !== false) {
+            $can_access = true;
+        }
+    } elseif (!empty($user_division) && $creator_division == $user_division) {
         $can_access = true;
     }
 } else {
-    // Other divisions can only see their own
-    if ($creator_division == $user_division) {
+    if ($budget['created_by'] == $user_id || (!empty($user_division) && $creator_division == $user_division)) {
         $can_access = true;
     }
 }
 
 if (!$can_access) {
-    header("Location: monthly_budget_list.php");
+    header("Location: monthly_budget_list.php?error=" . urlencode("Anda tidak memiliki akses untuk mengubah budget ini"));
     exit();
 }
 

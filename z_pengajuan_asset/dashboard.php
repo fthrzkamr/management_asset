@@ -501,7 +501,6 @@ function getDistributionBadge($status) {
                                                 <th style="min-width: 160px;">Deskripsi</th>
                                                 <th class="text-center" style="min-width: 90px;">Status</th>
                                                 <th class="text-center" style="min-width: 110px;">Status Distribusi</th>
-                                                <th class="text-center" style="min-width: 120px;">Status PPX</th>
                                                 <!-- Kolom khusus GA, IT & Super Admin -->
                                                 <?php if ($canApproveGA || $auth->isSuperAdmin() || $canApproveIT): ?>
                                                     <th class="text-center" style="min-width: 110px;">Kelola Distribusi</th>
@@ -559,45 +558,6 @@ function getDistributionBadge($status) {
                                                         <?php else: ?>
                                                             <small class="text-muted">-</small>
                                                         <?php endif; ?>
-                                                    </td>
-                                                    
-                                                    <!-- Tambahkan kolom Status PPX -->
-                                                    <td class="text-center">
-                                                        <?php
-                                                        // Query untuk cek apakah asset sudah dibuatkan PPX
-                                                        $check_ppx_query = "SELECT no_ppx FROM ppx_request WHERE no_pengajuan_asset = '" . $row['no_pengajuan'] . "' LIMIT 1";
-                                                        $check_ppx_result = mysqli_query($conn, $check_ppx_query);
-                                                        
-                                                        if (mysqli_num_rows($check_ppx_result) > 0) {
-                                                            $ppx_data = mysqli_fetch_assoc($check_ppx_result);
-                                                            ?>
-                                                            <span class="badge badge-success">
-                                                                <i class="fas fa-check-circle"></i> PPX Sudah Dibuat
-                                                            </span>
-                                                            <br>
-                                                            <small>
-                                                                <a href="../z_pengajuan_ppx/detail.php?no_ppx=<?= $ppx_data['no_ppx'] ?>" 
-                                                                class="text-primary" target="_blank" title="Lihat PPX">
-                                                                    <?= htmlspecialchars($ppx_data['no_ppx']) ?>
-                                                                </a>
-                                                            </small>
-                                                        <?php } else { ?>
-                                                            <?php if ($row['status'] == 'Disetujui' && $row['status_pendistribusian'] == 'Sudah diorder') { ?>
-                                                                <span class="badge badge-warning">
-                                                                    <i class="fas fa-file-invoice-dollar"></i> Buat PPX
-                                                                </span>
-                                                            <?php } else { ?>
-                                                                <small class="text-muted text-nowrap">
-                                                                    <?php if ($row['status'] != 'Disetujui') { ?>
-                                                                        Harus disetujui dulu
-                                                                    <?php } elseif ($row['status_pendistribusian'] != 'Sudah diorder') { ?>
-                                                                        -
-                                                                    <?php } else { ?>
-                                                                        -
-                                                                    <?php } ?>
-                                                                </small>
-                                                            <?php } ?>
-                                                        <?php } ?>
                                                     </td>
                                                     
                                                     <!-- Kolom Kelola Distribusi - DITAMBAH UNTUK IT -->

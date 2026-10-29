@@ -118,7 +118,7 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
 </head>
 
 <body>
-    <?php include_once('../layouts/navbar.php'); ?>
+    <?php include_once(__DIR__ . '/../layouts/navbar.php'); ?>
 
     <div class="page-wrapper">
         <div class="content container-fluid">
@@ -174,11 +174,10 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
                                             <th>Total Alokasi</th>
                                             <th>Terpakai</th>
                                             <th>Sisa</th>
-                                            <th>Utilisasi</th>
                                             <th>Status</th>
                                             <th>Tipe</th>
                                             <th>Dibuat Oleh</th>
-                                            <th style="width:100px">Aksi</th>
+                                            <th class="text-center" style="width:120px; min-width:110px;">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -190,14 +189,6 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
                                                     <td>Rp <?= number_format($row['total_allocation'], 0, ',', '.') ?></td>
                                                     <td class="text-danger">Rp <?= number_format($row['total_used'], 0, ',', '.') ?></td>
                                                     <td class="text-success">Rp <?= number_format($row['total_remaining'], 0, ',', '.') ?></td>
-                                                    <td onclick="event.stopPropagation();">
-                                                        <div class="progress" style="height: 20px;">
-                                                            <div class="progress-bar <?= $row['usage_percentage'] > 80 ? 'bg-danger' : 'bg-primary' ?>"
-                                                                style="width: <?= min($row['usage_percentage'], 100) ?>%">
-                                                                <?= number_format($row['usage_percentage'], 1) ?>%
-                                                            </div>
-                                                        </div>
-                                                    </td>
                                                     <td>
                                                         <?php
                                                         $status_class_map = [
@@ -218,39 +209,41 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
                                                         <span class="badge badge-info"><?= htmlspecialchars($row['tipe_anggaran'] ?? 'N/A') ?></span>
                                                     </td>
                                                     <td><?= htmlspecialchars($row['created_by_name']) ?></td>
-                                                    <td onclick="event.stopPropagation();">
-                                                        <a href="monthly_budget_detail.php?id=<?= $row['id_budget'] ?>"
-                                                            class="btn btn-sm btn-info"
-                                                            title="Detail"
-                                                            onclick="event.stopPropagation();">
-                                                            <i class="fas fa-eye"></i>
-                                                        </a>
+                                                    <td class="text-center text-nowrap" onclick="event.stopPropagation();">
+                                                        <div class="d-inline-flex" style="gap: 4px;">
+                                                            <a href="monthly_budget_detail.php?id=<?= $row['id_budget'] ?>"
+                                                                class="btn btn-sm btn-info"
+                                                                title="Detail"
+                                                                onclick="event.stopPropagation();">
+                                                                <i class="fas fa-eye"></i>
+                                                            </a>
 
-                                                        <?php $can_edit = empty($row['approved_by']) || $row['status'] === 'Revisi'; ?>
-                                                        <?php if (!$can_edit): ?>
-                                                            <a href="javascript:void(0);"
-                                                               class="btn btn-sm btn-warning disabled"
-                                                               title="Tidak dapat diedit — sudah disetujui atau sedang dalam proses"
-                                                               onclick="event.stopPropagation(); return false;">
-                                                                <i class="fas fa-edit"></i>
-                                                            </a>
-                                                        <?php else: ?>
-                                                            <a href="monthly_budget_edit.php?id=<?= $row['id_budget'] ?>"
-                                                               class="btn btn-sm btn-warning"
-                                                               title="Edit Anggaran"
-                                                               onclick="event.stopPropagation();">
-                                                                <i class="fas fa-edit"></i>
-                                                            </a>
-                                                        <?php endif; ?>
+                                                            <?php $can_edit = empty($row['approved_by']) || $row['status'] === 'Revisi'; ?>
+                                                            <?php if (!$can_edit): ?>
+                                                                <a href="javascript:void(0);"
+                                                                   class="btn btn-sm btn-warning disabled"
+                                                                   title="Tidak dapat diedit — sudah disetujui atau sedang dalam proses"
+                                                                   onclick="event.stopPropagation(); return false;">
+                                                                    <i class="fas fa-edit"></i>
+                                                                </a>
+                                                            <?php else: ?>
+                                                                <a href="monthly_budget_edit.php?id=<?= $row['id_budget'] ?>"
+                                                                   class="btn btn-sm btn-warning"
+                                                                   title="Edit Anggaran"
+                                                                   onclick="event.stopPropagation();">
+                                                                    <i class="fas fa-edit"></i>
+                                                                </a>
+                                                            <?php endif; ?>
 
-                                                        <?php if ($row['status'] === 'Revisi'): ?>
-                                                            <a href="revisi_submit.php?id=<?= $row['id_budget'] ?>"
-                                                               class="btn btn-sm btn-success"
-                                                               title="Submit Ulang Anggaran ke Manager Finance"
-                                                               onclick="event.stopPropagation();">
-                                                                <i class="fas fa-paper-plane"></i>
-                                                            </a>
-                                                        <?php endif; ?>
+                                                            <?php if ($row['status'] === 'Revisi'): ?>
+                                                                <a href="revisi_submit.php?id=<?= $row['id_budget'] ?>"
+                                                                   class="btn btn-sm btn-success"
+                                                                   title="Submit Ulang Anggaran ke Manager Finance"
+                                                                   onclick="event.stopPropagation();">
+                                                                    <i class="fas fa-paper-plane"></i>
+                                                                </a>
+                                                            <?php endif; ?>
+                                                        </div>
                                                     </td>
 
                                                 </tr>
@@ -263,7 +256,7 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
                     </div>
                 </div>
             </div>
-            <?php include_once('../layouts/footer.php'); ?>
+            <?php include_once(__DIR__ . '/../layouts/footer.php'); ?>
 
         </div>
     </div>
