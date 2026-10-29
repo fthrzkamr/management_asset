@@ -132,7 +132,7 @@ $(document).ready(function() {
     $('.datatable-b, .datatable-bs').each(function() {
         if (!$.fn.DataTable.isDataTable(this)) {
             $(this).DataTable({ pageLength: 10, order: [[5,'desc']],
-                language: { search: 'Cari:', zeroRecords: 'Tidak ada data', info: '_START_-_END_ dari _TOTAL_', paginate: { previous: 'Prev', next: 'Next' } }
+                language: { search: 'Cari:', zeroRecords: 'Tidak ada data', info: '_START_-_END_ dari _TOTAL_', paginate: { previous: '&laquo;', next: '&raquo;' } }
             });
         }
     });

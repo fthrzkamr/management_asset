@@ -170,9 +170,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                 <?php endif; ?>
                                             </td>
                                         </tr>
-                                    <?php endwhile; else: ?>
-                                        <tr><td colspan="8" class="text-center">Tidak ada data pengajuan PPX</td></tr>
-                                    <?php endif; ?>
+                                    <?php endwhile; endif; ?>
                                 </tbody>
                             </table>
                         </div>
@@ -186,7 +184,7 @@ unset($_SESSION['success'], $_SESSION['error']);
     <script src="https://cdn.datatables.net/1.10.24/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.10.24/js/dataTables.bootstrap4.min.js"></script>
     <script>
-        $(function(){ $('#ppxTable').DataTable({"order":[], "pageLength":10}); });
+        $(function(){ $('#ppxTable').DataTable({"order":[], "pageLength":10, "language": {"emptyTable": "Tidak ada data pengajuan PPX"}}); });
     </script>
 </body>
 </html>

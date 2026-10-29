@@ -255,10 +255,6 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
 
                                                 </tr>
                                             <?php endwhile; ?>
-                                        <?php else: ?>
-                                            <tr>
-                                                <td colspan="9" class="text-center text-muted">Belum ada data budget</td>
-                                            </tr>
                                         <?php endif; ?>
                                     </tbody>
                                 </table>
@@ -301,8 +297,8 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
                     "paginate": {
                         "first": "Pertama",
                         "last": "Terakhir",
-                        "next": "Berikutnya",
-                        "previous": "Sebelumnya"
+                        "next": "&raquo;",
+                        "previous": "&laquo;"
                     }
                 }
             });

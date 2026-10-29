@@ -715,8 +715,8 @@ $(document).ready(function() {
             "paginate": {
                 "first": "Pertama",
                 "last": "Terakhir",
-                "next": "Selanjutnya",
-                "previous": "Sebelumnya"
+                "next": "&raquo;",
+                "previous": "&laquo;"
             }
         },
         "order": [[3, 'desc']], // Sort by tanggal descending (geser karena kolom Kategori ditambah)

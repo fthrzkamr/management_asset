@@ -242,8 +242,8 @@ $(document).ready(function() {
             "paginate": {
                 "first": "Pertama",
                 "last": "Terakhir",
-                "next": "Berikutnya",
-                "previous": "Sebelumnya"
+                "next": "&raquo;",
+                "previous": "&laquo;"
             }
         }
     });

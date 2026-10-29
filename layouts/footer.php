@@ -9,7 +9,7 @@
 <script src="<?= BASE_URL ?>/assets/plugins/slimscroll/jquery.slimscroll.min.js"></script>
 <script src="<?= BASE_URL ?>/assets/plugins/datatables/jquery.dataTables.min.js"></script>
 <script src="<?= BASE_URL ?>/assets/plugins/select2/js/select2.min.js"></script>
-<script src="<?= BASE_URL ?>/assets/js/script.js"></script>
+<script src="<?= BASE_URL ?>/assets/js/script.js?v=<?= @filemtime(__DIR__ . '/../assets/js/script.js') ?: time() ?>"></script>
 
 <!-- Include Universal Confirm Modal -->
 <?php include __DIR__ . '/confirm_modal.php'; ?>

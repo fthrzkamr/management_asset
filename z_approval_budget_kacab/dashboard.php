@@ -210,7 +210,7 @@ $month_names = ['','Januari','Februari','Maret','April','Mei','Juni',
                         language: {
                             search: "Cari:", lengthMenu: "Tampilkan _MENU_ entri",
                             zeroRecords: "Tidak ada data", info: "_START_-_END_ dari _TOTAL_",
-                            paginate: { previous: "Prev", next: "Next" }
+                            paginate: { previous: "&laquo;", next: "&raquo;" }
                         },
                         pageLength: 10, order: [[4, 'desc']]
                     });

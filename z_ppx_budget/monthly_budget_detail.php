@@ -379,10 +379,6 @@ $period_display = date('F Y', strtotime($budget['period_year'] . '-' . $budget['
                                                 <td><?= htmlspecialchars($log['created_by_name']) ?></td>
                                             </tr>
                                         <?php endwhile; ?>
-                                    <?php else: ?>
-                                        <tr>
-                                            <td colspan="6" class="text-center text-muted">Belum ada riwayat pemakaian</td>
-                                        </tr>
                                     <?php endif; ?>
                                 </tbody>
                             </table>
@@ -403,7 +399,8 @@ $(document).ready(function() {
         "order": [[0, "desc"]],
         "pageLength": 25,
         "language": {
-            "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Indonesian.json"
+            "url": "//cdn.datatables.net/plug-ins/1.10.24/i18n/Indonesian.json",
+            "emptyTable": "Belum ada riwayat pemakaian"
         }
     });
 });

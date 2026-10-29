@@ -452,16 +452,6 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                         </td>
                                                     </tr>
                                                 <?php endwhile; ?>
-                                            <?php else: ?>
-                                                <tr>
-
-                                                    <td colspan="8" class="text-center">
-                                                        <div class="py-3">
-                                                            <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
-                                                            <p class="text-muted">Tidak ada data pengajuan PPX</p>
-                                                        </div>
-                                                    </td>
-                                                </tr>
                                             <?php endif; ?>
                                         </tbody>
                                     </table>
@@ -493,11 +483,12 @@ unset($_SESSION['success'], $_SESSION['error']);
                     "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
                     "infoEmpty": "Menampilkan 0 sampai 0 dari 0 data",
                     "zeroRecords": "Tidak ada data yang sesuai",
+                    "emptyTable": "Tidak ada data pengajuan PPX",
                     "paginate": {
                         "first": "Pertama",
                         "last": "Terakhir",
-                        "next": "Selanjutnya",
-                        "previous": "Sebelumnya"
+                        "next": "&raquo;",
+                        "previous": "&laquo;"
                     }
                 },
                 "columnDefs": [{

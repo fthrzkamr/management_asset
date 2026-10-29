@@ -149,9 +149,7 @@ $layout_dir = realpath(__DIR__ . '/../layouts');
                                 </tr>
                             </thead>
                             <tbody>
-                            <?php if (empty($rows_arr)): ?>
-                                <tr><td colspan="8" class="text-center py-4 text-muted">Belum ada routing. Klik "Tambah Routing" untuk mulai.</td></tr>
-                            <?php else: ?>
+                            <?php if (!empty($rows_arr)): ?>
                                 <?php foreach ($rows_arr as $i => $r): ?>
                                 <?php
                                     $sc = $status_colors[$r['initial_status']] ?? 'secondary';
@@ -354,6 +352,7 @@ $(function(){
         language: {
             search: 'Cari:', lengthMenu: 'Tampilkan _MENU_ data',
             info: '_START_-_END_ dari _TOTAL_', zeroRecords: 'Tidak ada data',
+            emptyTable: 'Belum ada routing. Klik "Tambah Routing" untuk mulai.',
             paginate: { previous: '«', next: '»' }
         }
     });

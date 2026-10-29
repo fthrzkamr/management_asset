@@ -106,14 +106,6 @@ $result = mysqli_query($conn, $sql);
                             </td>
                         </tr>
                         <?php endwhile; ?>
-                        <?php if (!$has_data): ?>
-                        <tr>
-                            <td colspan="7" class="text-center text-muted py-3">
-                                Belum ada barang di master inventory.
-                                <a href="inventory_list.php">Tambah barang dulu ke master</a>.
-                            </td>
-                        </tr>
-                        <?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -138,7 +130,8 @@ $(window).on('load', function() {
             info: 'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',
             infoEmpty: 'Tidak ada data',
             zeroRecords: 'Tidak ada data ditemukan',
-            paginate: { first: 'Pertama', last: 'Terakhir', next: 'Selanjutnya', previous: 'Sebelumnya' }
+            emptyTable: 'Belum ada barang di master inventory. <a href="inventory_list.php">Tambah barang dulu ke master</a>.',
+            paginate: { first: 'Pertama', last: 'Terakhir', next: '&raquo;', previous: '&laquo;' }
         }
     });
 });

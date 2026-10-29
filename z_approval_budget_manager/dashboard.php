@@ -202,12 +202,7 @@ $month_names = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agu
                                                         <?php endif; ?>
                                                     </td>
                                                 </tr>
-                                                <?php endwhile; else: ?>
-                                                <tr><td colspan="10" class="text-center py-4">
-                                                    <i class="fas fa-inbox fa-2x text-muted d-block mb-2"></i>
-                                                    <span class="text-muted">Tidak ada data</span>
-                                                </td></tr>
-                                                <?php endif; ?>
+                                                <?php endwhile; endif; ?>
                                             </tbody>
                                         </table>
                                     </div>
@@ -264,12 +259,7 @@ $month_names = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agu
                                             </a>
                                         </td>
                                     </tr>
-                                    <?php endwhile; else: ?>
-                                    <tr><td colspan="7" class="text-center py-4">
-                                        <i class="fas fa-inbox fa-2x text-muted d-block mb-2"></i>
-                                        <span class="text-muted">Tidak ada anggaran besar yang menunggu persetujuan</span>
-                                    </td></tr>
-                                    <?php endif; ?>
+                                    <?php endwhile; endif; ?>
                                     </tbody>
                                 </table>
                             </div>
@@ -299,9 +289,10 @@ $month_names = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agu
                     "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
                     "infoEmpty": "Menampilkan 0 sampai 0 dari 0 data",
                     "zeroRecords": "Tidak ada data yang sesuai",
+                    "emptyTable": "Tidak ada data",
                     "paginate": {
                         "first": "Pertama", "last": "Terakhir",
-                        "next": "Selanjutnya", "previous": "Sebelumnya"
+                        "next": "&raquo;", "previous": "&laquo;"
                     }
                 }
             });
@@ -315,9 +306,10 @@ $month_names = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agu
                     "info": "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
                     "infoEmpty": "Menampilkan 0 sampai 0 dari 0 data",
                     "zeroRecords": "Tidak ada data yang sesuai",
+                    "emptyTable": "Tidak ada anggaran besar yang menunggu persetujuan",
                     "paginate": {
                         "first": "Pertama", "last": "Terakhir",
-                        "next": "Selanjutnya", "previous": "Sebelumnya"
+                        "next": "&raquo;", "previous": "&laquo;"
                     }
                 }
             });

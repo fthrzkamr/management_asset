@@ -243,13 +243,6 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
-                                        <?php else: ?>
-                                            <tr>
-                                                <td colspan="9" class="text-center py-4">
-                                                    <i class="fas fa-inbox fa-2x text-muted mb-2 d-block"></i>
-                                                    <p class="text-muted">Tidak ada data pengajuan PPX</p>
-                                                </td>
-                                            </tr>
                                         <?php endif; ?>
                                     </tbody>
                                 </table>
@@ -277,7 +270,7 @@ $(document).ready(function() {
         language: {
             search: "Cari:", lengthMenu: "Tampilkan _MENU_ data",
             info: "Menampilkan _START_ - _END_ dari _TOTAL_ data",
-            zeroRecords: "Tidak ada data", paginate: { previous: "Sebelumnya", next: "Selanjutnya" }
+            zeroRecords: "Tidak ada data", emptyTable: "Tidak ada data pengajuan PPX", paginate: { previous: "&laquo;", next: "&raquo;" }
         }
     });
 });

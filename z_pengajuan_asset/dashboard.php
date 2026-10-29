@@ -966,8 +966,8 @@ $(document).ready(function() {
                 "paginate": {
                     "first": "Pertama",
                     "last": "Terakhir",
-                    "next": "Selanjutnya",
-                    "previous": "Sebelumnya"
+                    "next": "&raquo;",
+                    "previous": "&laquo;"
                 },
                 "emptyTable": "Tidak ada data yang tersedia",
                 "zeroRecords": "Tidak ada data yang cocok"

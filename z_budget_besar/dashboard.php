@@ -177,8 +177,8 @@ $status_badge = [
                     "paginate": {
                         "first": "Pertama",
                         "last": "Terakhir",
-                        "next": "Selanjutnya",
-                        "previous": "Sebelumnya"
+                        "next": "&raquo;",
+                        "previous": "&laquo;"
                     }
                 }
             });

@@ -446,8 +446,8 @@ unset($_SESSION['success'], $_SESSION['error']);
                     "paginate": {
                         "first": "Pertama",
                         "last": "Terakhir",
-                        "next": "Selanjutnya",
-                        "previous": "Sebelumnya"
+                        "next": "&raquo;",
+                        "previous": "&laquo;"
                     }
                 }
             });

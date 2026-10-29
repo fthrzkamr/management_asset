@@ -43,7 +43,7 @@ Version      : 1.0
 	
 	// Sidebar Initiate
 	init();
-	
+
 	// Mobile menu sidebar overlay
 	
 	$('body').append('<div class="sidebar-overlay"></div>');
@@ -169,16 +169,33 @@ Version      : 1.0
 			wheelStep: 10,
 			touchScrollStep: 100
 		});
-		var wHeight = $(window).height() - 60;
+		var wHeight = $(window).height() - 48;
 		$slimScrolls.height(wHeight);
 		$('.sidebar .slimScrollDiv').height(wHeight);
 		$(window).resize(function() {
-			var rHeight = $(window).height() - 60;
+			var rHeight = $(window).height() - 48;
 			$slimScrolls.height(rHeight);
 			$('.sidebar .slimScrollDiv').height(rHeight);
 		});
 	}
-	
+
+	// Simpan & pulihkan posisi scroll sidebar saat pindah halaman/fitur
+	// (tiap pindah menu = reload halaman penuh; harus dijalankan SETELAH slimScroll init,
+	// karena slimScroll me-reparent/wrap elemen sidebar-inner yang mereset scrollTop ke 0)
+	var $sidebarInner = $('.sidebar-inner');
+	if ($sidebarInner.length > 0) {
+		var savedSidebarScroll = sessionStorage.getItem('sidebarScrollTop');
+		if (savedSidebarScroll !== null) {
+			$sidebarInner.scrollTop(parseInt(savedSidebarScroll, 10));
+		}
+		$sidebarInner.on('scroll', function() {
+			sessionStorage.setItem('sidebarScrollTop', $sidebarInner.scrollTop());
+		});
+		$('#sidebar-menu a').on('click', function() {
+			sessionStorage.setItem('sidebarScrollTop', $sidebarInner.scrollTop());
+		});
+	}
+
 	// Small Sidebar
 
 	$(document).on('click', '#toggle_btn', function() {

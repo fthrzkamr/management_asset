@@ -340,8 +340,8 @@ if(!in_array(date('Y'), $list_tahun)){
                     "paginate": {
                         "first": "Awal",
                         "last": "Akhir",
-                        "next": "Lanjut",
-                        "previous": "Kembali"
+                        "next": "&raquo;",
+                        "previous": "&laquo;"
                     }
                 }
             });

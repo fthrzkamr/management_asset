@@ -267,8 +267,8 @@ $usage_percentage = $master['amount_in'] > 0 ? ($master['amount_out'] / $master[
                     "paginate": {
                         "first": "Pertama",
                         "last": "Terakhir",
-                        "next": "Selanjutnya",
-                        "previous": "Sebelumnya"
+                        "next": "&raquo;",
+                        "previous": "&laquo;"
                     }
                 },
                 "order": [[1, 'desc']] // Sort by tanggal descending

@@ -234,7 +234,7 @@ function is_active($patterns) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>/assets/plugins/select2/css/select2.min.css" />
     <link rel="stylesheet" href="<?= BASE_URL ?>/assets/plugins/bootstrap/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css" />
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=<?= @filemtime(__DIR__ . '/../assets/css/style.css') ?: time() ?>" />
 
     <!-- JS moved to footer to ensure jQuery loads first -->
     <style>

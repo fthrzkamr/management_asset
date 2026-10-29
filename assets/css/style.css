@@ -38,6 +38,7 @@ Version      : 1.0
 
 html {
 	height: 100%;
+	font-size: 80%;
 }
 body {
 	background-color: #fff;

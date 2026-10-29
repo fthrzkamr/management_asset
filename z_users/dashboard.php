@@ -367,8 +367,8 @@ mysqli_data_seek($users_result, 0);
                     "paginate": {
                         "first": "Pertama",
                         "last": "Terakhir",
-                        "next": "Selanjutnya",
-                        "previous": "Sebelumnya"
+                        "next": "&raquo;",
+                        "previous": "&laquo;"
                     }
                 }
             });
