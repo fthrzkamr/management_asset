@@ -254,6 +254,36 @@ function getDistributionBadge($status) {
             transform: scale(1.08);
         }
 
+        /* ═══════════════════════════════════════════
+           KOLOM AKSI MENGAMBANG (STICKY FLOATING RIGHT)
+           ═══════════════════════════════════════════ */
+        #pengajuanTable th.col-action,
+        #pengajuanTable td.col-action {
+            position: sticky !important;
+            right: 0 !important;
+            border-left: 1px solid #e2e8f0 !important;
+            box-shadow: -4px 0 8px -2px rgba(0, 0, 0, 0.08);
+        }
+
+        #pengajuanTable thead th.col-action {
+            background-color: #f8fafc !important;
+            z-index: 5;
+        }
+
+        #pengajuanTable tbody tr td.col-action {
+            background-color: #ffffff;
+            z-index: 4;
+        }
+
+        /* Zebra-striped background agar tidak tembus pandang */
+        #pengajuanTable tbody tr:nth-of-type(odd) td.col-action {
+            background-color: #f8fafc;
+        }
+
+        #pengajuanTable tbody tr:hover td.col-action {
+            background-color: #f1f5f9 !important;
+        }
+
         .card-stats {
             transition: all 0.2s ease;
             height: 100px;
@@ -505,7 +535,7 @@ function getDistributionBadge($status) {
                                                 <?php if ($canApproveGA || $auth->isSuperAdmin() || $canApproveIT): ?>
                                                     <th class="text-center" style="min-width: 110px;">Kelola Distribusi</th>
                                                 <?php endif; ?>
-                                                <th class="text-center" style="min-width: 135px;">Aksi</th>
+                                                <th class="text-center col-action" style="min-width: 135px; width: 135px;">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -587,7 +617,7 @@ function getDistributionBadge($status) {
                                                     <?php endif; ?>
                                                     
                                                     <!-- Aksi -->
-                                                    <td class="text-center text-nowrap">
+                                                    <td class="text-center text-nowrap col-action">
                                                         <div class="action-btn-group">
                                                             <!-- Detail Button -->
                                                             <button type="button" class="btn btn-outline-info btn-action"
