@@ -5,7 +5,7 @@ require_once $base_path . '/dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
 if (!$auth->isLoggedIn()) { header("Location: ../../login.php"); exit(); }
-$auth->requirePermission('pt_bst', 'create');
+$auth->requirePermission('pt_bst_po_pembelian', 'create');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nomor_po      = mysqli_real_escape_string($conn, $_POST['nomor_po']);

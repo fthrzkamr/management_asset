@@ -9,6 +9,11 @@ if (!isset($_SESSION['id_user'])) {
     exit;
 }
 
+// Cek izin (update)
+include_once(__DIR__ . '/../../dist/config/auth_helper.php');
+$auth = new AuthHelper($conn);
+$auth->requirePermission('pt_bst_asset', 'update', 'dashboard.php');
+
 if (!isset($_POST['submit'])) {
     header("Location: dashboard.php");
     exit;

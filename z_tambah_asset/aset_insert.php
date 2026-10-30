@@ -11,6 +11,11 @@ if (!isset($_SESSION['id_user'])) {
     exit;
 }
 
+// Cek izin (create)
+include_once(__DIR__ . '/../dist/config/auth_helper.php');
+$auth = new AuthHelper($conn);
+$auth->requirePermission('management_asset', 'create', 'dashboard.php');
+
 if (!isset($_POST['submit'])) {
     header("Location: aset_add.php");
     exit;

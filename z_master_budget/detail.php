@@ -19,11 +19,8 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Cek role
-if (!$auth->isFinance() && !$auth->isManagerFinance() && !$auth->isSuperAdmin()) {
-    header('Location: dashboard.php?error=' . urlencode('Akses ditolak'));
-    exit();
-}
+// Cek permission
+$auth->requirePermission('master_budget', 'read');
 
 $master_id = $_GET['id'] ?? '';
 
@@ -71,9 +68,11 @@ $usage_percentage = $master['amount_in'] > 0 ? ($master['amount_out'] / $master[
                     <a href="dashboard.php" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Kembali
                     </a>
+                    <?php if ($auth->hasPermission('master_budget', 'create')): ?>
                     <button class="btn btn-success" data-toggle="modal" data-target="#topupModal">
                         <i class="fas fa-plus-circle"></i> Top-Up
                     </button>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

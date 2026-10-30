@@ -4,10 +4,11 @@ include('../dist/config/auth_helper.php');
 
 $auth = new AuthHelper($conn);
 
-if (!$auth->isLoggedIn() || !$auth->isSuperAdmin()) {
+if (!$auth->isLoggedIn()) {
     header("Location: ../login.php");
     exit();
 }
+$auth->requirePermission('user_management', 'create', 'dashboard.php');
 
 // Ambil data role, divisi, departemen, dan cabang untuk dropdown
 $roles = mysqli_query($conn, "SELECT * FROM roles ORDER BY nama_role");

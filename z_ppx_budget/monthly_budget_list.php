@@ -133,9 +133,11 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
                         </ul>
                     </div>
                     <div class="col-auto">
+                        <?php if ($auth->canCreateBudget()): ?>
                         <a href="monthly_budget_create.php" class="btn btn-primary">
                             <i class="fas fa-plus"></i> Buat Budget Baru
                         </a>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -218,30 +220,32 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
                                                                 <i class="fas fa-eye"></i>
                                                             </a>
 
-                                                            <?php $can_edit = empty($row['approved_by']) || $row['status'] === 'Revisi'; ?>
-                                                            <?php if (!$can_edit): ?>
-                                                                <a href="javascript:void(0);"
-                                                                   class="btn btn-sm btn-warning disabled"
-                                                                   title="Tidak dapat diedit — sudah disetujui atau sedang dalam proses"
-                                                                   onclick="event.stopPropagation(); return false;">
-                                                                    <i class="fas fa-edit"></i>
-                                                                </a>
-                                                            <?php else: ?>
-                                                                <a href="monthly_budget_edit.php?id=<?= $row['id_budget'] ?>"
-                                                                   class="btn btn-sm btn-warning"
-                                                                   title="Edit Anggaran"
-                                                                   onclick="event.stopPropagation();">
-                                                                    <i class="fas fa-edit"></i>
-                                                                </a>
-                                                            <?php endif; ?>
+                                                            <?php if ($auth->canUpdateBudget()): ?>
+                                                                <?php $can_edit = empty($row['approved_by']) || $row['status'] === 'Revisi'; ?>
+                                                                <?php if (!$can_edit): ?>
+                                                                    <a href="javascript:void(0);"
+                                                                       class="btn btn-sm btn-warning disabled"
+                                                                       title="Tidak dapat diedit — sudah disetujui atau sedang dalam proses"
+                                                                       onclick="event.stopPropagation(); return false;">
+                                                                        <i class="fas fa-edit"></i>
+                                                                    </a>
+                                                                <?php else: ?>
+                                                                    <a href="monthly_budget_edit.php?id=<?= $row['id_budget'] ?>"
+                                                                       class="btn btn-sm btn-warning"
+                                                                       title="Edit Anggaran"
+                                                                       onclick="event.stopPropagation();">
+                                                                        <i class="fas fa-edit"></i>
+                                                                    </a>
+                                                                <?php endif; ?>
 
-                                                            <?php if ($row['status'] === 'Revisi'): ?>
-                                                                <a href="revisi_submit.php?id=<?= $row['id_budget'] ?>"
-                                                                   class="btn btn-sm btn-success"
-                                                                   title="Submit Ulang Anggaran ke Manager Finance"
-                                                                   onclick="event.stopPropagation();">
-                                                                    <i class="fas fa-paper-plane"></i>
-                                                                </a>
+                                                                <?php if ($row['status'] === 'Revisi'): ?>
+                                                                    <a href="revisi_submit.php?id=<?= $row['id_budget'] ?>"
+                                                                       class="btn btn-sm btn-success"
+                                                                       title="Submit Ulang Anggaran ke Manager Finance"
+                                                                       onclick="event.stopPropagation();">
+                                                                        <i class="fas fa-paper-plane"></i>
+                                                                    </a>
+                                                                <?php endif; ?>
                                                             <?php endif; ?>
                                                         </div>
                                                     </td>

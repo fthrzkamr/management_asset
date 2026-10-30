@@ -97,9 +97,11 @@ $layout_dir = realpath(__DIR__ . '/../layouts');
                         </nav>
                     </div>
                     <div class="col-auto">
+                        <?php if ($auth->hasPermission('ppx_routing', 'create')): ?>
                         <button class="btn btn-primary btn-sm" data-toggle="modal" data-target="#modalRouting" onclick="openAdd()">
                             <i class="fas fa-plus fa-sm"></i> Tambah Routing
                         </button>
+                        <?php endif; ?>
                         <?php if (!$has_rt): ?>
                         <a href="migrate_request_type.php" class="btn btn-warning btn-sm ml-1" title="Jalankan migration untuk aktifkan kolom Tipe PPX">
                             <i class="fas fa-database fa-sm"></i> Jalankan Migration
@@ -189,16 +191,20 @@ $layout_dir = realpath(__DIR__ . '/../layouts');
                                         <?php endif; ?>
                                     </td>
                                     <td class="tbl-action">
+                                        <?php if ($auth->hasPermission('ppx_routing', 'update')): ?>
                                         <button class="btn btn-xs btn-outline-primary" title="Edit"
                                             onclick='openEdit(<?= json_encode($r) ?>)'>
                                             <i class="fas fa-edit fa-xs"></i>
                                         </button>
+                                        <?php endif; ?>
+                                        <?php if ($auth->hasPermission('ppx_routing', 'delete')): ?>
                                         <a href="process.php?action=delete&id=<?= $r['id'] ?>"
                                            class="btn btn-xs btn-outline-danger btn-delete-confirm"
                                            data-message="Hapus routing untuk divisi <?= htmlspecialchars($r['nama_divisi']) ?> di cabang <?= htmlspecialchars($r['cabang'] ?: 'Semua') ?>?"
                                            title="Hapus">
                                             <i class="fas fa-trash fa-xs"></i>
                                         </a>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>

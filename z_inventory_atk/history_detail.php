@@ -3,7 +3,9 @@ require '../dist/config/config.php';
 require '../dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
-$auth->requirePermission('inventory_atk', 'read');
+if (!$auth->hasPermission('inventory_atk_stok', 'read') && !$auth->hasPermission('inventory_atk_master', 'read')) {
+    $auth->requirePermission('inventory_atk_stok', 'read');
+}
 
 $id_barang = isset($_GET['id_barang']) ? intval($_GET['id_barang']) : 0;
 

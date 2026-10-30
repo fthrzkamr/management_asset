@@ -1,5 +1,10 @@
 <?php
 include('../dist/config/config.php');
+include_once(__DIR__ . '/../dist/config/auth_helper.php');
+$auth = new AuthHelper($conn);
+if (!$auth->isLoggedIn() || !$auth->hasPermission('master_akun', 'read')) {
+    exit('<div class="alert alert-danger">Akses Ditolak</div>');
+}
 
 $limit = 5;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -32,8 +37,12 @@ $no = $start + 1;
                     <td class="text-center"><?= htmlspecialchars($row['no_akun']); ?></td>
                     <td class="text-center"><?= htmlspecialchars($row['nama_akun']); ?></td>
                     <td class="text-center">
-                        <a href="master_akun_edit.php?id=<?= $row['id_ma']; ?>" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
-                        <a href="master_akun_delete.php?id=<?= $row['id_ma']; ?>" class="btn btn-sm btn-danger btn-delete-confirm" data-message="Yakin ingin menghapus akun ini?"><i class="fas fa-trash-alt"></i></a>
+                        <?php if ($auth->hasPermission('master_akun', 'update')): ?>
+                        <a href="master_akun_edit.php?id=<?= $row['id_ma']; ?>" class="btn btn-sm btn-warning" title="Edit Akun"><i class="fas fa-edit"></i></a>
+                        <?php endif; ?>
+                        <?php if ($auth->hasPermission('master_akun', 'delete')): ?>
+                        <a href="master_akun_delete.php?id=<?= $row['id_ma']; ?>" class="btn btn-sm btn-danger btn-delete-confirm" data-message="Yakin ingin menghapus akun ini?" title="Hapus Akun"><i class="fas fa-trash-alt"></i></a>
+                        <?php endif; ?>
                     </td>
                 </tr>
             <?php } ?>

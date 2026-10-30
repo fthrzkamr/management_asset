@@ -39,7 +39,7 @@ $result = mysqli_query($conn, $query);
                                 <li class="breadcrumb-item active">Penerimaan & Riwayat PO</li>
                             </ul>
                         </div>
-                        <?php if($auth->hasPermission('inventory_atk', 'create')): ?>
+                        <?php if($auth->hasPermission('inventory_atk_po', 'create')): ?>
                         <div class="col-auto">
                             <a href="../po_pengajuan/dashboard.php" class="btn btn-primary btn-sm">
                                 <i class="fas fa-plus"></i> Ajukan PO Baru

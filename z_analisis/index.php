@@ -1,6 +1,10 @@
 <?php
 // filepath: c:\xampp\htdocs\asset_dfm\z_analisis\index.php
 include('../dist/config/config.php');
+require_once __DIR__ . '/../dist/config/auth_helper.php';
+$auth = new AuthHelper($conn);
+if (!$auth->isLoggedIn()) { header("Location: ../login.php"); exit(); }
+$auth->requirePermission('analytics', 'read');
 // tambahkan ini langsung setelah include untuk menampilkan error saat development
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);

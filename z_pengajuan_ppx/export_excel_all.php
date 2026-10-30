@@ -10,7 +10,7 @@ if (!$auth->isLoggedIn()) {
     header("Location: ../login.php");
     exit();
 }
-$auth->requirePermission('pengajuan', 'read');
+$auth->requirePermission('ppx', 'read');
 
 // Query berdasarkan role
 $whereClause = "";

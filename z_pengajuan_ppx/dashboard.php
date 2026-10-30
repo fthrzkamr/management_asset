@@ -330,7 +330,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 </a>
 
                                                                 <!-- Print -->
-                                                                <?php if ($auth->hasPermission('pengajuan_asset', 'read')): ?>
+                                                                <?php if ($auth->hasPermission('ppx', 'read')): ?>
                                                                     <a href="print_laporan.php?no_ppx=<?= urlencode($row['no_ppx']) ?>"
                                                                         class="btn btn-outline-info btn-action" title="Print Detail">
                                                                         <i class="fas fa-print fa-xs"></i>

@@ -376,7 +376,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 </a>
 
                                                                 <!-- Print per PPX -->
-                                                                <?php if ($auth->hasPermission('pengajuan_asset', 'read')): ?> <!-- Ganti canReadPPX dengan hasPermission -->
+                                                                <?php if ($auth->hasPermission('ppx', 'read') || $auth->hasPermission('approval_ppx_manager', 'approve')): ?>
                                                                     <a href="print_laporan.php?no_ppx=<?= urlencode($row['no_ppx']) ?>"
                                                                         class="btn btn-outline-info btn-action" title="Print Detail">
                                                                         <i class="fas fa-print fa-xs"></i>

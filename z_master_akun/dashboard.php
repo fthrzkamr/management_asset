@@ -37,9 +37,11 @@ $auth->requirePermission('master_akun', 'read');
                         <div class="card flex-fill card-table">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="card-title mb-0">Daftar Akun</h5>
+                                <?php if ($auth->hasPermission('master_akun', 'create')): ?>
                                 <a href="master_akun_add.php" class="btn btn-primary btn-sm">
                                     <i class="fas fa-plus"></i> Tambah Akun
                                 </a>
+                                <?php endif; ?>
                             </div>
                             <div class="card-body">
                                 <div id="akun-content"></div> <!-- hasil AJAX akun -->

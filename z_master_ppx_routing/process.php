@@ -5,9 +5,21 @@ require_once __DIR__ . '/../dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
 
-// Cek login dan permission
-if (!$auth->isLoggedIn() || (!$auth->isSuperAdmin() && !$auth->isManagerFinance())) {
-    $_SESSION['error'] = 'Anda tidak memiliki akses!';
+if (!$auth->isLoggedIn()) {
+    header("Location: ../login.php");
+    exit();
+}
+
+$action = $_POST['action'] ?? $_GET['action'] ?? '';
+
+if ($action === 'add') {
+    $auth->requirePermission('ppx_routing', 'create', 'dashboard.php');
+} elseif ($action === 'edit') {
+    $auth->requirePermission('ppx_routing', 'update', 'dashboard.php');
+} elseif ($action === 'delete') {
+    $auth->requirePermission('ppx_routing', 'delete', 'dashboard.php');
+} else {
+    $_SESSION['error'] = 'Aksi tidak valid!';
     header("Location: dashboard.php");
     exit();
 }

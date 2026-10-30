@@ -1,6 +1,13 @@
 <?php
 // filepath: c:\xampp\htdocs\asset_dfm\service_asset\service_complete.php
 include('../dist/config/config.php');
+include_once(__DIR__ . '/../dist/config/auth_helper.php');
+$auth = new AuthHelper($conn);
+if (!$auth->isLoggedIn()) {
+    header('Location: ../login.php');
+    exit();
+}
+$auth->requirePermission('pengajuan_service', 'update', 'dashboard.php');
 
 if (!isset($_SESSION['id_user'])) {
     header("Location: ../login.php");

@@ -12,7 +12,7 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-$auth->requirePermission('pengajuan', 'read');
+$auth->requirePermission('pengajuan_asset', 'read');
 ?>
 
 <!DOCTYPE html>

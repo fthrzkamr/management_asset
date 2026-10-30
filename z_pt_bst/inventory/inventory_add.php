@@ -3,7 +3,7 @@ require __DIR__ . '/../../dist/config/config.php';
 require __DIR__ . '/../../dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
-$auth->requirePermission('pt_bst', 'create');
+$auth->requirePermission('pt_bst_inventory', 'create');
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $kode = mysqli_real_escape_string($conn, $_POST['kode_barang']);

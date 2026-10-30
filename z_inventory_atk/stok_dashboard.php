@@ -5,7 +5,9 @@ require_once $base_path . '/dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
 if (!$auth->isLoggedIn()) { header("Location: ../login.php"); exit(); }
-$auth->requirePermission('inventory_atk', 'read');
+if (!$auth->hasPermission('inventory_atk_stok', 'read') && !$auth->hasPermission('inventory_atk_master', 'read')) {
+    $auth->requirePermission('inventory_atk_stok', 'read');
+}
 
 $page_title = "Kelola Stok Barang";
 

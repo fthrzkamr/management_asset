@@ -172,7 +172,7 @@ if (isset($_SERVER['HTTP_REFERER']) && strpos($_SERVER['HTTP_REFERER'], 'z_appro
                                     Informasi PPX: <?= htmlspecialchars($ppx_data['no_ppx']) ?>
                                 </h5>
                                 <div>
-                                    <?php if (strtolower(trim($ppx_data['status'])) === 'revisi' && $auth->hasPermission('pengajuan', 'create')): ?>
+                                    <?php if (strtolower(trim($ppx_data['status'])) === 'revisi' && ($auth->hasPermission('ppx', 'create') || $auth->hasPermission('ppx', 'update'))): ?>
                                         <a href="edit.php?no_ppx=<?= urlencode($ppx_data['no_ppx']) ?>" class="btn btn-danger btn-sm mr-1" title="Edit">
                                             <i class="fas fa-edit"></i> Revisi
                                         </a>

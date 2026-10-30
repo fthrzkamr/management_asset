@@ -275,8 +275,8 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 </button>
                                                             <?php endif; ?>
 
-                                                            <!-- Edit untuk user yang mengajukan sendiri jika pending -->
-                                                            <?php if ($row['status'] == 'Pending' && $row['user_id'] == $_SESSION['id_user']): ?>
+                                                            <!-- Edit untuk user yang mengajukan sendiri jika pending dan punya hak create/update -->
+                                                            <?php if (($auth->hasPermission('pengajuan_renovasi', 'update') || ($auth->hasPermission('pengajuan_renovasi', 'create') && $row['status'] == 'Pending')) && $row['user_id'] == $_SESSION['id_user']): ?>
                                                                 <a href="edit.php?id=<?= $row['no_pengajuan'] ?>"
                                                                     class="btn btn-outline-warning btn-action" title="Edit">
                                                                     <i class="fas fa-edit fa-xs"></i>

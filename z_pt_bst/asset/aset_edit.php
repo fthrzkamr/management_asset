@@ -1,6 +1,14 @@
 <?php
 // filepath: c:\xampp\htdocs\asset_bst\aset_edit.php
 include('../../dist/config/config.php');
+include_once(__DIR__ . '/../../dist/config/auth_helper.php');
+$auth = new AuthHelper($conn);
+if (!$auth->isLoggedIn()) {
+    header('Location: ' . BASE_URL . '/login.php');
+    exit();
+}
+// Form edit asset hanya untuk user dengan izin UPDATE
+$auth->requirePermission('pt_bst_asset', 'update', 'dashboard.php');
 
 // Cek parameter ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {

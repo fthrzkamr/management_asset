@@ -1,6 +1,18 @@
 <?php
 // filepath: c:\xampp\htdocs\asset_dfm\z_service_asset\service_revert.php
 include('../dist/config/config.php');
+include_once(__DIR__ . '/../dist/config/auth_helper.php');
+$auth = new AuthHelper($conn);
+if (!$auth->isLoggedIn() || !$auth->hasPermission('pengajuan_service', 'delete')) {
+    $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Anda tidak memiliki izin untuk membatalkan service!']);
+        exit();
+    }
+    header('Location: dashboard.php');
+    exit();
+}
 
 if (!isset($_SESSION['id_user'])) {
     $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';

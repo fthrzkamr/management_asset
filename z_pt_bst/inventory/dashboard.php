@@ -73,9 +73,7 @@ $result = mysqli_query($conn, $query);
                             <th width="10%">Satuan</th>
                             <th width="15%">Kategori</th>
                             <th width="10%" class="text-center">Stok BST</th>
-                            <?php if ($auth->hasPermission('pt_bst', 'update')): ?>
                             <th width="10%" class="text-center">Aksi</th>
-                            <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
@@ -96,13 +94,12 @@ $result = mysqli_query($conn, $query);
                             <td class="text-center font-weight-bold <?= $row['stok_bst'] > 0 ? 'text-success' : 'text-danger' ?>">
                                 <?= number_format($row['stok_bst']) ?>
                             </td>
-                            <?php if ($auth->hasPermission('pt_bst', 'update')): ?>
                             <td class="text-center">
                                 <div class="btn-group">
                                     <a href="stok_history.php?id=<?= $row['id_barang'] ?>" class="btn btn-sm btn-outline-info" title="Lihat History">
                                         <i class="fas fa-history"></i>
                                     </a>
-                                    <?php if ($auth->hasPermission('pt_bst', 'update')): ?>
+                                    <?php if ($auth->hasPermission('pt_bst_inventory', 'update')): ?>
                                     <button type="button" class="btn btn-sm btn-outline-primary" 
                                             onclick="openModal(<?= $row['id_barang'] ?>, '<?= addslashes($row['nama_barang']) ?>', <?= $row['stok_bst'] ?>)" title="Update Stok Manual">
                                         <i class="fas fa-edit"></i>
@@ -110,7 +107,6 @@ $result = mysqli_query($conn, $query);
                                     <?php endif; ?>
                                 </div>
                             </td>
-                            <?php endif; ?>
                         </tr>
                         <?php endwhile; ?>
                     </tbody>

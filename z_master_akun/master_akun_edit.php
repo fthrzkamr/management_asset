@@ -1,5 +1,9 @@
 <?php
-include '../dist/config/config.php'; // Include database connection
+include '../dist/config/config.php';
+include_once(__DIR__ . '/../dist/config/auth_helper.php');
+$auth = new AuthHelper($conn);
+if (!$auth->isLoggedIn()) { header('Location: ../login.php'); exit(); }
+$auth->requirePermission('master_akun', 'update', 'dashboard.php'); // Include database connection
 
 if (!isset($_GET['id'])) {
     // Redirect if no ID is provided

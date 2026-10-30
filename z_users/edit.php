@@ -11,12 +11,8 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Cek permission - hanya super admin yang bisa edit user lain
-if (!$auth->isSuperAdmin()) {
-    $_SESSION['error'] = 'Anda tidak memiliki akses untuk mengedit user lain!';
-    header("Location: ../index.php");
-    exit();
-}
+// Cek permission user_management update
+$auth->requirePermission('user_management', 'update', 'dashboard.php');
 
 // Ambil ID dari parameter URL
 if (!isset($_GET['id'])) {

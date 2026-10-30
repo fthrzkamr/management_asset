@@ -83,12 +83,14 @@ $error_message = isset($_GET['error']) ? $_GET['error'] : '';
                 </div>
                 <div class="col-auto float-right ml-auto">
                     <div class="btn-group" role="group">
+                        <?php if ($auth->hasPermission('master_budget', 'create')): ?>
                         <button class="btn btn-primary" data-toggle="modal" data-target="#addMasterModal">
                             <i class="fas fa-plus"></i> <span class="d-none d-md-inline">Tambah Master Budget</span>
                         </button>
                         <button class="btn btn-success" data-toggle="modal" data-target="#topupModal">
                             <i class="fas fa-money-bill-wave"></i> <span class="d-none d-md-inline">Top-Up Dana</span>
                         </button>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -285,22 +287,26 @@ $error_message = isset($_GET['error']) ? $_GET['error'] : '';
                                            class="btn btn-sm btn-info" title="Detail">
                                             <i class="fas fa-eye"></i>
                                         </a>
+                                        <?php if ($auth->hasPermission('master_budget', 'create')): ?>
                                         <button class="btn btn-sm btn-success" 
                                                 onclick="showTopupModal('<?= htmlspecialchars($budget['master_id']) ?>')" 
                                                 title="Top-Up">
                                             <i class="fas fa-plus-circle"></i>
                                         </button>
-                                        <?php if ($budget['amount_out'] > 0): ?>
-                                            <button class="btn btn-sm btn-secondary" disabled title="Tidak dapat dihapus, dana sudah digunakan">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        <?php else: ?>
-                                            <button type="button" class="btn btn-sm btn-danger btn-delete-master" 
-                                                    data-master-id="<?= htmlspecialchars($budget['master_id']) ?>" 
-                                                    data-description="<?= htmlspecialchars($budget['description']) ?>"
-                                                    title="Hapus">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                        <?php endif; ?>
+                                        <?php if ($auth->hasPermission('master_budget', 'delete')): ?>
+                                            <?php if ($budget['amount_out'] > 0): ?>
+                                                <button class="btn btn-sm btn-secondary" disabled title="Tidak dapat dihapus, dana sudah digunakan">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            <?php else: ?>
+                                                <button type="button" class="btn btn-sm btn-danger btn-delete-master" 
+                                                        data-master-id="<?= htmlspecialchars($budget['master_id']) ?>" 
+                                                        data-description="<?= htmlspecialchars($budget['description']) ?>"
+                                                        title="Hapus">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            <?php endif; ?>
                                         <?php endif; ?>
                                     </div>
                                 </td>

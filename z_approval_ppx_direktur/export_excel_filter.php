@@ -11,7 +11,7 @@ if (!$auth->isLoggedIn()) {
     header("Location: ../login.php");
     exit();
 }
-$auth->requirePermission('pengajuan', 'read');
+$auth->requirePermission('ppx', 'read');
 
 // Cek apakah ada parameter no_ppx untuk export detail spesifik
 $no_ppx = $_GET['no_ppx'] ?? '';

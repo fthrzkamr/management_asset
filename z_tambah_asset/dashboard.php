@@ -9,8 +9,12 @@ if (!$auth->isLoggedIn()) {
    exit();
 }
 
-// Check if user has permission to create assets
-$auth->requirePermission('management_asset', 'create');
+// Halaman daftar cukup butuh izin READ (sebelumnya salah mengecek CREATE)
+$auth->requirePermission('management_asset', 'read');
+
+// Flag izin untuk menampilkan/menyembunyikan tombol aksi
+$can_create_asset = $auth->checkAccess('management_asset', 'create');
+$can_update_asset = $auth->checkAccess('management_asset', 'update');
 
 $allowed_limits = [5,10,25,50,100];
 // Pagination settings - allow user to choose via GET `limit`
@@ -155,10 +159,12 @@ function getSortIcon($column, $current_sort, $current_order)
                                  
                                  <!-- Button Group - Berjejer Horizontal -->
                                  <div class="d-flex align-items-center" style="gap: 10px;">
-                                    <!-- Button Tambah Asset -->
+                                    <!-- Button Tambah Asset (hanya jika punya izin create) -->
+                                    <?php if ($can_create_asset): ?>
                                     <a href="aset_add.php" class="btn btn-primary btn-sm">
                                        <i class="fas fa-plus fa-sm"></i> Tambah Asset
                                     </a>
+                                    <?php endif; ?>
                                     
                                     <!-- Button Download Excel -->
                                     <a href="aset_excel.php<?= !empty($filter_cabang) ? '?cabang=' . urlencode($filter_cabang) : '' ?>" class="btn btn-success btn-sm">
@@ -342,11 +348,11 @@ function getSortIcon($column, $current_sort, $current_order)
                                                       title='Lihat Detail'>
                                                       <i class='fa-solid fa-eye'></i>
                                                    </a>
-                                                   <a href='aset_edit.php?id=" . urlencode($row['kode_aset']) . "' 
+                                                   " . ($can_update_asset ? "<a href='aset_edit.php?id=" . urlencode($row['kode_aset']) . "' 
                                                       class='btn btn-sm btn-warning'
                                                       title='Edit Asset'>
                                                       <i class='fa-solid fa-pen-to-square'></i>
-                                                   </a>
+                                                   </a>" : '') . "
                                                 </div>
                                              </td>";
                                        echo "</tr>";

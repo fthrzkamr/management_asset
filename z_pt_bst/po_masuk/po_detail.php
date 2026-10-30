@@ -3,7 +3,7 @@ require __DIR__ . '/../../dist/config/config.php';
 require __DIR__ . '/../../dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
-$auth->requirePermission('pt_bst', 'read');
+$auth->requirePermission('pt_bst_po_masuk', 'read');
 
 $id_po = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
@@ -39,7 +39,7 @@ while($d = mysqli_fetch_assoc($q_detail)) {
 
 // Handler Aksi PO
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
-    $auth->requirePermission('pt_bst', 'process');
+    $auth->requirePermission('pt_bst_po_masuk', 'process');
     $action = $_POST['action'];
     $keterangan_admin = mysqli_real_escape_string($conn, $_POST['keterangan'] ?? '');
 

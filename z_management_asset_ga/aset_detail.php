@@ -1,6 +1,14 @@
 <?php
 // filepath: c:\xampp\htdocs\asset_dfm\aset_detail.php
 include('../dist/config/config.php');
+include_once(__DIR__ . '/../dist/config/auth_helper.php');
+$auth = new AuthHelper($conn);
+if (!$auth->isLoggedIn() || !$auth->checkAccess('management_asset_ga', 'read')) {
+    echo '<div class="alert alert-danger">Anda tidak memiliki izin untuk melihat detail asset.</div>';
+    exit;
+}
+// Tombol Edit di modal hanya untuk user dengan izin UPDATE
+$can_update_asset = $auth->checkAccess('management_asset_ga', 'update');
 
 // Cek parameter ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {
@@ -228,9 +236,11 @@ if (!empty($asset['foto_asset'])) {
 <!-- Action Buttons -->
 <div class="row mt-3">
     <div class="col-md-12 text-right">
+        <?php if ($can_update_asset): ?>
         <a href="aset_edit.php?id=<?= urlencode($asset['kode_aset']) ?>" class="btn btn-warning btn-sm">
             <i class="fas fa-edit"></i> Edit Asset
         </a>
+        <?php endif; ?>
         <button type="button" class="btn btn-secondary btn-sm ml-2" data-dismiss="modal">
             <i class="fas fa-times"></i> Tutup
         </button>

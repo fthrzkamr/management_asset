@@ -5,7 +5,7 @@ require_once $base_path . '/dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
 if (!$auth->isLoggedIn()) { header("Location: ../../login.php"); exit(); }
-$auth->requirePermission('pt_bst', 'create');
+$auth->requirePermission('pt_bst_po_pembelian', 'create');
 
 // Auto Generate No PO (Format: PO/BST/YYYY/MM/XXX)
 $thn = date('Y');

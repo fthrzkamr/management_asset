@@ -5,7 +5,7 @@ require_once $base_path . '/dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
 if (!$auth->isLoggedIn()) { header("Location: ../../login.php"); exit(); }
-$auth->requirePermission('pt_bst', 'read');
+$auth->requirePermission('pt_bst_po_pembelian', 'read');
 
 $id_pembelian = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 if ($id_pembelian == 0) { header("Location: dashboard.php"); exit(); }

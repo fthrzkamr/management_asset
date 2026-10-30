@@ -14,7 +14,7 @@ if (!$auth->isLoggedIn()) {
 }
 
 // Cek permission
-$auth->requirePermission('pengajuan', 'delete');
+$auth->requirePermission('ppx', 'delete');
 
 if (!isset($_GET['id'])) {
     $_SESSION['error'] = 'ID pengajuan tidak ditemukan!';

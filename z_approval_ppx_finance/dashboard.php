@@ -36,7 +36,7 @@ if (!$auth->isLoggedIn()) {
 }
 
 // Cek permission - Finance atau Manager Operasional yang punya akses process PPX
-if (!$auth->isFinance() && !$auth->isOperationalManager() && !$auth->canProcessPPX()) {
+if (!$auth->isFinance() && !$auth->isOperationalManager() && !$auth->canProcessPPX() && !$auth->hasPermission('approval_ppx_finance', 'approve') && !$auth->hasPermission('approval_ppx_finance', 'process')) {
     error_log("Access denied: User " . $auth->getUserRole() . " cannot access this page");
     die("Access Denied: Anda tidak memiliki akses ke halaman ini.");
 }

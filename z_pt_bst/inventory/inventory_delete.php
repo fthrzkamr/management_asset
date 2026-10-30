@@ -3,7 +3,7 @@ require '../dist/config/config.php';
 require '../dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
-$auth->requirePermission('pt_bst', 'delete');
+$auth->requirePermission('pt_bst_inventory', 'delete');
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 

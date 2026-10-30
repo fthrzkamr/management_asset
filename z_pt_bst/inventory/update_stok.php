@@ -5,7 +5,7 @@ require_once $base_path . '/dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
 if (!$auth->isLoggedIn()) { header("Location: ../../login.php"); exit(); }
-$auth->requirePermission('pt_bst', 'update');
+$auth->requirePermission('pt_bst_inventory', 'update');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id_barang = isset($_POST['id_barang']) ? (int)$_POST['id_barang'] : 0;

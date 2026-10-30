@@ -3,7 +3,7 @@ require __DIR__ . '/../../dist/config/config.php';
 require __DIR__ . '/../../dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
-$auth->requirePermission('pt_bst', 'update');
+$auth->requirePermission('pt_bst_inventory', 'update');
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($id == 0) {

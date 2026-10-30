@@ -1,5 +1,13 @@
 <?php
 include('../dist/config/config.php');
+include_once(__DIR__ . '/../dist/config/auth_helper.php');
+$auth = new AuthHelper($conn);
+if (!$auth->isLoggedIn()) {
+    header('Location: ' . BASE_URL . '/login.php');
+    exit();
+}
+// Form tambah asset hanya untuk user dengan izin CREATE
+$auth->requirePermission('management_asset_ga', 'create', 'dashboard.php');
 
 // Ambil data kategori dengan pengelompokan berdasarkan sub_kategori dan pola
 $qKategori = mysqli_query($conn, "SELECT id_kategori, kategori_asset, sub_kategori, kode_kategori FROM kategori_asset ORDER BY sub_kategori, kategori_asset ASC");

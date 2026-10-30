@@ -129,9 +129,11 @@ if (isset($_GET['error'])) {
                             <!-- Button Group - Berjejer Horizontal -->
                             <div class="d-flex align-items-center" style="gap: 10px;">
                                 <!-- Button Tambah Service -->
+                                <?php if ($auth->hasPermission('pengajuan_service', 'create')): ?>
                                 <a href="service_add.php" class="btn btn-primary btn-sm">
                                     <i class="fas fa-plus fa-sm"></i> Tambah Service
                                 </a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -278,12 +280,14 @@ if (isset($_GET['error'])) {
                                                                         title="Lihat Detail">
                                                                     <i class="fas fa-eye"></i>
                                                                 </button>
+                                                                <?php if ($auth->hasPermission('pengajuan_service', 'update')): ?>
                                                                 <a href="service_complete.php?id=<?= $row['id_service'] ?>"
                                                                     class="btn btn-sm btn-success"
                                                                     data-toggle="tooltip"
                                                                     title="Selesaikan Service">
                                                                     <i class="fas fa-check"></i>
                                                                 </a>
+                                                                <?php endif; ?>
                                                                 <?php if (!empty($row['no_ppx'])): ?>
                                                                     <button type="button" 
                                                                             class="btn btn-sm btn-secondary" 
@@ -293,12 +297,14 @@ if (isset($_GET['error'])) {
                                                                         <i class="fas fa-lock"></i>
                                                                     </button>
                                                                 <?php else: ?>
+                                                                    <?php if ($auth->hasPermission('pengajuan_service', 'delete')): ?>
                                                                     <button type="button" 
                                                                             class="btn btn-sm btn-outline-danger btn-revert-service" 
                                                                             data-service-id="<?= $row['id_service'] ?>" 
                                                                             title="Batalkan Service">
                                                                         <i class="fas fa-trash"></i>
                                                                     </button>
+                                                                    <?php endif; ?>
                                                                 <?php endif; ?>
                                                             </div>
                                                         </td>
@@ -419,9 +425,11 @@ if (isset($_GET['error'])) {
                                                                     title="Lihat Detail">
                                                                 <i class="fas fa-eye"></i>
                                                             </button>
+                                                            <?php if ($auth->hasPermission('pengajuan_service', 'delete')): ?>
                                                             <button type="button" class="btn btn-sm btn-outline-danger btn-revert-service" data-service-id="<?= $row['id_service'] ?>" title="Batalkan Service">
                                                                 <i class="fas fa-trash"></i>
                                                             </button>
+                                                            <?php endif; ?>
                                                         </td>
                                                     </tr>
                                                 <?php endwhile; ?>

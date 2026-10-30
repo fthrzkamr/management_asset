@@ -1,6 +1,14 @@
 <?php
 // filepath: c:\xampp\htdocs\asset_dfm\aset_excel.php
 include('../dist/config/config.php');
+include_once(__DIR__ . '/../dist/config/auth_helper.php');
+$auth = new AuthHelper($conn);
+if (!$auth->isLoggedIn()) {
+    header('Location: ' . BASE_URL . '/login.php');
+    exit();
+}
+// Download Excel cukup butuh izin READ
+$auth->requirePermission('management_asset', 'read', 'dashboard.php');
 
 // Set header untuk download Excel
 header('Content-Type: application/vnd.ms-excel');

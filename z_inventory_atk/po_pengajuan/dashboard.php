@@ -3,7 +3,9 @@ require __DIR__ . '/../../dist/config/config.php';
 require __DIR__ . '/../../dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
-$auth->requirePermission('inventory_atk_po', 'create');
+$auth->requirePermission('inventory_atk_po', 'read');
+
+$can_create_po = $auth->hasPermission('inventory_atk_po', 'create');
 
 $page_title = "Pengajuan PO ATK";
 
@@ -15,6 +17,7 @@ $id_user = $_SESSION['id_user'] ?? 1;
 
 // Proses Form Submit PO
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_po'])) {
+    $auth->requirePermission('inventory_atk_po', 'create');
     $items = $_POST['items'] ?? [];
     $keterangan = mysqli_real_escape_string($conn, $_POST['keterangan_po']);
     $nama_supplier = mysqli_real_escape_string($conn, $_POST['nama_supplier']);
@@ -172,9 +175,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_po'])) {
                                     
                                     <hr>
                                     <div class="text-right">
+                                        <?php if ($can_create_po): ?>
                                         <button type="submit" name="submit_po" class="btn btn-success btn-lg" id="btnSubmit" disabled>
                                             <i class="fas fa-paper-plane"></i> Kirim Pengajuan PO
                                         </button>
+                                        <?php else: ?>
+                                        <div class="alert alert-warning text-center d-inline-block py-2 px-4 mb-0">
+                                            <i class="fas fa-lock"></i> Anda hanya memiliki izin baca (Read). Tidak dapat mengajukan PO baru.
+                                        </div>
+                                        <?php endif; ?>
                                     </div>
                                 </form>
                             </div>

@@ -4,10 +4,11 @@ include('../dist/config/auth_helper.php');
 
 $auth = new AuthHelper($conn);
 
-if (!$auth->isLoggedIn() || !$auth->isSuperAdmin()) {
+if (!$auth->isLoggedIn()) {
     header("Location: ../login.php");
     exit();
 }
+$auth->requirePermission('user_management', 'create', 'dashboard.php');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nama_user = trim($_POST['nama_user']);

@@ -1,6 +1,13 @@
 <?php
 // filepath: c:\xampp\htdocs\asset_dfm\service_asset\service_insert.php
 include('../dist/config/config.php');
+include_once(__DIR__ . '/../dist/config/auth_helper.php');
+$auth = new AuthHelper($conn);
+if (!$auth->isLoggedIn()) {
+    header('Location: ../login.php');
+    exit();
+}
+$auth->requirePermission('pengajuan_service', 'create', 'dashboard.php');
 date_default_timezone_set('Asia/Jakarta');
 
 // Cek session login

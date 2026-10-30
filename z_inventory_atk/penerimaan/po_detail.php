@@ -3,7 +3,7 @@ require __DIR__ . '/../../dist/config/config.php';
 require __DIR__ . '/../../dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
-$auth->requirePermission('inventory_atk', 'read');
+$auth->requirePermission('inventory_atk_penerimaan', 'read');
 
 $id_po = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $id_user = $_SESSION['id_user'] ?? 1;
@@ -35,7 +35,7 @@ while($d = mysqli_fetch_assoc($q_detail)) {
 
 // Handler Proses Penerimaan
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['proses_terima'])) {
-    $auth->requirePermission('inventory_atk', 'process');
+    $auth->requirePermission('inventory_atk_penerimaan', 'process');
     
     if ($po['status'] == 'Dikirim') {
         mysqli_begin_transaction($conn);

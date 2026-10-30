@@ -16,6 +16,10 @@ if (!$auth->hasPermission('management_asset_ga', 'read')) {
     exit();
 }
 
+// Flag izin untuk menampilkan/menyembunyikan tombol aksi
+$can_create_asset = $auth->checkAccess('management_asset_ga', 'create');
+$can_update_asset = $auth->checkAccess('management_asset_ga', 'update');
+
 // Additional check: ensure user with GA division is accessing correct dashboard
 $user_divisi = $auth->getUserDivisi();
 if ($auth->isKoordinator() && $user_divisi !== 6) {
@@ -340,10 +344,12 @@ function getSortIcon($column, $current_sort, $current_order)
                                  
                                  <!-- Button Group - Responsive -->
                                  <div class="d-flex flex-wrap align-items-center" style="gap: 10px;">
-                                    <!-- Button Tambah Asset -->
+                                    <!-- Button Tambah Asset (hanya jika punya izin create) -->
+                                    <?php if ($can_create_asset): ?>
                                     <a href="aset_add.php" class="btn btn-primary btn-sm">
                                        <i class="fas fa-plus fa-sm"></i> <span class="d-none d-sm-inline">Tambah </span>Asset
                                     </a>
+                                    <?php endif; ?>
                                     
                                     <!-- Button Download Excel -->
                                     <a href="aset_excel.php<?= !empty($filter_cabang) ? '?cabang=' . urlencode($filter_cabang) : '' ?>" class="btn btn-success btn-sm">
@@ -533,11 +539,11 @@ function getSortIcon($column, $current_sort, $current_order)
                                                       title='Lihat Detail'>
                                                       <i class='fa-solid fa-eye'></i>
                                                    </a>
-                                                   <a href='aset_edit.php?id=" . urlencode($row['kode_aset']) . "' 
+                                                   " . ($can_update_asset ? "<a href='aset_edit.php?id=" . urlencode($row['kode_aset']) . "' 
                                                       class='btn btn-sm btn-warning'
                                                       title='Edit Asset'>
                                                       <i class='fa-solid fa-pen-to-square'></i>
-                                                   </a>
+                                                   </a>" : '') . "
                                                 </div>
                                              </td>";
                                        echo "</tr>";

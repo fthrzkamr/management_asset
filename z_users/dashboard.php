@@ -16,6 +16,7 @@ $auth->requirePermission('user_management', 'read');
 
 // Handle delete user
 if (isset($_GET['delete']) && isset($_GET['id'])) {
+    $auth->requirePermission('user_management', 'delete', 'dashboard.php');
     $user_id = intval($_GET['id']);
 
     // Cek jangan hapus diri sendiri
@@ -95,9 +96,11 @@ mysqli_data_seek($users_result, 0);
                             <!-- Button Group - Berjejer Horizontal -->
                             <div class="d-flex align-items-center" style="gap: 10px;">
                                 <!-- Button Tambah Pengguna -->
+                                <?php if ($auth->hasPermission('user_management', 'create')): ?>
                                 <a href="add.php" class="btn btn-primary btn-sm">
                                     <i class="fas fa-plus fa-sm"></i> Tambah Pengguna
                                 </a>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -296,13 +299,15 @@ mysqli_data_seek($users_result, 0);
                                                             </button>
 
                                                             <!-- Edit -->
+                                                            <?php if ($auth->hasPermission('user_management', 'update')): ?>
                                                             <a href="edit.php?id=<?= $user['id_user'] ?>"
                                                                 class="btn btn-outline-warning btn-action" title="Edit">
                                                                 <i class="fas fa-edit fa-xs"></i>
                                                             </a>
+                                                            <?php endif; ?>
 
                                                             <!-- Delete - Tidak bisa hapus diri sendiri -->
-                                                            <?php if ($user['id_user'] != $_SESSION['id_user']): ?>
+                                                            <?php if ($auth->hasPermission('user_management', 'delete') && $user['id_user'] != $_SESSION['id_user']): ?>
                                                                 <button type="button" class="btn btn-outline-danger btn-action"
                                                                     onclick="deleteUser(<?= $user['id_user'] ?>, '<?= htmlspecialchars($user['nama_user']) ?>')" title="Hapus">
                                                                     <i class="fas fa-trash fa-xs"></i>

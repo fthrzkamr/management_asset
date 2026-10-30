@@ -43,7 +43,7 @@ $result = mysqli_query($conn, $query);
                     <li class="breadcrumb-item active">PO Pembelian BST</li>
                 </ul>
             </div>
-            <?php if ($auth->hasPermission('pt_bst', 'create')): ?>
+            <?php if ($auth->hasPermission('pt_bst_po_pembelian', 'create')): ?>
             <div class="col-auto">
                 <a href="add.php" class="btn btn-primary shadow-sm">
                     <i class="fas fa-plus"></i> Buat PO Pembelian
@@ -96,7 +96,7 @@ $result = mysqli_query($conn, $query);
                                 <a href="detail.php?id=<?= $row['id_pembelian'] ?>" class="btn btn-sm btn-info" data-toggle="tooltip" title="Lihat Detail">
                                     <i class="fas fa-eye"></i>
                                 </a>
-                                <?php if($row['status'] == 'Pending' && $auth->hasPermission('pt_bst', 'process')): ?>
+                                <?php if($row['status'] == 'Pending' && $auth->hasPermission('pt_bst_po_pembelian', 'process')): ?>
                                 <a href="proses_selesai.php?id=<?= $row['id_pembelian'] ?>" 
                                    class="btn btn-sm btn-success" 
                                    onclick="event.preventDefault(); var url = this.href; showConfirm('Selesaikan PO Pembelian ini? Stok barang milik PT BST akan bertambah secara otomatis.', function() { window.location.href = url; });"

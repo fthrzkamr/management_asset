@@ -14,6 +14,14 @@ if (!$auth->isLoggedIn()) {
 
 $action = $_POST['action'] ?? $_GET['action'] ?? '';
 
+if ($action === 'add') {
+    $auth->requirePermission('budget_routing', 'create');
+} elseif ($action === 'edit' || $action === 'save_cabang' || $action === 'save_divisi') {
+    $auth->requirePermission('budget_routing', 'update');
+} elseif ($action === 'delete') {
+    $auth->requirePermission('budget_routing', 'delete');
+}
+
 try {
     mysqli_begin_transaction($conn);
 

@@ -10,12 +10,8 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Cek permission - hanya super admin yang bisa update user
-if (!$auth->isSuperAdmin()) {
-    $_SESSION['error'] = 'Anda tidak memiliki akses untuk mengubah data user!';
-    header("Location: ../index.php");
-    exit();
-}
+// Cek permission user_management update
+$auth->requirePermission('user_management', 'update', 'dashboard.php');
 
 // Pengecekan action
 if (!isset($_POST['action']) || $_POST['action'] !== 'edit_user') {

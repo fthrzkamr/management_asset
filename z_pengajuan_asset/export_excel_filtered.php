@@ -12,7 +12,7 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-$auth->requirePermission('pengajuan', 'read');
+$auth->requirePermission('pengajuan_asset', 'read');
 
 // Ambil parameter filter dari GET
 $start_date = mysqli_real_escape_string($conn, $_GET['start_date'] ?? '');
