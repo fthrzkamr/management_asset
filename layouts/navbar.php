@@ -516,6 +516,16 @@ function is_active($patterns) {
                     </li>
                 <?php endif; ?>
 
+                <!-- MONITORING GA -->
+                <?php if ($auth->hasPermission('monitoring_ga', 'read')): ?>
+                    <li class="<?= is_active('z_monitoring_ga') ? 'active' : '' ?>">
+                        <a href="<?= BASE_URL ?>/z_monitoring_ga/dashboard.php">
+                            <i class="fas fa-tasks"></i>
+                            <span> Monitoring GA</span>
+                        </a>
+                    </li>
+                <?php endif; ?>
+
                 <!-- PENGAJUAN (NEW DROPDOWN) -->
                 <?php
                 $peng_patterns = ['z_pengajuan_ppx', 'monthly_budget_list.php', 'monthly_budget_create.php', 'monthly_budget_edit.php', 'monthly_budget_detail.php'];

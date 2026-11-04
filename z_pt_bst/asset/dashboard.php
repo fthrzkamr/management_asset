@@ -32,6 +32,42 @@ if (!in_array($sort_column, $allowed_sort)) {
    $sort_column = 'created_at';
 }
 
+// Label Bulan
+$daftar_bulan = [
+   '01' => 'Januari',
+   '02' => 'Februari',
+   '03' => 'Maret',
+   '04' => 'April',
+   '05' => 'Mei',
+   '06' => 'Juni',
+   '07' => 'Juli',
+   '08' => 'Agustus',
+   '09' => 'September',
+   '10' => 'Oktober',
+   '11' => 'November',
+   '12' => 'Desember'
+];
+
+// Fetch Tahun List dari data tanggal_pengadaan
+$tahun_list = [];
+$q_thn = mysqli_query($conn, "SELECT DISTINCT YEAR(created_at) as thn FROM asset_bst WHERE created_at IS NOT NULL UNION SELECT DISTINCT YEAR(tanggal_pengadaan) as thn FROM asset_bst WHERE tanggal_pengadaan IS NOT NULL AND tanggal_pengadaan != '0000-00-00' ORDER BY thn DESC");
+if ($q_thn) {
+   while ($r_thn = mysqli_fetch_assoc($q_thn)) {
+      if (!empty($r_thn['thn'])) {
+         $tahun_list[] = (string)$r_thn['thn'];
+      }
+   }
+}
+$cur_year = date('Y');
+$prev_year = (string)((int)$cur_year - 1);
+if (!in_array($cur_year, $tahun_list)) {
+   $tahun_list[] = $cur_year;
+}
+if (!in_array($prev_year, $tahun_list)) {
+   $tahun_list[] = $prev_year;
+}
+rsort($tahun_list);
+
 // Fetch Cabang List
 $cabang_list = [];
 $q_cabg = mysqli_query($conn, "SELECT nama_cabang FROM master_cabang ORDER BY id_cabang ASC");
@@ -41,32 +77,41 @@ if ($q_cabg) {
    }
 }
 
-// Search functionality
-$search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
-$where_clause = '';
+// Parameter Filter & Search
+$search = isset($_GET['search']) ? mysqli_real_escape_string($conn, trim($_GET['search'])) : '';
+$filter_cabang = isset($_GET['cabang']) ? mysqli_real_escape_string($conn, trim($_GET['cabang'])) : '';
+$filter_bulan = isset($_GET['bulan']) ? mysqli_real_escape_string($conn, trim($_GET['bulan'])) : '';
+$filter_tahun = isset($_GET['tahun']) ? mysqli_real_escape_string($conn, trim($_GET['tahun'])) : '';
 
-// Show all assets for Management Asset (no per-user filter).
-// Build search clause if user supplied a query.
+// Build WHERE conditions
+$where_conditions = [];
+
 if (!empty($search)) {
-   $search_sql = "(kode_aset LIKE '%$search%' 
+   $where_conditions[] = "(kode_aset LIKE '%$search%' 
                    OR nama_aset LIKE '%$search%' 
                    OR `user` LIKE '%$search%'
                    OR kategori_aset LIKE '%$search%' 
                    OR lokasi LIKE '%$search%' 
                    OR merk LIKE '%$search%')";
-   $where_clause = "WHERE " . $search_sql;
 }
 
-// Tambahan Filter Cabang dari Navbar Dropdown
-$filter_cabang = isset($_GET['cabang']) ? mysqli_real_escape_string($conn, $_GET['cabang']) : '';
 if (!empty($filter_cabang) && $filter_cabang !== 'Semua Cabang') {
-   $cab_sql = "lokasi LIKE '%$filter_cabang%'";
-   if (empty($where_clause)) {
-      $where_clause = "WHERE " . $cab_sql;
-   } else {
-      $where_clause .= " AND " . $cab_sql;
-   }
+   $where_conditions[] = "lokasi LIKE '%$filter_cabang%'";
 }
+
+if (!empty($filter_bulan) && !empty($filter_tahun)) {
+   $where_conditions[] = "(
+       (MONTH(created_at) = " . (int)$filter_bulan . " AND YEAR(created_at) = " . (int)$filter_tahun . ")
+       OR 
+       (MONTH(tanggal_pengadaan) = " . (int)$filter_bulan . " AND YEAR(tanggal_pengadaan) = " . (int)$filter_tahun . ")
+   )";
+} elseif (!empty($filter_bulan)) {
+   $where_conditions[] = "(MONTH(created_at) = " . (int)$filter_bulan . " OR MONTH(tanggal_pengadaan) = " . (int)$filter_bulan . ")";
+} elseif (!empty($filter_tahun)) {
+   $where_conditions[] = "(YEAR(created_at) = " . (int)$filter_tahun . " OR YEAR(tanggal_pengadaan) = " . (int)$filter_tahun . ")";
+}
+
+$where_clause = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_conditions) : "";
 
 // Count total records
 $count_query = mysqli_query($conn, "SELECT COUNT(*) as total FROM asset_bst $where_clause");
@@ -76,7 +121,7 @@ $total_pages = ceil($total_records / $limit);
 // Main query with pagination and sorting
 $query = mysqli_query($conn, "
    SELECT kode_aset, `user`, nama_aset, kategori_aset, lokasi, merk, 
-         jumlah, satuan, kondisi, status_barang
+         jumlah, satuan, kondisi, status_barang, created_at
    FROM asset_bst 
    $where_clause
    ORDER BY $sort_column $sort_order
@@ -166,62 +211,93 @@ function getSortIcon($column, $current_sort, $current_order)
                                     </a>
                                     <?php endif; ?>
                                     
-                                    <!-- Button Download Excel -->
-                                    <a href="aset_excel.php<?= !empty($filter_cabang) ? '?cabang=' . urlencode($filter_cabang) : '' ?>" class="btn btn-success btn-sm">
-                                       <i class="fas fa-download fa-sm"></i> Download Excel
-                                    </a>
+                                    <?php
+$excel_params = [];
+if (!empty($filter_cabang) && $filter_cabang !== 'Semua Cabang') $excel_params['cabang'] = $filter_cabang;
+if (!empty($filter_bulan)) $excel_params['bulan'] = $filter_bulan;
+if (!empty($filter_tahun)) $excel_params['tahun'] = $filter_tahun;
+if (!empty($search)) $excel_params['search'] = $search;
+$excel_url = 'aset_excel.php' . (!empty($excel_params) ? '?' . http_build_query($excel_params) : '');
+?>
+                                     <!-- Button Download Excel -->
+                                     <a href="<?= $excel_url ?>" class="btn btn-success btn-sm" title="Download Excel sesuai filter yang aktif">
+                                        <i class="fas fa-download fa-sm"></i> Download Excel
+                                     </a>
                                  </div>
                               </div>
                            </div>
                         </div>
 
-                        <!-- Search Bar -->
-                        <div class="row mb-3">
-                           <div class="col-md-6">
-                              <form method="GET" action="">
-                                 <div class="d-flex flex-column flex-sm-row">
-                                     <div class="flex-grow-1 d-flex align-items-center mb-2 mb-sm-0">
-                                        <select name="cabang" class="form-control form-control-sm mr-2" style="max-width: 150px;" onchange="this.form.submit()">
-                                           <option value="">Semua Cabang</option>
-                                           <?php foreach($cabang_list as $cbg): ?>
-                                              <option value="<?= htmlspecialchars($cbg) ?>" <?= $filter_cabang === $cbg ? 'selected' : '' ?>>
-                                                 <?= htmlspecialchars($cbg) ?>
-                                              </option>
-                                           <?php endforeach; ?>
-                                        </select>
-                                        <div class="input-group input-group-sm">
-                                           <input type="text" name="search" class="form-control" placeholder="Cari asset..." value="<?= htmlspecialchars($search) ?>">
-                                           <?php if (isset($_GET['sort'])): ?>
-                                              <input type="hidden" name="sort" value="<?= htmlspecialchars($_GET['sort']) ?>">
-                                           <?php endif; ?>
-                                           <?php if (isset($_GET['order'])): ?>
-                                              <input type="hidden" name="order" value="<?= htmlspecialchars($_GET['order']) ?>">
-                                           <?php endif; ?>
-                                           <div class="input-group-append">
-                                              <button type="submit" class="btn btn-outline-secondary">
-                                                 <i class="fas fa-search"></i>
-                                              </button>
-                                              <?php if (!empty($search)): ?>
-                                                 <a href="dashboard.php" class="btn btn-outline-danger">
-                                                    <i class="fas fa-times"></i>
-                                                 </a>
-                                              <?php endif; ?>
-                                           </div>
+                        <!-- Filter Bar -->
+                        <div class="row mb-3 align-items-center">
+                           <div class="col-12 col-xl-9 mb-2 mb-xl-0">
+                              <form method="GET" action="" id="filterForm">
+                                 <div class="d-flex flex-wrap align-items-center" style="gap: 8px;">
+                                     <!-- Filter Cabang -->
+                                     <select name="cabang" class="form-control form-control-sm" style="width: auto; min-width: 140px;" onchange="this.form.submit()">
+                                        <option value="">Semua Cabang</option>
+                                        <?php foreach($cabang_list as $cbg): ?>
+                                           <option value="<?= htmlspecialchars($cbg) ?>" <?= $filter_cabang === $cbg ? 'selected' : '' ?>>
+                                              <?= htmlspecialchars($cbg) ?>
+                                           </option>
+                                        <?php endforeach; ?>
+                                     </select>
+
+                                     <!-- Filter Bulan -->
+                                     <select name="bulan" class="form-control form-control-sm" style="width: auto; min-width: 130px;" onchange="this.form.submit()">
+                                        <option value="">Semua Bulan</option>
+                                        <?php foreach($daftar_bulan as $num => $name): ?>
+                                           <option value="<?= $num ?>" <?= ($filter_bulan === $num) ? 'selected' : '' ?>>
+                                              <?= $name ?>
+                                           </option>
+                                        <?php endforeach; ?>
+                                     </select>
+
+                                     <!-- Filter Tahun -->
+                                     <select name="tahun" class="form-control form-control-sm" style="width: auto; min-width: 110px;" onchange="this.form.submit()">
+                                        <option value="">Semua Tahun</option>
+                                        <?php foreach($tahun_list as $thn): ?>
+                                           <option value="<?= $thn ?>" <?= ($filter_tahun == $thn) ? 'selected' : '' ?>>
+                                              <?= $thn ?>
+                                           </option>
+                                        <?php endforeach; ?>
+                                     </select>
+
+                                     <!-- Search Box -->
+                                     <div class="input-group input-group-sm flex-grow-1" style="min-width: 180px; max-width: 250px;">
+                                        <input type="text" name="search" class="form-control" placeholder="Cari asset..." value="<?= htmlspecialchars($search) ?>">
+                                        <?php if (isset($_GET['sort'])): ?>
+                                           <input type="hidden" name="sort" value="<?= htmlspecialchars($_GET['sort']) ?>">
+                                        <?php endif; ?>
+                                        <?php if (isset($_GET['order'])): ?>
+                                           <input type="hidden" name="order" value="<?= htmlspecialchars($_GET['order']) ?>">
+                                        <?php endif; ?>
+                                        <div class="input-group-append">
+                                           <button type="submit" class="btn btn-outline-secondary" title="Cari">
+                                              <i class="fas fa-search"></i>
+                                           </button>
                                         </div>
                                      </div>
-                                     <div class="ml-0 ml-sm-2" style="max-width: 80px;">
-                                        <select name="limit" class="form-control form-control-sm" onchange="this.form.submit()">
-                                           <?php foreach([5,10,25,50,100] as $l): ?>
-                                              <option value="<?= $l ?>" <?= $l == $limit ? 'selected' : '' ?>><?= $l ?></option>
-                                           <?php endforeach; ?>
-                                        </select>
-                                     </div>
-                                  </div>
+
+                                     <!-- Limit per page -->
+                                     <select name="limit" class="form-control form-control-sm" style="width: auto; max-width: 75px;" onchange="this.form.submit()" title="Jumlah data per halaman">
+                                        <?php foreach([5,10,25,50,100] as $l): ?>
+                                           <option value="<?= $l ?>" <?= $l == $limit ? 'selected' : '' ?>><?= $l ?></option>
+                                        <?php endforeach; ?>
+                                     </select>
+
+                                     <!-- Reset Filter Button -->
+                                     <?php if (!empty($search) || !empty($filter_cabang) || !empty($filter_bulan) || !empty($filter_tahun)): ?>
+                                        <a href="dashboard.php" class="btn btn-sm btn-outline-danger" title="Reset Semua Filter">
+                                           <i class="fas fa-undo"></i> Reset
+                                        </a>
+                                     <?php endif; ?>
+                                 </div>
                               </form>
                            </div>
-                           <div class="col-md-6 text-right">
+                           <div class="col-12 col-xl-3 text-xl-right">
                               <small class="text-muted">
-                                 Menampilkan <?= $offset + 1 ?> - <?= min($offset + $limit, $total_records) ?> dari <?= $total_records ?> data
+                                 Menampilkan <?= $total_records > 0 ? ($offset + 1) : 0 ?> - <?= min($offset + $limit, $total_records) ?> dari <?= $total_records ?> data
                               </small>
                            </div>
                         </div>
@@ -278,6 +354,7 @@ function getSortIcon($column, $current_sort, $current_order)
                                           Kondisi <?= getSortIcon('kondisi', $sort_column, $sort_order) ?>
                                        </a>
                                     </th>
+
                                                                            <th class="text-center action-col">Action</th>
                                  </tr>
                               </thead>
@@ -320,9 +397,6 @@ function getSortIcon($column, $current_sort, $current_order)
                                              $kondisi_class = 'badge-secondary';
                                        }
                                        echo "<td><span class='badge {$kondisi_class}'>" . htmlspecialchars($row['kondisi']) . "</span></td>";
-
-
-
                                        echo "<td class='text-center action-col'>
                                                 <div class='action-buttons'>
                                                    <a href='#viewModal' 

@@ -307,6 +307,13 @@ $PERMISSION_MODULES = [
         'group' => 'Lainnya',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
+    // === MONITORING GA ===
+    'monitoring_ga' => [
+        'label' => 'Monitoring Pekerjaan GA',
+        'icon'  => 'fas fa-tasks',
+        'group' => 'Monitoring GA',
+        'actions' => ['create', 'read', 'update', 'delete'],
+    ],
 ];
 
 // Semua actions yang mungkin ada (untuk render kolom header)
