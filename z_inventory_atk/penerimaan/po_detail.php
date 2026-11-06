@@ -156,7 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['proses_terima'])) {
                         </div>
 
                         <!-- Card Action Penerimaan-->
-                        <?php if($po['status'] == 'Dikirim' && $auth->hasPermission('inventory_atk', 'process')): ?>
+                        <?php if($po['status'] == 'Dikirim' && $auth->hasPermission('inventory_atk_penerimaan', 'process')): ?>
                         <div class="card shadow-sm border-success">
                             <div class="card-header bg-success text-white">
                                 <h5 class="card-title text-white mb-0">Aksi Penerimaan Barang</h5>

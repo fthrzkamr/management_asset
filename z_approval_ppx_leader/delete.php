@@ -14,7 +14,7 @@ if (!$auth->isLoggedIn()) {
 }
 
 // Cek permission
-$auth->requirePermission('pengajuan_asset', 'delete');
+$auth->requirePermission('ppx', 'delete');
 
 if (!isset($_GET['id'])) {
     $_SESSION['error'] = 'ID pengajuan tidak ditemukan!';
@@ -49,8 +49,8 @@ if ($auth->isSuperAdmin()) {
     // Karyawan dan Staff - cek kepemilikan dan status
     $user_id = $_SESSION['id_user'];
     
-    // Cek apakah pengajuan milik user ini (untuk karyawan)
-    if ($auth->isKoordinator() && $pengajuan['user_id'] != $user_id) {
+    // Cek apakah pengajuan milik user ini (untuk pengaju biasa non-approver)
+    if (!$auth->canApprove() && $pengajuan['user_id'] != $user_id) {
         $error_message = 'Anda hanya bisa menghapus pengajuan milik Anda sendiri!';
     } else {
         // Untuk PPX, hanya pengajuan dengan status "Revisi" yang dapat dihapus oleh user biasa

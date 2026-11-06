@@ -14,8 +14,8 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Cek permission - hanya Finance dan Super Admin
-if (!$auth->isFinance() && !$auth->isSuperAdmin()) {
+// Cek permission - Approval Realisasi (Finance) sesuai pengaturan Administrator
+if (!$auth->hasPermission('approval_budget_finance', 'approve') && !$auth->hasPermission('approval_budget_finance', 'read')) {
     $_SESSION['error'] = 'Anda tidak memiliki akses untuk halaman ini!';
     header("Location: ../index.php");
     exit();

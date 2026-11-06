@@ -5,8 +5,8 @@ include('../dist/config/auth_helper.php');
 
 $auth = new AuthHelper($conn);
 
-// Cek login dan permission
-if (!$auth->isLoggedIn() || (!$auth->isManagerFinance() && !$auth->isSuperAdmin())) {
+// Cek login dan permission (sesuai Approval Anggaran Manager Finance di Administrator)
+if (!$auth->isLoggedIn() || !$auth->hasPermission('approval_budget_manager', 'approve')) {
     $_SESSION['error'] = 'Anda tidak memiliki akses untuk melakukan tindakan ini!';
     header("Location: dashboard.php");
     exit();

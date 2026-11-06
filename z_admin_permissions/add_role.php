@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mysqli_stmt_bind_param($ins, "sss", $nama_role, $deskripsi, $perms_json);
             if (mysqli_stmt_execute($ins)) {
                 $_SESSION['success'] = 'Role "' . htmlspecialchars($nama_role) . '" berhasil ditambahkan.';
-                header('Location: dashboard.php'); exit();
+                header('Location: dashboard.php?tab=roles'); exit();
             } else {
                 $error = 'Gagal menyimpan: ' . mysqli_error($conn);
             }
@@ -195,7 +195,7 @@ $current_perms = [];
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-plus"></i> Buat Role
                     </button>
-                    <a href="dashboard.php" class="btn btn-secondary">
+                    <a href="dashboard.php?tab=roles" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Kembali
                     </a>
                 </div>

@@ -1,13 +1,20 @@
 <?php
 // filepath: c:\xampp\htdocs\asset_dfm\pengajuan_asset\detail.php
 include('../dist/config/config.php');
+include('../dist/config/auth_helper.php');
 
 
 if (!isset($_SESSION['id_user']) || !isset($_GET['no_pengajuan'])) {
     exit('Access denied');
 }
 
+$auth = new AuthHelper($conn);
+
 $no_pengajuan = mysqli_real_escape_string($conn, $_GET['no_pengajuan']);
+
+// Batasi data sesuai permission (IT hanya IT, GA hanya GA, user biasa hanya miliknya)
+$visibilityCond = $auth->getAssetRequestVisibilityCondition('ar', 'ka');
+$visibilitySql  = $visibilityCond !== '' ? " AND $visibilityCond" : '';
 
 $query = "SELECT 
     ar.*,
@@ -22,7 +29,7 @@ LEFT JOIN lokasi_asset la ON ar.lokasi_penggunaan = la.id_lokasi
 LEFT JOIN user_dfm u ON ar.user_id = u.id_user
 LEFT JOIN user_dfm ua ON ar.approved_by = ua.id_user
 LEFT JOIN divisi d ON ar.divisi = d.id_divisi
-WHERE ar.no_pengajuan = '$no_pengajuan'";
+WHERE ar.no_pengajuan = '$no_pengajuan'$visibilitySql";
 
 $result = mysqli_query($conn, $query);
 $data = mysqli_fetch_assoc($result);

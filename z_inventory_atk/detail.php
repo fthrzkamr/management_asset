@@ -11,7 +11,9 @@ require_once $base_path . '/dist/config/auth_helper.php';
 $auth = new AuthHelper($conn);
 
 // Check permission for ATK (same as dashboard)
-$auth->requirePermission('inventory_atk_pengambilan', 'read');
+if (!$auth->hasPermission('inventory_atk_pengambilan', 'read') && !$auth->hasPermission('inventory_atk_pengambilan', 'approve')) {
+    $auth->requirePermission('inventory_atk_pengambilan', 'read');
+}
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 

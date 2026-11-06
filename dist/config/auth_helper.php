@@ -183,7 +183,10 @@ class AuthHelper
 
     public function canReadAsset()
     {
-        return $this->hasPermission('pengajuan_asset', 'read');
+        return $this->hasPermission('pengajuan_asset', 'read')
+            || $this->hasPermission('approval_asset_it', 'read')
+            || $this->hasPermission('approval_asset_ga', 'read')
+            || $this->canApproveAsset();
     }
 
     public function canUpdateAsset()
@@ -203,42 +206,101 @@ class AuthHelper
      * @return bool
      */
     public function canApproveAsset($kategori_asset = null) {
-        // Super Admin, HR, dan GA dapat approve semua kategori
-        if ($this->isSuperAdmin() || $this->isHr() || $this->isGa()) {
+        // Berdasarkan PERMISSION (Kelola Role / Permission User), bukan nama role.
+        $scope = $this->getAssetApprovalScope();
+        if (!$scope['any']) {
+            return false;
+        }
+
+        // Jika kategori tidak dispecify, izinkan akses menu
+        if ($kategori_asset === null) {
             return true;
         }
-        
-        // IT hanya dapat approve kategori IT
-        if ($this->isIT()) {
-            // Jika kategori tidak dispecify, izinkan akses menu
-            if ($kategori_asset === null) {
-                return true;
-            }
-            
-            // Get kategori name from ID if numeric
-            if (is_numeric($kategori_asset)) {
-                $query = "SELECT kategori_asset FROM kategori_asset WHERE id_kategori = ?";
-                $stmt = mysqli_prepare($this->conn, $query);
-                mysqli_stmt_bind_param($stmt, "i", $kategori_asset);
-                mysqli_stmt_execute($stmt);
-                $result = mysqli_stmt_get_result($stmt);
-                
-                if ($data = mysqli_fetch_assoc($result)) {
-                    $kategori_asset = strtolower($data['kategori_asset']);
-                }
-                
-                mysqli_stmt_close($stmt);
-            } else {
-                // Convert to lowercase for case-insensitive comparison
-                $kategori_asset = strtolower($kategori_asset);
-            }
-            
-            // Check if kategori is IT related
-            $it_categories = ['it', 'komputer', 'laptop', 'printer', 'elektronik', 'hardware', 'software'];
-            return in_array($kategori_asset, $it_categories);
+
+        // Approver penuh (global / IT+GA) boleh semua kategori
+        if ($scope['all']) {
+            return true;
         }
-        
-        return false;
+
+        // Ambil sub_kategori (IT/GA) dari kategori yang diminta
+        $sub = null;
+        if (is_numeric($kategori_asset)) {
+            $query = "SELECT sub_kategori FROM kategori_asset WHERE id_kategori = ?";
+            $stmt = mysqli_prepare($this->conn, $query);
+            mysqli_stmt_bind_param($stmt, "i", $kategori_asset);
+            mysqli_stmt_execute($stmt);
+            $result = mysqli_stmt_get_result($stmt);
+            if ($data = mysqli_fetch_assoc($result)) {
+                $sub = $data['sub_kategori'];
+            }
+            mysqli_stmt_close($stmt);
+        } else {
+            $sub = strtoupper(trim($kategori_asset));
+        }
+
+        return $this->canApproveAssetSubKategori($sub);
+    }
+
+    /**
+     * Scope approval Pengajuan Aset berdasarkan PERMISSION (bukan role):
+     *  - Super Admin                         => semua (IT + GA)
+     *  - approval_asset_it / approval_asset_ga (spesifik) => hanya sub kategori yang dicentang
+     *    (permission spesifik SELALU menang atas permission umum)
+     *  - hanya pengajuan_asset:approve (umum) => semua sub kategori (approver global)
+     *  - selain itu                          => tidak bisa approve
+     *
+     * @return array ['all' => bool, 'IT' => bool, 'GA' => bool, 'any' => bool]
+     */
+    public function getAssetApprovalScope()
+    {
+        if ($this->isSuperAdmin()) {
+            return ['all' => true, 'IT' => true, 'GA' => true, 'any' => true];
+        }
+
+        $it      = $this->hasPermission('approval_asset_it', 'approve');
+        $ga      = $this->hasPermission('approval_asset_ga', 'approve');
+        $general = $this->hasPermission('pengajuan_asset', 'approve');
+
+        if ($it || $ga) {
+            return ['all' => ($it && $ga), 'IT' => $it, 'GA' => $ga, 'any' => true];
+        }
+        if ($general) {
+            return ['all' => true, 'IT' => true, 'GA' => true, 'any' => true];
+        }
+        return ['all' => false, 'IT' => false, 'GA' => false, 'any' => false];
+    }
+
+    /**
+     * Apakah user boleh approve / kelola distribusi pengajuan dengan sub kategori tertentu?
+     * @param string|null $sub_kategori 'IT' atau 'GA'
+     */
+    public function canApproveAssetSubKategori($sub_kategori)
+    {
+        $scope = $this->getAssetApprovalScope();
+        if (!$scope['any']) return false;
+        if ($scope['all']) return true;
+        $sub = strtoupper(trim((string)$sub_kategori));
+        return isset($scope[$sub]) ? (bool)$scope[$sub] : false;
+    }
+
+    /**
+     * Kondisi SQL (tanpa kata WHERE) untuk membatasi data asset_request sesuai permission.
+     * Return '' jika boleh melihat semua. Memakai alias tabel asset_request ($ar) dan kategori_asset ($ka)
+     * (query pemanggil wajib sudah JOIN kategori_asset).
+     */
+    public function getAssetRequestVisibilityCondition($ar = 'ar', $ka = 'ka')
+    {
+        $scope  = $this->getAssetApprovalScope();
+        $userId = (int)($_SESSION['id_user'] ?? 0);
+        $own    = "$ar.user_id = $userId";
+
+        if ($scope['all']) return '';
+        if (!$scope['any']) return $own;
+
+        $filters = [];
+        if ($scope['IT']) $filters[] = "$ka.sub_kategori = 'IT'";
+        if ($scope['GA']) $filters[] = "$ka.sub_kategori = 'GA'";
+        return '(' . implode(' OR ', $filters) . " OR $own)";
     }
 
     // PENGAJUAN RENOVASI - SESUAI DATABASE PERMISSIONS
@@ -311,10 +373,7 @@ class AuthHelper
 
     public function canReadManagementAsset()
     {
-        // HR, GA, and Super Admin have explicit access
-        if ($this->isHr() || $this->isGA() || $this->isSuperAdmin()) {
-            return true;
-        }
+        // Berdasarkan permission (Super Admin sudah otomatis di hasPermission)
         return $this->hasPermission('management_asset', 'read');
     }
 
@@ -482,12 +541,109 @@ class AuthHelper
     // COMPATIBILITY METHODS - UPDATED TO USE PERMISSIONS
     public function canApprove()
     {
-        return $this->canApproveAsset() || $this->canApproveRenovasi() || $this->canApprovePPX() || $this->canApproveService() || $this->hasPermission('approval_ppx_asmen', 'approve');
+        // Dipakai oleh seluruh modul approval PPX. Hanya dihitung dari permission PPX
+        // (bukan approval aset/renovasi/service, supaya role lain tidak ikut lolos).
+        if ($this->canApprovePPX()) {
+            return true;
+        }
+        foreach (['approval_ppx_leader', 'approval_ppx_kacab', 'approval_ppx_hr', 'approval_ppx_asmen',
+                  'approval_ppx_finance', 'approval_ppx_operasional', 'approval_ppx_direktur',
+                  'approval_ppx_ga', 'approval_ppx_manager'] as $mod) {
+            if ($this->hasPermission($mod, 'approve')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Apakah user boleh membaca / mencetak / export data PPX (baik sebagai pengaju maupun approver/processor)?
+     */
+    public function canReadOrApprovePPX()
+    {
+        return $this->canReadPPX()
+            || $this->canApprove()
+            || $this->canProcessPPX()
+            || $this->hasPermission('approval_ppx_ga', 'process')
+            || $this->hasPermission('approval_ppx_finance', 'process');
+    }
+
+    /**
+     * Apakah user memiliki visibilitas penuh ke seluruh Anggaran Bulanan lintas cabang/divisi?
+     */
+    public function hasFullMonthlyBudgetVisibility()
+    {
+        return $this->isSuperAdmin()
+            || $this->hasPermission('ppx_budget', 'approve')
+            || $this->hasPermission('approval_budget_finance', 'approve')
+            || $this->hasPermission('approval_budget_finance', 'read')
+            || $this->hasPermission('approval_budget_manager', 'approve')
+            || $this->hasPermission('approval_budget_asmen', 'approve')
+            || $this->hasPermission('master_budget', 'read');
+    }
+
+    /**
+     * Kondisi SQL (tanpa kata WHERE) untuk visibilitas ppx_monthly_budget sesuai permission.
+     * Return '' jika user berhak melihat seluruh anggaran bulanan.
+     */
+    public function getMonthlyBudgetVisibilityCondition($mbAlias = 'mb', $userAlias = 'u', $divAlias = 'creator_div_name', $userCabangId = 0)
+    {
+        if ($this->hasFullMonthlyBudgetVisibility()) {
+            return '';
+        }
+
+        $userId = (int)($_SESSION['id_user'] ?? 0);
+        $ors    = ["$mbAlias.created_by = $userId"];
+
+        if ($this->hasPermission('approval_budget_kacab', 'approve') && (int)$userCabangId > 0) {
+            $ors[] = "$userAlias.id_cabang = " . (int)$userCabangId;
+        }
+        if ($this->hasPermission('approval_budget_manajer_ops', 'approve') || $this->hasPermission('approval_budget_manajer_ops', 'read')) {
+            $ors[] = "$divAlias.id_divisi IN (2, 4, 17)";
+        }
+        if ($this->hasPermission('approval_ppx_hr', 'approve')) {
+            $ors[] = "$divAlias.id_divisi IN (1, 6, 7)";
+        }
+
+        return count($ors) === 1 ? $ors[0] : '(' . implode(' OR ', $ors) . ')';
+    }
+
+    /**
+     * Cek apakah user boleh mengakses satu record ppx_monthly_budget tertentu berdasarkan permission.
+     */
+    public function canAccessMonthlyBudgetRecord($creatorId, $creatorDivId = 0, $creatorCabangId = 0, $userCabangId = 0)
+    {
+        if ($this->hasFullMonthlyBudgetVisibility()) {
+            return true;
+        }
+
+        $userId = (int)($_SESSION['id_user'] ?? 0);
+        if ((int)$creatorId === $userId) {
+            return true;
+        }
+        if ($this->hasPermission('approval_budget_kacab', 'approve')
+            && (int)$userCabangId > 0
+            && (int)$creatorCabangId === (int)$userCabangId) {
+            return true;
+        }
+        if (($this->hasPermission('approval_budget_manajer_ops', 'approve') || $this->hasPermission('approval_budget_manajer_ops', 'read'))
+            && in_array((int)$creatorDivId, [2, 4, 17], true)) {
+            return true;
+        }
+        if ($this->hasPermission('approval_ppx_hr', 'approve')
+            && in_array((int)$creatorDivId, [1, 6, 7], true)) {
+            return true;
+        }
+
+        return false;
     }
 
     public function canViewFinancialData()
     {
-        return $this->isFinanceTeam() || $this->isDirektur() || $this->isSuperAdmin();
+        return $this->isFinanceTeam()
+            || $this->hasPermission('approval_ppx_direktur', 'approve')
+            || $this->hasPermission('analytics', 'read')
+            || $this->isSuperAdmin();
     }
 
     public function checkRenovasiAccess($action)
@@ -500,15 +656,27 @@ class AuthHelper
         return $this->checkAccess('ppx', $action);
     }
 
-    // ============== ROLE GROUPS ==============
+    // ============== ROLE GROUPS (PERMISSION-AWARE) ==============
     public function isManagement()
     {
-        return in_array($this->getUserRole(), ['direktur', 'manag_finance', 'manag_operasional', 'hr', 'kacab']) || $this->isSuperAdmin();
+        return $this->isSuperAdmin()
+            || $this->hasPermission('analytics', 'read')
+            || $this->hasPermission('approval_ppx_direktur', 'approve')
+            || $this->hasPermission('approval_ppx_manager', 'approve')
+            || $this->hasPermission('approval_ppx_operasional', 'approve')
+            || $this->hasPermission('approval_ppx_hr', 'approve')
+            || $this->hasPermission('approval_ppx_kacab', 'approve');
     }
 
     public function isFinanceTeam()
     {
-        return in_array($this->getUserRole(), ['finance', 'manag_finance']) || $this->isSuperAdmin();
+        return $this->isSuperAdmin()
+            || $this->hasPermission('approval_ppx_finance', 'approve')
+            || $this->hasPermission('approval_ppx_manager', 'approve')
+            || $this->hasPermission('approval_ppx_asmen', 'approve')
+            || $this->hasPermission('approval_budget_finance', 'approve')
+            || $this->hasPermission('approval_budget_manager', 'approve')
+            || $this->hasPermission('master_budget', 'read');
     }
 
     public function isApprover()
@@ -605,8 +773,8 @@ class AuthHelper
             ];
         }
 
-        // Analytics menu for roles that have analysis access
-        if ($this->isHr() || $this->isGA() || $this->isKacab() || $this->isManagerFinance() || $this->isOperationalManager()  || $this->isDirektur() || $this->isSuperAdmin()) {
+        // Analytics menu berdasarkan permission 'analytics'
+        if ($this->hasPermission('analytics', 'read')) {
             $menus[] = [
                 'title' => 'Analisis Management',
                 'url' => $base_path . 'z_analisis/index.php',
@@ -617,70 +785,43 @@ class AuthHelper
         return $menus;
     }
 
-    // Get default landing page berdasarkan permissions
+    // Get default landing page berdasarkan permissions (bukan hardcode nama role)
     public function getDefaultLandingPage()
     {
-        $role = $this->getUserRole();
-
-        // Landing page berdasarkan role sesuai requirement terbaru
-        switch ($role) {
-            case 'super_admin':
-                return 'z_pengajuan_asset/dashboard.php';
-
-            case 'hr':
-                // HR bisa asset, management, service, ppx
-                return 'z_pengajuan_asset/dashboard.php';
-
-            case 'GA':
-                // GA bisa asset, management, service, ppx
-                return 'z_pengajuan_asset/dashboard.php';
-
-            case 'koordinator':
-                // Koordinator hanya pengajuan (asset, ppx, renovasi)
-                return 'z_pengajuan_asset/dashboard.php';
-
-            case 'kacab':
-                // Kacab bisa asset, service, ppx (tidak ada management)
-                return 'z_pengajuan_asset/dashboard.php';
-
-            case 'direktur':
-                // Direktur hanya PPX
-                return 'z_pengajuan_ppx/dashboard.php';
-
-            case 'finance':
-                // Finance bisa asset, renovasi, ppx
-                return 'z_pengajuan_asset/dashboard.php';
-
-            case 'manag_finance':
-                // Manager Finance bisa asset, renovasi, ppx
-                return 'z_pengajuan_asset/dashboard.php';
-
-            case 'manag_operasional':
-                // Manager Operasional bisa asset, renovasi, ppx
-                return 'z_pengajuan_asset/dashboard.php';
-
-            default:
-                return 'index.php';
+        if ($this->canReadAsset() || $this->canApproveAsset()) {
+            return 'z_pengajuan_asset/dashboard.php';
         }
+        if ($this->canReadPPX()) {
+            return 'z_pengajuan_ppx/dashboard.php';
+        }
+        if ($this->canReadBudget()) {
+            return 'z_ppx_budget/dashboard.php';
+        }
+        return 'index.php';
     }
 
     // ============== INVENTORY ATK PERMISSIONS ==============
+    // Berdasarkan permission dari Kelola Role / Permission User (bukan nama role)
     public function canManageInventoryATK()
     {
-        // GA dan Super Admin bisa manage inventory ATK
-        return $this->isGA() || $this->isSuperAdmin();
+        return $this->hasPermission('inventory_atk_master', 'create')
+            || $this->hasPermission('inventory_atk_master', 'update')
+            || $this->hasPermission('inventory_atk_stok', 'update');
     }
 
     public function canApproveATK()
     {
-        // GA dan Super Admin bisa approve pengambilan ATK
-        return $this->isGA() || $this->isSuperAdmin();
+        return $this->hasPermission('inventory_atk_pengambilan', 'approve')
+            || $this->hasPermission('inventory_atk_po', 'approve');
     }
 
     public function canViewInventoryATK()
     {
-        // GA dan Super Admin bisa view inventory ATK
-        return $this->isGA() || $this->isSuperAdmin();
+        return $this->hasPermission('inventory_atk_master', 'read')
+            || $this->hasPermission('inventory_atk_stok', 'read')
+            || $this->hasPermission('inventory_atk_po', 'read')
+            || $this->hasPermission('inventory_atk_penerimaan', 'read')
+            || $this->hasPermission('inventory_atk_pengambilan', 'read');
     }
 
     // ============== USER DIVISION & DEPARTMENT METHODS ==============
@@ -762,44 +903,28 @@ class AuthHelper
      */
     public function canAccessManagementAsset()
     {
-        // Super Admin, HR, IT role, GA role can always access
-        if ($this->isSuperAdmin() || $this->isHr() || $this->isIT() || $this->isGA()) {
-            return true;
-        }
-
-        // Koordinator with GA division can access GA management
-        if ($this->isKoordinator() && $this->isGADivision()) {
-            return true;
-        }
-
-        return false;
+        // Berdasarkan permission: boleh jika punya akses baca Manajemen Aset IT atau GA
+        return $this->hasPermission('management_asset', 'read')
+            || $this->hasPermission('management_asset_ga', 'read');
     }
 
     /**
-     * Get the appropriate Management Asset dashboard URL based on user's division/role
-     * @return string|null Dashboard URL or null if no access
+     * Get the appropriate Management Asset dashboard URL berdasarkan PERMISSION user
+     * @return string|null Dashboard URL, atau null jika tidak ada akses / punya akses keduanya (tampilkan menu pilihan)
      */
     public function getManagementAssetDashboard()
     {
-        if (!$this->canAccessManagementAsset()) {
-            return null;
-        }
+        $it = $this->hasPermission('management_asset', 'read');
+        $ga = $this->hasPermission('management_asset_ga', 'read');
 
-        // IT role or IT division -> IT asset dashboard
-        if ($this->isIT() || $this->isITDivision()) {
+        if ($it && !$ga) {
             return 'z_tambah_asset/dashboard.php';
         }
-
-        // GA role or GA division -> GA asset dashboard
-        if ($this->isGA() || $this->isGADivision()) {
+        if ($ga && !$it) {
             return 'z_management_asset_ga/dashboard.php';
         }
 
-        // Super Admin & HR can choose, default to IT
-        if ($this->isSuperAdmin() || $this->isHr()) {
-            return null; // Will show dropdown menu
-        }
-
+        // Tidak punya akses, atau punya keduanya (menu akan menampilkan dua pilihan)
         return null;
     }
 
@@ -818,7 +943,12 @@ class AuthHelper
     public function canAccessInventoryAtk($action = 'read')
     {
         if ($this->isSuperAdmin()) return true;
-        return $this->hasPermission('inventory_atk', $action);
+        foreach (['inventory_atk_master', 'inventory_atk_stok', 'inventory_atk_po', 'inventory_atk_penerimaan', 'inventory_atk_pengambilan'] as $mod) {
+            if ($this->hasPermission($mod, $action)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public function canAccessManagementAssetGA($action = 'read')
@@ -836,7 +966,12 @@ class AuthHelper
     public function canAccessApprovalBudget($action = 'read')
     {
         if ($this->isSuperAdmin()) return true;
-        return $this->hasPermission('approval_budget', $action);
+        foreach (['approval_budget_kacab', 'approval_budget_manajer_ops', 'approval_budget_asmen', 'approval_budget_finance', 'approval_budget_manager'] as $mod) {
+            if ($this->hasPermission($mod, $action) || $this->hasPermission($mod, 'approve')) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public function canAccessAnalytics($action = 'read')

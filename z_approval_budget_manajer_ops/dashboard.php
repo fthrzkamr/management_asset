@@ -5,7 +5,7 @@ require_once __DIR__ . '/../dist/config/auth_helper.php';
 $auth = new AuthHelper($conn);
 if (!$auth->isLoggedIn()) { header("Location: ../login.php"); exit(); }
 
-if (!$auth->hasPermission('approval_budget_manajer_ops', 'read')) {
+if (!$auth->hasPermission('approval_budget_manajer_ops', 'read') && !$auth->hasPermission('approval_budget_manajer_ops', 'approve')) {
     $_SESSION['error'] = 'Anda tidak memiliki akses ke halaman ini!';
     header("Location: ../index.php"); exit();
 }

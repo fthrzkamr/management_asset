@@ -294,8 +294,8 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 if ($row['user_id'] == $_SESSION['id_user']) {
                                                                     // User yang mengajukan bisa hapus pengajuan sendiri
                                                                     $can_delete = true;
-                                                                } elseif ($canApprove || $auth->isHr() || $auth->isGa()) {
-                                                                    // User dengan permission approve, HR, dan GA bisa hapus pengajuan Pending
+                                                                } elseif ($canApprove) {
+                                                                    // User dengan permission approve bisa hapus pengajuan Pending
                                                                     $can_delete = true;
                                                                 }
                                                             }

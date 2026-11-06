@@ -35,31 +35,29 @@ $auth->requirePermission('approval_ppx_ga', 'approve');
 // Tampilkan status Leader, Manager, Finance, Direktur, Selesai, Uang Muka, Selesai Realisasi
 $whereClause = "WHERE pr.status IN ('Leader', 'Manager', 'Finance', 'Direktur', 'Selesai', 'Uang Muka', 'Selesai Realisasi', 'Realisasi')";
 
-// PERBAIKAN: Filter hanya divisi HR, GA, IT untuk role GA
-// Untuk role Finance/Finance AP, tampilkan semua kecuali divisi HR, GA, IT
-// Batasi juga berdasarkan cabang user agar tiap user hanya melihat pengajuan di cabangnya
+// Filter divisi berdasarkan permission (bukan hardcode nama role) dengan workflow yang sama persis
 $userCabang = mysqli_real_escape_string($conn, $_SESSION['cabang'] ?? '');
+$canProcessGAPPX = $auth->hasPermission('approval_ppx_ga', 'process')
+    || $auth->hasPermission('approval_ppx_ga', 'approve')
+    || $auth->canProcessPPX();
 
-if ($auth->isGA()) {
-    // GA hanya lihat divisi HR, GA, IT
+if ($auth->isSuperAdmin()) {
+    // Super Admin melihat semua di halaman ini
+} elseif ($auth->hasPermission('approval_ppx_ga', 'approve') && !$auth->hasPermission('approval_ppx_finance', 'approve')) {
+    // Approver PPX GA hanya lihat divisi HR, GA, IT
     $whereClause .= " AND (d.nama_divisi IN ('HR', 'GA', 'IT') OR d.nama_divisi LIKE '%Human%' OR d.nama_divisi LIKE '%General%' OR d.nama_divisi LIKE '%Information%')";
     // Pastikan Gudang(2), Bisnis(4), Operasional(17) tidak muncul di dashboard GA
     $whereClause .= " AND pr.divisi NOT IN (2,4,17)";
     if (!empty($userCabang)) {
         $whereClause .= " AND pr.cabang = '" . $userCabang . "'";
     }
-} elseif ($auth->isFinance() || $auth->isFinanceAP()) {
-    // Finance/Finance AP lihat semua divisi KECUALI HR, GA, IT
+} elseif ($auth->hasPermission('approval_ppx_finance', 'approve')) {
+    // Finance lihat semua divisi KECUALI HR, GA, IT
     $whereClause .= " AND (d.nama_divisi NOT IN ('HR', 'GA', 'IT') AND d.nama_divisi NOT LIKE '%Human%' AND d.nama_divisi NOT LIKE '%General%' AND d.nama_divisi NOT LIKE '%Information%')";
-    // Pastikan Gudang(2), Bisnis(4), Operasional(17) tidak muncul di dashboard Finance (ditangani oleh Manager Operasional)
     $whereClause .= " AND pr.divisi NOT IN (2,4,17)";
     if (!empty($userCabang)) {
         $whereClause .= " AND pr.cabang = '" . $userCabang . "'";
     }
-}
-
-if ($auth->isKoordinator()) {
-    $whereClause .= " AND pr.user_id = " . $_SESSION['id_user'];
 }
 
 // PERBAIKAN: Query dengan JOIN yang lebih efisien dan total nominal yang konsisten
@@ -404,7 +402,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 </a>
 
                                                                 <!-- Print per PPX -->
-                                                                <?php if ($auth->canReadPPX()): ?>
+                                                                <?php if ($auth->canReadOrApprovePPX()): ?>
                                                                     <a href="print_laporan.php?no_ppx=<?= urlencode($row['no_ppx']) ?>" target="_blank"
                                                                         class="btn btn-outline-info btn-action" title="Print Detail">
                                                                         <i class="fas fa-print fa-xs"></i>
@@ -430,7 +428,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 // 2. Ada item yang belum dibayar
                                                                 // 3. Status BUKAN Realisasi atau Selesai
                                                                 $st = trim($row['status']);
-                                                                $canShowProcess = $auth->canProcessPPX() && 
+                                                                $canShowProcess = $canProcessGAPPX && 
                                                                                 in_array($st, ['Leader', 'Manager', 'Finance', 'Uang Muka'], true) && 
                                                                                 $unpaid_count > 0 &&
                                                                                 !in_array($st, ['Realisasi', 'Selesai']);
@@ -447,7 +445,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 <?php
                                                                 // Button khusus untuk approve "Selesai Realisasi" menjadi "Selesai"
                                                                 // Hanya muncul jika status = Selesai Realisasi
-                                                                if ($auth->canProcessPPX() && $st == 'Selesai Realisasi'):
+                                                                if ($canProcessGAPPX && $st == 'Selesai Realisasi'):
                                                                 ?>
                                                                     <button type="button" class="btn btn-outline-success btn-action"
                                                                         onclick="approveSelesaiRealisasi('<?= htmlspecialchars($row['no_ppx']) ?>')" 

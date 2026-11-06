@@ -7,8 +7,8 @@ require_once __DIR__ . '/../z_master_budget/MasterBudgetService.php';
 
 $auth = new AuthHelper($conn);
 
-// Cek login dan permission
-if (!$auth->isLoggedIn() || (!$auth->isManagerFinance() && !$auth->isSuperAdmin())) {
+// Cek login dan permission (Approval Anggaran Manager Finance sesuai Administrator)
+if (!$auth->isLoggedIn() || !$auth->hasPermission('approval_budget_manager', 'approve')) {
     $_SESSION['error'] = 'Anda tidak memiliki akses untuk melakukan tindakan ini!';
     header("Location: dashboard.php");
     exit();

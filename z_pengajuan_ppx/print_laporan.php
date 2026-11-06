@@ -35,7 +35,9 @@ if (!$auth->isLoggedIn()) {
     header("Location: ../login.php");
     exit();
 }
-$auth->requirePermission('pengajuan_asset', 'read');
+if (!$auth->canReadOrApprovePPX()) {
+    $auth->requirePermission('ppx', 'read');
+}
 
 // Cek apakah ada parameter no_ppx untuk print detail spesifik
 $no_ppx = $_GET['no_ppx'] ?? '';
@@ -442,7 +444,7 @@ if (!empty($no_ppx)) {
 
     // Query berdasarkan role
     $whereClause = "";
-    if ($auth->isKoordinator()) {
+    if (!$auth->isSuperAdmin() && !$auth->canApprove()) {
         $whereClause = "WHERE pr.user_id = " . (int)$_SESSION['id_user'];
     }
 

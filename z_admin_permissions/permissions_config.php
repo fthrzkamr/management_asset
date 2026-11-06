@@ -37,6 +37,12 @@ $PERMISSION_MODULES = [
         'group' => 'Pengajuan',
         'actions' => ['create', 'read', 'update', 'delete', 'approve'],
     ],
+    'approval_peminjaman' => [
+        'label' => 'Approval Peminjaman Aset',
+        'icon'  => 'fas fa-hand-holding',
+        'group' => 'Pengajuan',
+        'actions' => ['read', 'approve'],
+    ],
     // === MANAJEMEN ASET ===
     'management_asset' => [
         'label' => 'Manajemen Aset (IT)',
@@ -233,7 +239,7 @@ $PERMISSION_MODULES = [
         'label' => 'Inventory PT BST',
         'icon'  => 'fas fa-boxes',
         'group' => 'Modul PT BST',
-        'actions' => ['read', 'update'],
+        'actions' => ['create', 'read', 'update', 'delete'],
     ],
     'pt_bst_po_masuk' => [
         'label' => 'PO Masuk (BST)',
@@ -268,6 +274,12 @@ $PERMISSION_MODULES = [
     'master_akun' => [
         'label' => 'Master Akun (COA)',
         'icon'  => 'fas fa-file-invoice-dollar',
+        'group' => 'Data Master',
+        'actions' => ['create', 'read', 'update', 'delete'],
+    ],
+    'master_vendor' => [
+        'label' => 'Master Vendor',
+        'icon'  => 'fas fa-handshake',
         'group' => 'Data Master',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
@@ -368,4 +380,136 @@ $STATUS_TO_PERMISSION_MAP = [
     'Finance'       => 'approval_ppx_finance',
     'GA'            => 'approval_ppx_ga',
     'Direktur'      => 'approval_ppx_direktur',
+];
+
+/**
+ * Standar Template Default Permission untuk setiap Role di tabel `roles`.
+ * Semua kunci modul & aksi 100% selaras dengan $PERMISSION_MODULES di atas
+ * dan mencerminkan workflow standar DF GROUP tanpa key usang.
+ */
+$DEFAULT_ROLE_PERMISSIONS = [
+    'super_admin' => array_map(function ($m) {
+        return $m['actions'];
+    }, $PERMISSION_MODULES),
+
+    'hr' => [
+        'pengajuan_asset'     => ['create', 'read', 'update', 'delete', 'approve'],
+        'pengajuan_renovasi'  => ['create', 'read', 'update', 'delete', 'approve'],
+        'pengajuan_service'   => ['create', 'read', 'update', 'delete', 'approve'],
+        'approval_peminjaman' => ['read', 'approve'],
+        'ppx'                 => ['create', 'read', 'update'],
+        'approval_ppx_hr'     => ['approve'],
+        'ppx_budget'          => ['create', 'read', 'update', 'delete'],
+        'analytics'           => ['read'],
+    ],
+
+    'koordinator' => [
+        'pengajuan_asset'    => ['create', 'read', 'update'],
+        'pengajuan_renovasi' => ['create', 'read', 'update'],
+        'pengajuan_service'  => ['create', 'read', 'update'],
+        'ppx'                => ['create', 'read', 'update', 'delete'],
+    ],
+
+    'GA' => [
+        'pengajuan_asset'           => ['create', 'read', 'update'],
+        'approval_asset_ga'         => ['read', 'approve'],
+        'pengajuan_renovasi'        => ['create', 'read', 'update', 'approve'],
+        'pengajuan_service'         => ['create', 'read', 'update', 'approve'],
+        'management_asset_ga'       => ['create', 'read', 'update', 'delete'],
+        'monitoring_ga'             => ['create', 'read', 'update', 'delete'],
+        'ppx'                       => ['create', 'read', 'update'],
+        'approval_ppx_ga'           => ['approve', 'process'],
+        'inventory_atk_master'      => ['create', 'read', 'update', 'delete'],
+        'inventory_atk_stok'        => ['read', 'update'],
+        'inventory_atk_po'          => ['create', 'read', 'update', 'delete', 'approve'],
+        'inventory_atk_penerimaan'  => ['create', 'read', 'process'],
+        'inventory_atk_pengambilan' => ['create', 'read', 'approve', 'reject', 'process'],
+        'master_vendor'             => ['create', 'read', 'update', 'delete'],
+        'analytics'                 => ['read'],
+    ],
+
+    'it' => [
+        'pengajuan_asset'   => ['create', 'read', 'update'],
+        'approval_asset_it' => ['read', 'approve'],
+        'pengajuan_service' => ['create', 'read', 'update', 'approve'],
+        'management_asset'  => ['create', 'read', 'update', 'delete'],
+        'ppx'               => ['create', 'read', 'update', 'delete'],
+        'analytics'         => ['read'],
+    ],
+
+    'kacab' => [
+        'pengajuan_asset'       => ['create', 'read', 'update'],
+        'pengajuan_renovasi'    => ['create', 'read', 'update'],
+        'pengajuan_service'     => ['create', 'read'],
+        'ppx'                   => ['create', 'read', 'update'],
+        'approval_ppx_kacab'    => ['approve'],
+        'approval_budget_kacab' => ['read', 'approve'],
+        'analytics'             => ['read'],
+    ],
+
+    'finance' => [
+        'pengajuan_asset'         => ['create', 'read', 'update'],
+        'ppx'                     => ['create', 'read', 'update', 'approve', 'process'],
+        'approval_ppx_finance'    => ['approve', 'process'],
+        'ppx_budget'              => ['create', 'read', 'update', 'delete'],
+        'budget_besar'            => ['create', 'read', 'update', 'delete'],
+        'master_budget'           => ['create', 'read', 'update', 'delete'],
+        'approval_budget_finance' => ['read', 'approve', 'process'],
+        'report_ppx'              => ['read'],
+        'report_ppx_all'          => ['read', 'export'],
+        'analytics'               => ['read'],
+    ],
+
+    'finance_ap' => [
+        'pengajuan_asset'    => ['create', 'read', 'update'],
+        'pengajuan_renovasi' => ['create', 'read', 'update'],
+        'ppx'                => ['create', 'read', 'update', 'delete'],
+        'ppx_budget'         => ['create', 'read', 'update', 'delete'],
+        'realisasi_ppx'      => ['create', 'read', 'update', 'delete'],
+    ],
+
+    'asmen_finance' => [
+        'ppx'                      => ['read', 'approve'],
+        'approval_ppx_asmen'       => ['approve'],
+        'approval_realisasi_asmen' => ['read', 'approve'],
+        'ppx_budget'               => ['read', 'approve'],
+        'approval_budget_asmen'    => ['read', 'approve'],
+        'report_ppx'               => ['read'],
+        'report_ppx_all'           => ['read', 'export'],
+        'analytics'                => ['read'],
+    ],
+
+    'manag_finance' => [
+        'ppx'                     => ['read', 'approve'],
+        'approval_ppx_manager'    => ['approve'],
+        'ppx_budget'              => ['create', 'read', 'update', 'delete', 'approve', 'manage_category'],
+        'master_budget'           => ['create', 'read', 'update', 'delete'],
+        'approval_budget_manager' => ['read', 'approve'],
+        'report_ppx'              => ['read'],
+        'report_ppx_all'          => ['read', 'export'],
+        'analytics'               => ['read'],
+    ],
+
+    'manag_operasional' => [
+        'pengajuan_asset'             => ['create', 'read', 'update'],
+        'ppx'                         => ['read', 'approve'],
+        'approval_ppx_operasional'    => ['approve'],
+        'approval_budget_manajer_ops' => ['read', 'approve'],
+        'analytics'                   => ['read'],
+    ],
+
+    'direktur' => [
+        'ppx'                   => ['read', 'approve'],
+        'approval_ppx_direktur' => ['approve'],
+        'ppx_budget'            => ['read', 'approve'],
+        'report_ppx'            => ['read'],
+        'report_ppx_all'        => ['read', 'export'],
+        'analytics'             => ['read'],
+    ],
+
+    'gudang' => [
+        'pengajuan_asset' => ['create', 'read', 'update'],
+        'ppx'             => ['create', 'read', 'update'],
+        'ppx_budget'      => ['create', 'read', 'update'],
+    ],
 ];

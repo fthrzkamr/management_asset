@@ -11,7 +11,9 @@ if (!$auth->isLoggedIn()) {
     header("Location: ../login.php");
     exit();
 }
-$auth->requirePermission('ppx', 'read');
+if (!$auth->canReadOrApprovePPX()) {
+    $auth->requirePermission('ppx', 'read');
+}
 
 // Query berdasarkan role
 $whereClause = "";

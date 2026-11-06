@@ -160,7 +160,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                             <td>Rp <?= number_format($row['total_nominal'],0,',','.') ?></td>
                                             <td>
                                                 <a href="detail.php?no_ppx=<?= urlencode($row['no_ppx']) ?>" class="btn btn-sm btn-info">Detail</a>
-                                                <?php if ($row['status'] === 'Kacab' && $auth->isKacab()): ?>
+                                                <?php if ($row['status'] === 'Kacab' && $auth->hasPermission('approval_ppx_kacab', 'approve')): ?>
                                                     <form method="POST" action="process_approve.php" style="display:inline;">
                                                         <input type="hidden" name="no_pengajuan" value="<?= htmlspecialchars($row['no_ppx']) ?>">
                                                         <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Apakah Anda yakin ingin menyetujui PPX ini?')">Approve</button>

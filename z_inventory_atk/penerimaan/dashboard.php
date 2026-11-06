@@ -88,7 +88,7 @@ $result = mysqli_query($conn, $query);
                                                 <td><?= $row['total_item'] ?? 0 ?> Item</td>
                                                 <td><span class="badge <?= $badge_class ?>" style="font-size: 13px;"><?= $status ?></span></td>
                                                 <td class="text-right">
-                                                    <?php if($status == 'Dikirim' && $auth->hasPermission('inventory_atk', 'process')): ?>
+                                                    <?php if($status == 'Dikirim' && $auth->hasPermission('inventory_atk_penerimaan', 'process')): ?>
                                                         <a href="po_detail.php?id=<?= $row['id_po'] ?>" class="btn btn-sm btn-success">
                                                             <i class="fas fa-check-double"></i> Aksi: Cek & Terima
                                                         </a>

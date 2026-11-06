@@ -11,6 +11,12 @@ if ($auth->hasPermission('inventory_atk_master', 'read') || $auth->hasPermission
     $auth->requirePermission('inventory_atk_master', 'read'); 
 }
 
+$canCreateMaster = $auth->hasPermission('inventory_atk_master', 'create') || $auth->hasPermission('pt_bst_inventory', 'create') || $auth->hasPermission('pt_bst_inventory', 'update');
+$canUpdateMaster = $auth->hasPermission('inventory_atk_master', 'update') || $auth->hasPermission('pt_bst_inventory', 'update');
+$canDeleteMaster = $auth->hasPermission('inventory_atk_master', 'delete') || $auth->hasPermission('pt_bst_inventory', 'delete');
+$refQuery = (isset($_GET['ref']) && $_GET['ref'] === 'bst') ? '?ref=bst' : '';
+$refAmp   = (isset($_GET['ref']) && $_GET['ref'] === 'bst') ? '&ref=bst' : '';
+
 $page_title = "Master Inventory Barang";
 
 $result = mysqli_query($conn, "SELECT * FROM inventory_atk ORDER BY kategori, nama_barang");
@@ -42,9 +48,9 @@ $result = mysqli_query($conn, "SELECT * FROM inventory_atk ORDER BY kategori, na
                     <li class="breadcrumb-item active">Master Barang</li>
                 </ul>
             </div>
-            <?php if ($auth->hasPermission('inventory_atk_master', 'create')): ?>
+            <?php if ($canCreateMaster): ?>
             <div class="col-auto">
-                <a href="inventory_add.php" class="btn btn-primary">
+                <a href="inventory_add.php<?= $refQuery ?>" class="btn btn-primary">
                     <i class="fas fa-plus"></i> Tambah Barang
                 </a>
             </div>
@@ -77,7 +83,7 @@ $result = mysqli_query($conn, "SELECT * FROM inventory_atk ORDER BY kategori, na
                             <th>Nama Barang</th>
                             <th width="90">Satuan</th>
                             <th width="130">Kategori</th>
-                            <?php if ($auth->hasPermission('inventory_atk_master', 'update') || $auth->hasPermission('inventory_atk_master', 'delete')): ?>
+                            <?php if ($canUpdateMaster || $canDeleteMaster): ?>
                             <th width="120">Aksi</th>
                             <?php endif; ?>
                         </tr>
@@ -95,15 +101,15 @@ $result = mysqli_query($conn, "SELECT * FROM inventory_atk ORDER BY kategori, na
                                 ?>
                                 <span class="badge badge-<?= $b ?>"><?= $row['kategori'] ?></span>
                             </td>
-                            <?php if ($auth->hasPermission('inventory_atk_master', 'update') || $auth->hasPermission('inventory_atk_master', 'delete')): ?>
+                            <?php if ($canUpdateMaster || $canDeleteMaster): ?>
                             <td>
-                                <?php if ($auth->hasPermission('inventory_atk_master', 'update')): ?>
-                                    <a href="inventory_edit.php?id=<?= $row['id_barang'] ?>" class="btn btn-sm btn-warning" title="Edit">
+                                <?php if ($canUpdateMaster): ?>
+                                    <a href="inventory_edit.php?id=<?= $row['id_barang'] ?><?= $refAmp ?>" class="btn btn-sm btn-warning" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
                                 <?php endif; ?>
-                                <?php if ($auth->hasPermission('inventory_atk_master', 'delete')): ?>
-                                    <a href="inventory_delete.php?id=<?= $row['id_barang'] ?>"
+                                <?php if ($canDeleteMaster): ?>
+                                    <a href="inventory_delete.php?id=<?= $row['id_barang'] ?><?= $refAmp ?>"
                                        class="btn btn-sm btn-danger" title="Hapus"
                                        onclick="return confirm('Yakin hapus barang ini?')">
                                         <i class="fas fa-trash"></i>

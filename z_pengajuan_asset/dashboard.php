@@ -20,46 +20,42 @@ if (!$auth->hasPermission('pengajuan_asset', 'read') &&
     $auth->requirePermission('pengajuan_asset', 'read'); // Ini akan memicu alert akses ditolak
 }
 
-// Buat kondisi WHERE berdasarkan permission
-// User dengan 'approve'
-$isGlobalApprover = $auth->hasPermission('pengajuan_asset', 'approve');
+// Buat kondisi WHERE berdasarkan permission (BUKAN berdasarkan nama role)
+// Scope approval ditentukan dari permission:
+//  - approval_asset_it / approval_asset_ga (spesifik) -> hanya sub kategori yang dicentang
+//  - pengajuan_asset:approve (umum, tanpa IT/GA spesifik) -> semua sub kategori
+//  - Super Admin -> semua
+$assetScope = $auth->getAssetApprovalScope();
 
 // Build WHERE conditions
 $where_conditions = [];
 $user_id = (int)$_SESSION['id_user'];
 $own_request_condition = "ar.user_id = $user_id";
 
-// Permission spesifik untuk sub kategori (menggunakan permission baru dari config)
-$canApproveIT = $auth->hasPermission('approval_asset_it', 'approve');
-$canApproveGA = $auth->hasPermission('approval_asset_ga', 'approve');
+$canApproveIT = $assetScope['IT'];
+$canApproveGA = $assetScope['GA'];
+$canApproveAsset = $assetScope['any'];
+$canApproveAll = $assetScope['all'];
 
-$canApproveAsset = $isGlobalApprover || $canApproveIT || $canApproveGA;
+// Kolom "Kelola Distribusi" hanya untuk Super Admin & approver spesifik IT/GA (permission Administrator)
+$showDistributionColumn = $auth->isSuperAdmin()
+    || $auth->hasPermission('approval_asset_it', 'approve')
+    || $auth->hasPermission('approval_asset_ga', 'approve');
 
-if ($auth->isSuperAdmin() || $auth->isHr()) {
-    // Super Admin & HR see everything
+if ($canApproveAll) {
+    // Approver penuh (Super Admin / approver global / punya IT+GA): lihat semua pengajuan
 } elseif ($canApproveAsset) {
-    // User dengan approve permission
+    // Approver spesifik: hanya sub kategori miliknya + pengajuan sendiri
     $role_filters = [];
-    if ($canApproveIT && !$canApproveGA) {
+    if ($canApproveIT) {
         $role_filters[] = "ka.sub_kategori = 'IT'";
-    } elseif ($canApproveGA && !$canApproveIT) {
+    }
+    if ($canApproveGA) {
         $role_filters[] = "ka.sub_kategori = 'GA'";
     }
-    
-    if (!empty($role_filters)) {
-        // Jika user adalah approver spesifik (punya IT atau GA tapi BUKAN global approver)
-        if (!$isGlobalApprover) {
-            $where_conditions[] = "(" . implode(" OR ", $role_filters) . " OR $own_request_condition)";
-        }
-        // Jika isGlobalApprover == true, kondisi tidak ditambahkan (sehingga bisa melihat semua data)
-    } else {
-        // Jika tidak punya IT atau GA, tapi punya global approver -> lihat semua
-        if (!$isGlobalApprover) {
-            $where_conditions[] = $own_request_condition;
-        }
-    }
+    $where_conditions[] = "(" . implode(" OR ", $role_filters) . " OR $own_request_condition)";
 } else {
-    // Normal users ONLY see their own
+    // User biasa hanya melihat pengajuannya sendiri
     $where_conditions[] = $own_request_condition;
 }
 
@@ -105,26 +101,18 @@ $stats_where_conditions = [];
 $user_id = (int)$_SESSION['id_user'];
 $own_request_condition = "ar.user_id = $user_id";
 
-if ($auth->isSuperAdmin() || $auth->isHr()) {
-    // No filter
+if ($canApproveAll) {
+    // No filter (approver penuh)
 } elseif ($canApproveAsset) {
     $stats_joins = "LEFT JOIN kategori_asset ka ON ar.kategori_asset = ka.id_kategori";
     $role_filters = [];
-    if ($canApproveIT && !$canApproveGA) {
+    if ($canApproveIT) {
         $role_filters[] = "ka.sub_kategori = 'IT'";
-    } elseif ($canApproveGA && !$canApproveIT) {
+    }
+    if ($canApproveGA) {
         $role_filters[] = "ka.sub_kategori = 'GA'";
     }
-    
-    if (!empty($role_filters)) {
-        if (!$isGlobalApprover) {
-            $stats_where_conditions[] = "(" . implode(" OR ", $role_filters) . " OR $own_request_condition)";
-        }
-    } else {
-        if (!$isGlobalApprover) {
-            $stats_where_conditions[] = $own_request_condition;
-        }
-    }
+    $stats_where_conditions[] = "(" . implode(" OR ", $role_filters) . " OR $own_request_condition)";
 } else {
     $stats_where_conditions[] = $own_request_condition;
 }
@@ -401,7 +389,7 @@ function getDistributionBadge($status) {
                         <strong>Info GA:</strong> Anda melihat pengajuan asset sub kategori GA & pengajuan milik Anda sendiri.
                         <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
                     </div>
-                <?php elseif ($auth->isHr() || $auth->isSuperAdmin()): ?>
+                <?php else: ?>
                     <div class="alert alert-primary alert-dismissible fade show">
                         <i class="fas fa-user-shield fa-sm"></i> 
                         <strong>Info:</strong> Anda melihat semua pengajuan asset dari semua divisi.
@@ -511,8 +499,6 @@ function getDistributionBadge($status) {
                                         <small class="text-muted">- Sub Kategori IT & Milik Saya</small>
                                     <?php elseif ($canApproveGA && !$canApproveIT): ?>
                                         <small class="text-muted">- Sub Kategori GA & Milik Saya</small>
-                                    <?php elseif ($auth->isHr() || $auth->isSuperAdmin() || ($canApproveIT && $canApproveGA)): ?>
-                                        <small class="text-muted">- Semua Pengajuan</small>
                                     <?php else: ?>
                                         <small class="text-muted">- Semua Pengajuan</small>
                                     <?php endif; ?>
@@ -532,7 +518,7 @@ function getDistributionBadge($status) {
                                                 <th class="text-center" style="min-width: 90px;">Status</th>
                                                 <th class="text-center" style="min-width: 110px;">Status Distribusi</th>
                                                 <!-- Kolom khusus GA, IT & Super Admin -->
-                                                <?php if ($canApproveGA || $auth->isSuperAdmin() || $canApproveIT): ?>
+                                                <?php if ($showDistributionColumn): ?>
                                                     <th class="text-center" style="min-width: 110px;">Kelola Distribusi</th>
                                                 <?php endif; ?>
                                                 <th class="text-center col-action" style="min-width: 135px; width: 135px;">Aksi</th>
@@ -591,17 +577,11 @@ function getDistributionBadge($status) {
                                                     </td>
                                                     
                                                     <!-- Kolom Kelola Distribusi - DITAMBAH UNTUK IT -->
-                                                    <?php if ($canApproveGA || $auth->isSuperAdmin() || $canApproveIT): ?>
+                                                    <?php if ($showDistributionColumn): ?>
                                                         <td class="text-center">
                                                             <?php 
-                                                            // GA hanya bisa distribusi GA asset
-                                                            // IT hanya bisa distribusi IT asset
-                                                            $canDistribute = true;
-                                                            if ($canApproveGA && !$canApproveIT && $row['sub_kategori'] == 'IT') {
-                                                                $canDistribute = false;
-                                                            } elseif ($canApproveIT && !$canApproveGA && $row['sub_kategori'] != 'IT') {
-                                                                $canDistribute = false;
-                                                            }
+                                                            // Distribusi hanya untuk sub kategori yang diizinkan permission-nya
+                                                            $canDistribute = $auth->canApproveAssetSubKategori($row['sub_kategori']);
                                                             ?>
                                                             
                                                             <?php if ($row['status'] == 'Disetujui' && $canDistribute): ?>
@@ -631,30 +611,9 @@ function getDistributionBadge($status) {
                                                                 <i class="fas fa-print fa-xs"></i>
                                                             </a>
 
-                                                            <!-- Process Button untuk HR/GA/IT/Admin -->
+                                                            <!-- Process Button: berdasarkan permission approval (IT / GA / umum) -->
                                                             <?php 
-                                                            $canApprove = false;
-                                                            
-                                                            if ($auth->isSuperAdmin()) {
-                                                                // Super admin approve semua
-                                                                $canApprove = true;
-                                                            } elseif ($auth->isHr()) {
-                                                                // HR approve semua
-                                                                $canApprove = true;
-                                                            } elseif ($canApproveAsset) {
-                                                                // Jika dia adalah approver, cek sub_kategori yang boleh diapprove
-                                                                if ($canApproveGA && $row['sub_kategori'] == 'GA') {
-                                                                    $canApprove = true;
-                                                                } elseif ($canApproveIT && $row['sub_kategori'] == 'IT') {
-                                                                    $canApprove = true;
-                                                                } elseif ($canApproveGA && $canApproveIT) {
-                                                                    // Jika punya dua-duanya, bisa approve semuanya
-                                                                    $canApprove = true;
-                                                                } elseif (!$canApproveGA && !$canApproveIT) {
-                                                                    // Punya 'approve' tapi bukan IT/GA (misal manager), approve semua
-                                                                    $canApprove = true;
-                                                                }
-                                                            }
+                                                            $canApprove = $auth->canApproveAssetSubKategori($row['sub_kategori']);
                                                             
                                                             if ($canApprove && $row['status'] == 'Pending'):
                                                             ?>
@@ -673,25 +632,18 @@ function getDistributionBadge($status) {
                                                                 </a>
                                                             <?php endif; ?>
 
-                                                            <!-- Delete dengan aturan role -->
+                                                            <!-- Delete: Super Admin / pemilik pengajuan (Pending) / approver sub kategori terkait (Pending) -->
                                                             <?php 
                                                             $can_delete = false;
                                                             if ($auth->isSuperAdmin()) {
                                                                 // Super Admin bisa hapus semua
                                                                 $can_delete = true;
                                                             } elseif ($row['status'] == 'Pending') {
-                                                                // Jika status Pending
                                                                 if ($row['user_id'] == $_SESSION['id_user']) {
                                                                     // User yang mengajukan bisa hapus pengajuan sendiri
                                                                     $can_delete = true;
-                                                                } elseif ($auth->isHr()) {
-                                                                    // HR bisa hapus semua pengajuan Pending
-                                                                    $can_delete = true;
-                                                                } elseif ($canApproveGA && $row['sub_kategori'] == 'GA') {
-                                                                    // GA bisa hapus pengajuan Pending sub_kategori GA
-                                                                    $can_delete = true;
-                                                                } elseif ($canApproveIT && $row['sub_kategori'] == 'IT') {
-                                                                    // IT bisa hapus pengajuan Pending sub_kategori IT
+                                                                } elseif ($auth->canApproveAssetSubKategori($row['sub_kategori'])) {
+                                                                    // Approver sub kategori terkait (IT/GA/umum) bisa hapus pengajuan Pending
                                                                     $can_delete = true;
                                                                 }
                                                             }
@@ -739,8 +691,8 @@ function getDistributionBadge($status) {
         </div>
     </div>
 
-    <!-- Modal Aksi - Untuk HR/GA/IT/Super Admin -->
-    <?php if ($auth->isHr() || $canApproveGA || $auth->isSuperAdmin() || $canApproveIT): ?>
+    <!-- Modal Aksi - Untuk user yang punya permission approve (IT/GA/umum) -->
+    <?php if ($canApproveAsset): ?>
         <div class="modal fade" id="actionModal" tabindex="-1" role="dialog" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
@@ -903,12 +855,12 @@ function getDistributionBadge($status) {
                                 <small>
                                     <i class="fas fa-lock"></i>
                                     <strong>Akses Terbatas:</strong> 
-                                    <?php if ($auth->isIT()): ?>
-                                        IT hanya dapat mengelola distribusi untuk asset dengan sub kategori IT.
-                                    <?php elseif ($auth->isGa()): ?>
-                                        GA hanya dapat mengelola distribusi untuk asset dengan sub kategori GA.
+                                    <?php if ($canApproveIT && !$canApproveGA): ?>
+                                        Anda hanya dapat mengelola distribusi untuk asset dengan sub kategori IT.
+                                    <?php elseif ($canApproveGA && !$canApproveIT): ?>
+                                        Anda hanya dapat mengelola distribusi untuk asset dengan sub kategori GA.
                                     <?php else: ?>
-                                        Admin dapat mengelola distribusi untuk semua kategori asset.
+                                        Anda dapat mengelola distribusi untuk semua kategori asset.
                                     <?php endif; ?>
                                 </small>
                             </div>

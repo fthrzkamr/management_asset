@@ -8,7 +8,9 @@ if (!$auth->isLoggedIn()) {
     header("Location: ../login.php");
     exit();
 }
-$auth->requirePermission('pengajuan_asset', 'read');
+if (!$auth->canReadOrApprovePPX()) {
+    $auth->requirePermission('ppx', 'read');
+}
 
 header("Content-Type: application/vnd.ms-excel; charset=UTF-8");
 header("Content-Disposition: attachment; filename=ppx_export_" . date('Ymd_His') . ".xls");

@@ -16,8 +16,8 @@ if (!$auth->isLoggedIn()) {
     die('Error: Anda harus login terlebih dahulu.');
 }
 
-if (!$auth->isFinance() && !$auth->isManagerFinance() && !$auth->isSuperAdmin()) {
-    die('Error: Hanya Finance yang dapat menjalankan script ini.');
+if (!$auth->hasPermission('master_budget', 'update')) {
+    die('Error: Anda tidak memiliki izin (master_budget:update) untuk menjalankan script ini.');
 }
 
 $budgetService = new MasterBudgetService($conn);

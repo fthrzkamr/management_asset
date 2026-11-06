@@ -24,9 +24,10 @@ $kategori = mysqli_real_escape_string($conn, $_GET['kategori'] ?? '');
 $whereClause = "";
 $filterConditions = [];
 
-// Filter berdasarkan role
-if ($auth->isKoordinator()) {
-    $whereClause = "WHERE ar.user_id = " . $_SESSION['id_user'];
+// Filter berdasarkan permission (IT hanya sub kategori IT, GA hanya GA, user biasa hanya miliknya)
+$visibilityCond = $auth->getAssetRequestVisibilityCondition('ar', 'ka');
+if ($visibilityCond !== '') {
+    $whereClause = "WHERE " . $visibilityCond;
 }
 
 // Filter tanggal

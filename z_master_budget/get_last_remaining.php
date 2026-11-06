@@ -21,8 +21,8 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Cek role
-if (!$auth->isFinance() && !$auth->isManagerFinance() && !$auth->isSuperAdmin()) {
+// Cek permission Master Anggaran (sesuai Administrator)
+if (!$auth->hasPermission('master_budget', 'read')) {
     echo json_encode(['success' => false, 'message' => 'Access denied']);
     exit();
 }

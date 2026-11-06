@@ -13,11 +13,9 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-$isGlobalApprover = $auth->hasPermission('pengajuan_asset', 'approve');
-$canApproveIT = $auth->isIT() || $auth->hasPermission('approval_asset_it', 'approve');
-$canApproveGA = $auth->isGa() || $auth->hasPermission('approval_asset_ga', 'approve');
-
-if (!$isGlobalApprover && !$canApproveIT && !$canApproveGA) {
+// Hak approve ditentukan dari PERMISSION (Administrator), bukan dari nama role.
+// approval_asset_it / approval_asset_ga (spesifik) membatasi sub kategori; pengajuan_asset:approve = approver umum.
+if (!$auth->getAssetApprovalScope()['any']) {
     $_SESSION['error'] = 'Anda tidak memiliki izin untuk approve pengajuan asset!';
     header('Location: dashboard.php');
     exit();
@@ -85,12 +83,8 @@ try {
     }
     
     // Validasi berdasarkan sub kategori (sesuai permission Administrator)
-    if (!$isGlobalApprover) {
-        if ($canApproveIT && !$canApproveGA && $asset_data['sub_kategori'] != 'IT') {
-            throw new Exception('Anda hanya dapat menyetujui pengajuan asset dengan sub kategori IT!');
-        } elseif ($canApproveGA && !$canApproveIT && $asset_data['sub_kategori'] != 'GA') {
-            throw new Exception('Anda hanya dapat menyetujui pengajuan asset dengan sub kategori GA!');
-        }
+    if (!$auth->canApproveAssetSubKategori($asset_data['sub_kategori'])) {
+        throw new Exception('Anda tidak memiliki izin untuk menyetujui pengajuan asset dengan sub kategori ' . ($asset_data['sub_kategori'] ?: '-') . '!');
     }
     
     // Set status dan update field berdasarkan decision
@@ -154,13 +148,13 @@ try {
     mysqli_commit($conn);
     
     // Set success message dan redirect
+    // Keterangan siapa yang memproses diambil dari scope permission, bukan dari nama role
     $role_info = '';
-    if ($auth->isIT()) {
-        $role_info = ' oleh IT Support';
-    } elseif ($auth->isGa()) {
-        $role_info = ' oleh GA';
-    } elseif ($auth->isHr()) {
-        $role_info = ' oleh HR';
+    $scope = $auth->getAssetApprovalScope();
+    if (!$scope['all'] && $scope['IT']) {
+        $role_info = ' oleh Approver IT';
+    } elseif (!$scope['all'] && $scope['GA']) {
+        $role_info = ' oleh Approver GA';
     }
     
     $_SESSION['success'] = "Pengajuan asset {$no_pengajuan} berhasil {$status_message}{$role_info}!";

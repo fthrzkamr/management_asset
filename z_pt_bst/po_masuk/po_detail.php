@@ -147,7 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
                             </div>
                         </div>
 
-                        <?php if($po['status'] == 'Pending' && $auth->hasPermission('pt_bst', 'process')): ?>
+                        <?php if($po['status'] == 'Pending' && $auth->hasPermission('pt_bst_po_masuk', 'process')): ?>
                         <div class="card shadow-sm border-primary pb-0">
                             <div class="card-header bg-info text-white">
                                 <h5 class="card-title text-white mb-0">Aksi Proses PO</h5>

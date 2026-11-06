@@ -42,31 +42,11 @@ if ($cabang_q) {
 // read filter from request
 $filter_cabang = isset($_GET['filter_cabang']) ? intval($_GET['filter_cabang']) : 0;
 
-$user_role = strtoupper($auth->getUserRole() ?? ($_SESSION['nama_role'] ?? ''));
-$is_superadmin = $auth->isSuperAdmin();
-$is_finance = $auth->isFinance() || (strpos($user_role, 'FINANCE') !== false);
-$is_manager = (strpos($user_role, 'MANAGER') !== false);
-$is_privileged = $is_superadmin || $is_finance || $is_manager;
-
-// Filter conditions
+// Filter conditions berdasarkan PERMISSION (bukan hardcode role / strpos FINANCE)
 $where_conditions = [];
-
-if ($is_superadmin) {
-    // Super Admin dapat melihat seluruh budget bulanan lintas divisi
-} elseif ($is_privileged) {
-    // Finance dan Manager: Finance melihat semua, Manager melihat divisi terkait
-    if (!$is_finance) {
-        if (stripos($user_division, 'HR') !== false || stripos($user_division, 'IT') !== false || stripos($user_division, 'GA') !== false) {
-            $where_conditions[] = "creator_div_name.id_divisi IN (1, 6, 7)";
-        } elseif (stripos($user_division, 'Finance AP') !== false) {
-            $where_conditions[] = "creator_div_name.id_divisi = 9";
-        } elseif (!empty($user_division)) {
-            $where_conditions[] = "creator_div_name.nama_divisi = '" . mysqli_real_escape_string($conn, $user_division) . "'";
-        }
-    }
-} else {
-    // User reguler: hanya melihat budget yang dibuat sendiri
-    $where_conditions[] = "mb.created_by = " . intval($user_id);
+$vis_cond = $auth->getMonthlyBudgetVisibilityCondition('mb', 'u', 'creator_div_name', $user_cabang_id);
+if ($vis_cond !== '') {
+    $where_conditions[] = $vis_cond;
 }
 
 // Filter cabang jika dipilih

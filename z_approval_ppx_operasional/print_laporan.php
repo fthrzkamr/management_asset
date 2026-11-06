@@ -30,7 +30,9 @@ if (!$auth->isLoggedIn()) {
     header("Location: ../login.php");
     exit();
 }
-$auth->requirePermission('pengajuan_asset', 'read');
+if (!$auth->canReadOrApprovePPX()) {
+    $auth->requirePermission('ppx', 'read');
+}
 
 $no_ppx = $_GET['no_ppx'] ?? '';
 

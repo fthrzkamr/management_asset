@@ -20,14 +20,9 @@ if (!$auth->hasPermission('management_asset_ga', 'read')) {
 $can_create_asset = $auth->checkAccess('management_asset_ga', 'create');
 $can_update_asset = $auth->checkAccess('management_asset_ga', 'update');
 
-// Additional check: ensure user with GA division is accessing correct dashboard
+// Hak akses sepenuhnya ditentukan oleh permission 'management_asset_ga' (Administrator),
+// tidak lagi dibatasi berdasarkan nama role / divisi.
 $user_divisi = $auth->getUserDivisi();
-if ($auth->isKoordinator() && $user_divisi !== 6) {
-   // Koordinator non-GA tidak boleh akses dashboard GA
-   $_SESSION['error'] = 'Anda bukan divisi GA, Akses ditolak untuk menu ini!';
-   header("Location: ../index.php");
-   exit();
-}
 
 $allowed_limits = [5,10,25,50,100];
 // Pagination settings - allow user to choose via GET `limit`

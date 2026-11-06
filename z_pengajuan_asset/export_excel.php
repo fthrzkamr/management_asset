@@ -14,9 +14,9 @@ if (!$auth->isLoggedIn()) {
 
 $auth->requirePermission('pengajuan_asset', 'read');
 
-// Query berdasarkan permission
-$canApprove = $auth->hasPermission('pengajuan_asset', 'approve');
-$whereClause = $canApprove ? "" : "WHERE ar.user_id = " . (int)$_SESSION['id_user'];
+// Query berdasarkan permission (IT hanya sub kategori IT, GA hanya GA, user biasa hanya miliknya)
+$visibilityCond = $auth->getAssetRequestVisibilityCondition('ar', 'ka');
+$whereClause = $visibilityCond !== '' ? "WHERE $visibilityCond" : "";
 
 $query = "SELECT 
     ar.no_pengajuan,

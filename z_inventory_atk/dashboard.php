@@ -16,8 +16,10 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Check permission for ATK Approval
-$auth->requirePermission('inventory_atk_pengambilan', 'approve');
+// Check permission for ATK Pengambilan (read atau approve)
+if (!$auth->hasPermission('inventory_atk_pengambilan', 'read') && !$auth->hasPermission('inventory_atk_pengambilan', 'approve')) {
+    $auth->requirePermission('inventory_atk_pengambilan', 'read');
+}
 
 $page_title = "Dashboard Pengajuan ATK";
 

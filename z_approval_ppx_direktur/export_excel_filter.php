@@ -11,7 +11,9 @@ if (!$auth->isLoggedIn()) {
     header("Location: ../login.php");
     exit();
 }
-$auth->requirePermission('ppx', 'read');
+if (!$auth->canReadOrApprovePPX()) {
+    $auth->requirePermission('ppx', 'read');
+}
 
 // Cek apakah ada parameter no_ppx untuk export detail spesifik
 $no_ppx = $_GET['no_ppx'] ?? '';

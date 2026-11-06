@@ -30,11 +30,7 @@ if (!$auth->isLoggedIn()) {
 // Cek permission - Approval PPX Direktur
 $auth->requirePermission('approval_ppx_direktur', 'approve');
 
-// Query berdasarkan role dengan JOIN ke detail
 $whereClause = "";
-if ($auth->isKoordinator()) {
-    $whereClause = "WHERE pr.user_id = " . $_SESSION['id_user'];
-}
 
 // PERBAIKAN: Query dengan JOIN yang lebih efisien dan total nominal yang konsisten
 $query = "SELECT 
@@ -355,7 +351,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 </a>
 
                                                                 <!-- Print per PPX -->
-                                                                <?php if ($auth->canReadPPX()): ?>
+                                                                <?php if ($auth->canReadOrApprovePPX()): ?>
                                                                     <a href="print_laporan.php?no_ppx=<?= urlencode($row['no_ppx']) ?>" target="_blank"
                                                                        class="btn btn-outline-info btn-action" title="Print Detail">
                                                                         <i class="fas fa-print fa-xs"></i>
@@ -363,7 +359,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 <?php endif; ?>
 
                                                                 <!-- Approval button - PERBAIKI KONDISI -->
-                                                                <?php if ($auth->canApprovePPX() && trim($row['status']) === 'Direktur'): ?>
+                                                                <?php if (($auth->hasPermission('approval_ppx_direktur', 'approve') || $auth->canApprovePPX()) && trim($row['status']) === 'Direktur'): ?>
                                                                     <button type="button" class="btn btn-outline-success btn-action"
                                                                         onclick="processAction('<?= htmlspecialchars($row['no_ppx']) ?>')" title="Proses">
                                                                         <i class="fas fa-check fa-xs"></i>

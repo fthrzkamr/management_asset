@@ -61,7 +61,7 @@ $current_perms = json_decode($role['permissions'] ?? '{}', true) ?: [];
                         </h3>
                         <ul class="breadcrumb">
                             <li class="breadcrumb-item"><a href="../index.php">Dashboard</a></li>
-                            <li class="breadcrumb-item"><a href="dashboard.php">Administrator</a></li>
+                            <li class="breadcrumb-item"><a href="dashboard.php?tab=roles">Administrator</a></li>
                             <li class="breadcrumb-item active">Edit Permission</li>
                         </ul>
                     </div>
@@ -172,7 +172,7 @@ $current_perms = json_decode($role['permissions'] ?? '{}', true) ?: [];
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save"></i> Simpan Permission
                             </button>
-                            <a href="dashboard.php" class="btn btn-secondary">
+                            <a href="dashboard.php?tab=roles" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> Kembali
                             </a>
                         </div>

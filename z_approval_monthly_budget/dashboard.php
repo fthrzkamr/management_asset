@@ -15,7 +15,7 @@ if (!$auth->isLoggedIn()) {
 }
 
 // Cek permission - hanya Manager Finance dan Super Admin
-if (!$auth->isManagerFinance() && !$auth->isSuperAdmin()) {
+if (!$auth->hasPermission('approval_budget_manager', 'approve')) {
     $_SESSION['error'] = 'Anda tidak memiliki akses untuk halaman ini!';
     header("Location: ../index.php");
     exit();

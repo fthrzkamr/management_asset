@@ -5,7 +5,7 @@ require_once $base_path . '/dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
 if (!$auth->isLoggedIn()) { header("Location: ../login.php"); exit(); }
-if ($auth->hasPermission('inventory_atk_master', 'create') || $auth->hasPermission('pt_bst_inventory', 'update')) {
+if ($auth->hasPermission('inventory_atk_master', 'create') || $auth->hasPermission('pt_bst_inventory', 'create') || $auth->hasPermission('pt_bst_inventory', 'update')) {
     // Access granted
 } else {
     $auth->requirePermission('inventory_atk_master', 'create'); 

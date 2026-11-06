@@ -13,11 +13,9 @@ $is_authorized = false;
 
 if (method_exists($auth, 'isLoggedIn')) {
     if ($auth->isLoggedIn()) {
-        if (method_exists($auth, 'isFinance')) {
-            $is_authorized = $auth->isFinance() || $auth->isSuperAdmin();
-        } else {
-            $is_authorized = true;
-        }
+        // Berdasarkan permission Administrator (bukan nama role)
+        $is_authorized = $auth->hasPermission('approval_budget_finance', 'approve')
+                      || $auth->hasPermission('approval_budget_finance', 'read');
     }
 } else {
     $is_authorized = !empty($_SESSION['id_user']);

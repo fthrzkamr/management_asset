@@ -12,7 +12,9 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-$auth->requirePermission('ppx', 'process');
+if (!$auth->hasPermission('approval_ppx_hr', 'approve') && !$auth->canReadOrApprovePPX()) {
+    $auth->requirePermission('approval_ppx_hr', 'approve');
+}
 
 if (!isset($_GET['no_ppx'])) {
     header("Location: dashboard.php");

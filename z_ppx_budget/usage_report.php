@@ -25,24 +25,26 @@ $filter_month = isset($_GET['month']) ? intval($_GET['month']) : date('n'); // D
 $filter_master = isset($_GET['master_id']) ? $_GET['master_id'] : '';
 $filter_status = isset($_GET['status']) ? $_GET['status'] : ''; // Default kosong = tampilkan semua
 
-// Get current user's division name for debugging
+// Get current user's division & cabang
 $user_id = $_SESSION['id_user'];
-$user_query = "SELECT d.nama_divisi 
+$user_query = "SELECT d.nama_divisi, u.id_cabang 
                FROM user_dfm u 
                LEFT JOIN divisi d ON u.divisi = d.id_divisi 
                WHERE u.id_user = $user_id";
 $user_result = mysqli_query($conn, $user_query);
 $user_data = mysqli_fetch_assoc($user_result);
-$user_division = $user_data['nama_divisi'];
+$user_division = $user_data['nama_divisi'] ?? '';
+$user_cabang_id = intval($user_data['id_cabang'] ?? 0);
 
 // Build WHERE clause
 $where_conditions = [];
 $where_conditions[] = "mb.period_year = $filter_year";
 $where_conditions[] = "mb.period_month = $filter_month";
 
-// Filter by current user unless they are Super Admin
-if (!$auth->isSuperAdmin()) {
-    $where_conditions[] = "mb.created_by = $user_id";
+// Filter berdasarkan permission visibilitas anggaran
+$vis_cond = $auth->getMonthlyBudgetVisibilityCondition('mb', 'u', 'creator_div_name', $user_cabang_id);
+if ($vis_cond !== '') {
+    $where_conditions[] = $vis_cond;
 }
 
 if (!empty($filter_master)) {

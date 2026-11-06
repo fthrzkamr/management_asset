@@ -13,11 +13,8 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-$isGlobalApprover = $auth->hasPermission('pengajuan_asset', 'approve');
-$canApproveIT = $auth->isIT() || $auth->hasPermission('approval_asset_it', 'approve');
-$canApproveGA = $auth->isGa() || $auth->hasPermission('approval_asset_ga', 'approve');
-
-if (!$isGlobalApprover && !$canApproveIT && !$canApproveGA) {
+// Hak kelola distribusi ditentukan dari PERMISSION (Administrator), bukan dari nama role.
+if (!$auth->getAssetApprovalScope()['any']) {
     $_SESSION['error'] = 'Anda tidak memiliki izin untuk mengelola pendistribusian asset!';
     header('Location: dashboard.php');
     exit();
@@ -74,17 +71,9 @@ try {
         throw new Exception('Hanya pengajuan yang sudah disetujui yang dapat dikelola distribusinya!');
     }
     
-    // Cek sub_kategori jika bukan global approver
-    if (!$isGlobalApprover) {
-        // Jika user punya GA tapi tidak IT
-        if ($canApproveGA && !$canApproveIT && $asset_data['sub_kategori'] === 'IT') {
-            throw new Exception('Anda hanya dapat mengelola distribusi untuk asset dengan sub kategori GA!');
-        }
-        
-        // Jika user punya IT tapi tidak GA
-        if ($canApproveIT && !$canApproveGA && $asset_data['sub_kategori'] !== 'IT') {
-            throw new Exception('Anda hanya dapat mengelola distribusi untuk asset dengan sub kategori IT!');
-        }
+    // Cek sub_kategori sesuai permission user
+    if (!$auth->canApproveAssetSubKategori($asset_data['sub_kategori'])) {
+        throw new Exception('Anda tidak memiliki izin untuk mengelola distribusi asset dengan sub kategori ' . ($asset_data['sub_kategori'] ?: '-') . '!');
     }
     
     // Update status pendistribusian
@@ -109,12 +98,13 @@ try {
     // Commit transaction
     mysqli_commit($conn);
     
-    // Set success message dengan info role
+    // Set success message
     $role_info = '';
-    if ($auth->isIT()) {
-        $role_info = ' oleh IT Support';
-    } elseif ($auth->isGa()) {
-        $role_info = ' oleh GA';
+    $scope = $auth->getAssetApprovalScope();
+    if (!$scope['all'] && $scope['IT']) {
+        $role_info = ' oleh Approver IT';
+    } elseif (!$scope['all'] && $scope['GA']) {
+        $role_info = ' oleh Approver GA';
     }
     
     $_SESSION['success'] = "Status pendistribusian untuk pengajuan {$no_pengajuan} berhasil diperbarui menjadi '{$status_pendistribusian}'{$role_info}!";

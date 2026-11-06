@@ -44,7 +44,7 @@ while ($d = mysqli_fetch_assoc($rdet)) $details[] = $d;
 $nonEditableStatuses = ['Done','Finance','Direktur','Manager','Leader'];
 
 // jika bukan pemilik dan bukan staff/superadmin -> tolak, kecuali status = 'Revisi'
-if ($auth->isKoordinator() && $ppx['user_id'] != $_SESSION['id_user'] && $ppx['status'] !== 'Revisi') {
+if (!$auth->canApprove() && $ppx['user_id'] != $_SESSION['id_user'] && $ppx['status'] !== 'Revisi') {
     $_SESSION['error'] = 'Anda tidak dapat mengedit pengajuan ini.';
     header("Location: dashboard.php");
     exit();
@@ -52,7 +52,7 @@ if ($auth->isKoordinator() && $ppx['user_id'] != $_SESSION['id_user'] && $ppx['s
 
 // jika status sudah termasuk yang diproses, tolak untuk user biasa
 // kecuali status = 'Revisi' maka tetap boleh diedit
-if (in_array($ppx['status'], $nonEditableStatuses) && $ppx['status'] !== 'Revisi' && !($auth->isHr() || $auth->isSuperAdmin())) {
+if (in_array($ppx['status'], $nonEditableStatuses) && $ppx['status'] !== 'Revisi' && !($auth->hasPermission('approval_ppx_hr', 'approve') || $auth->isSuperAdmin())) {
     $_SESSION['error'] = 'Pengajuan yang sudah diproses tidak dapat diedit.';
     header("Location: dashboard.php");
     exit();

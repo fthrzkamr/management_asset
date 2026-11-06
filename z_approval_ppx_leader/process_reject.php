@@ -14,7 +14,9 @@ if (!$auth->isLoggedIn()) {
 }
 
 // Cek permission
-$auth->requirePermission('ppx', 'approve');
+if (!$auth->canApprove()) {
+    $auth->requirePermission('approval_ppx_leader', 'approve');
+}
 
 // Validasi input
 if (!isset($_POST['no_pengajuan'])) {
@@ -47,27 +49,31 @@ $current_status = $pengajuan['status'];
 $divisi = strtolower($pengajuan['nama_divisi']);
 
 // Validasi apakah user berhak menolak berdasarkan status dan divisi
+// (hak ditentukan dari PERMISSION Administrator, bukan nama role)
 $can_reject = false;
 
-if ($auth->isKacab()) {
+if ($auth->hasPermission('approval_ppx_kacab', 'approve')) {
     // Kacab bisa reject status Leader untuk divisi non-operasional, non-IT/GA/HR, non-finance
     if ($current_status == 'Leader' && 
         !preg_match('/(gudang|sales|bisnis|kurir|it|ga|hr|finance|tax)/i', $divisi)) {
         $can_reject = true;
     }
-} elseif ($auth->isOperationalManager()) {
+}
+if ($auth->hasPermission('approval_ppx_operasional', 'approve')) {
     // Manager Operasional bisa reject untuk divisi operasional
     if (preg_match('/(gudang|sales|bisnis|kurir)/i', $divisi) && 
         in_array($current_status, ['Leader', 'Operasional'])) {
         $can_reject = true;
     }
-} elseif ($auth->isHr()) {
+}
+if ($auth->hasPermission('approval_ppx_hr', 'approve')) {
     // HR bisa reject untuk divisi IT/GA/HR
     if (preg_match('/(it|ga|hr)/i', $divisi) && 
         in_array($current_status, ['Leader', 'HR'])) {
         $can_reject = true;
     }
-} elseif ($auth->isManagerFinance()) {
+}
+if ($auth->hasPermission('approval_ppx_manager', 'approve')) {
     // Manager Finance bisa reject untuk divisi finance
     if (preg_match('/(finance|tax)/i', $divisi) && 
         in_array($current_status, ['Leader', 'Manager', 'Finance'])) {

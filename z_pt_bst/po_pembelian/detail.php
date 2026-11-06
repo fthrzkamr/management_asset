@@ -114,7 +114,7 @@ $page_title = "Detail PO Pembelian";
                 </table>
             </div>
             
-            <?php if($hdr['status'] == 'Pending' && $auth->hasPermission('pt_bst', 'process')): ?>
+            <?php if($hdr['status'] == 'Pending' && $auth->hasPermission('pt_bst_po_pembelian', 'process')): ?>
             <div class="text-right mt-4 d-print-none">
                 <hr>
                 <div class="alert alert-info d-inline-block text-left mb-0 mr-3 align-middle" style="max-width:350px;">

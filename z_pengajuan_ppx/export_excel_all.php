@@ -14,7 +14,7 @@ $auth->requirePermission('ppx', 'read');
 
 // Query berdasarkan role
 $whereClause = "";
-if ($auth->isKoordinator()) {
+if (!$auth->isSuperAdmin() && !$auth->canApprove()) {
     $whereClause = "WHERE pr.user_id = " . (int)$_SESSION['id_user'];
 }
 

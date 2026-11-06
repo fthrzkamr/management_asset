@@ -35,54 +35,54 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Cek permission - Finance atau Manager Operasional yang punya akses process PPX
-if (!$auth->isFinance() && !$auth->isOperationalManager() && !$auth->canProcessPPX() && !$auth->hasPermission('approval_ppx_finance', 'approve') && !$auth->hasPermission('approval_ppx_finance', 'process')) {
+// Cek permission - sesuai pengaturan Administrator (approval_ppx_finance: approve / process)
+if (!$auth->hasPermission('approval_ppx_finance', 'approve') && !$auth->hasPermission('approval_ppx_finance', 'process')) {
     error_log("Access denied: User " . $auth->getUserRole() . " cannot access this page");
     die("Access Denied: Anda tidak memiliki akses ke halaman ini.");
 }
 
 error_log("Access granted for user role: " . $auth->getUserRole());
 
-// Query berdasarkan role dengan JOIN ke detail
-// Manager Finance memproses Finance AP Cibinong dengan status 'Manager'
-// Batasi juga berdasarkan cabang user
+// Query berdasarkan permission (bukan hardcode nama role) dengan workflow routing yang sama persis
 $userCabang = mysqli_real_escape_string($conn, $_SESSION['cabang'] ?? '');
+$canProcessFinancePPX = $auth->hasPermission('approval_ppx_finance', 'process')
+    || $auth->hasPermission('approval_ppx_finance', 'approve')
+    || $auth->canProcessPPX();
 
-if ($auth->isManagerFinance()) {
-    // Manager Finance untuk Finance AP (divisi 9) dari Cibinong dengan status='Manager' atau 'Selesai'
+if ($auth->isSuperAdmin()) {
+    // Super Admin melihat semua status Finance/Manager/Realisasi/Selesai
+    $whereClause = "WHERE (pr.status IN ('Manager', 'Finance', 'Uang Muka', 'Selesai Realisasi', 'Realisasi', 'Selesai'))";
+} elseif ($auth->hasPermission('approval_ppx_manager', 'approve') && !$auth->hasPermission('approval_ppx_finance', 'approve')) {
+    // Approver Manager Finance untuk Finance AP (divisi 9) dari Cibinong dengan status='Manager' atau 'Selesai'
     $whereClause = "WHERE pr.status IN ('Manager', 'Selesai') AND pr.divisi = 9 AND pr.cabang = 'Cibinong'";
-} elseif ($auth->isFinance()) {
-    // Finance untuk Finance AP (divisi 9) dari Cibinong dengan status='Finance' atau 'Selesai'
-    // Data tetap ditampilkan setelah di-approve (status 'Selesai')
-    // ATAU untuk divisi lain dengan status Finance/Uang Muka/Selesai Realisasi/Selesai
+} elseif ($auth->hasPermission('approval_ppx_finance', 'approve') || $auth->hasPermission('approval_ppx_finance', 'process')) {
+    // Approver Finance untuk Finance AP (divisi 9) dari Cibinong + divisi lain sesuai cabang
     $whereClause = "WHERE (pr.status IN ('Finance', 'Selesai') AND pr.divisi = 9 AND pr.cabang = 'Cibinong')";
     
     // Tambahkan kondisi untuk divisi lain (bukan Finance AP Cibinong)
     if (!empty($userCabang) && strtolower(trim($userCabang)) !== 'cibinong') {
-        // Untuk cabang selain Cibinong, tambahkan divisi lain
         $whereClause = "WHERE (
             (pr.status IN ('Finance', 'Selesai') AND pr.divisi = 9 AND pr.cabang = 'Cibinong')
             OR 
-            (pr.status IN ('Finance', 'Uang Muka', 'Selesai Realisasi', 'Selesai') AND pr.divisi NOT IN (1, 2, 4, 6, 7, 9, 17) AND pr.cabang = '" . $userCabang . "')
+            (pr.status IN ('Finance', 'Uang Muka', 'Selesai Realisasi', 'Realisasi', 'Selesai') AND pr.divisi NOT IN (1, 2, 4, 6, 7, 9, 17) AND pr.cabang = '" . $userCabang . "')
         )";
     } elseif (empty($userCabang)) {
-        // Jika tidak ada batasan cabang, tampilkan semua
-        $whereClause .= " OR (pr.status IN ('Finance', 'Uang Muka', 'Selesai Realisasi', 'Selesai') AND pr.divisi NOT IN (1, 2, 4, 6, 7, 9, 17))";
+        $whereClause .= " OR (pr.status IN ('Finance', 'Uang Muka', 'Selesai Realisasi', 'Realisasi', 'Selesai') AND pr.divisi NOT IN (1, 2, 4, 6, 7, 9, 17))";
+    } else {
+        // Cabang Cibinong (HO): juga tampilkan divisi non-routing di cabang Cibinong
+        $whereClause = "WHERE (
+            (pr.status IN ('Finance', 'Selesai') AND pr.divisi = 9 AND pr.cabang = 'Cibinong')
+            OR 
+            (pr.status IN ('Finance', 'Uang Muka', 'Selesai Realisasi', 'Realisasi', 'Selesai') AND pr.divisi NOT IN (1, 2, 4, 6, 7, 9, 17) AND pr.cabang = '" . $userCabang . "')
+        )";
     }
 } else {
-    // Finance reguler - exclude divisi yang sudah dihandle role lain
+    // Fallback permission ppx:approve / ppx:process - exclude divisi yang sudah dihandle role lain
     $whereClause = "WHERE (pr.status IN ('Finance', 'Uang Muka', 'Selesai Realisasi', 'Realisasi', 'Selesai'))";
-    // Exclude Gudang(2), Bisnis(4), Operasional(17) - handled by Manager Operasional
-    // Exclude IT(1), GA(6), HR(7) - handled by HR
-    // Exclude Finance AP(9) - handled by Kacab or Finance based on cabang
     $whereClause .= " AND pr.divisi NOT IN (1, 2, 4, 6, 7, 9, 17)";
     if (!empty($userCabang)) {
         $whereClause .= " AND pr.cabang = '" . $userCabang . "'";
     }
-}
-
-if ($auth->isKoordinator()) {
-    $whereClause .= " AND pr.user_id = " . $_SESSION['id_user'];
 }
 
 // PERBAIKAN: Query dengan JOIN yang lebih efisien dan total nominal yang konsisten
@@ -389,7 +389,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 </a>
 
                                                                 <!-- Print per PPX -->
-                                                                <?php if ($auth->canReadPPX()): ?>
+                                                                <?php if ($auth->canReadOrApprovePPX()): ?>
                                                                     <a href="print_laporan.php?no_ppx=<?= urlencode($row['no_ppx']) ?>" target="_blank"
                                                                         class="btn btn-outline-info btn-action" title="Print Detail">
                                                                         <i class="fas fa-print fa-xs"></i>
@@ -415,7 +415,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 // 2. Ada item yang belum dibayar
                                                                 // 3. Status BUKAN Realisasi atau Selesai
                                                                 $st = trim($row['status']);
-                                                                $canShowProcess = $auth->canProcessPPX() && 
+                                                                $canShowProcess = $canProcessFinancePPX && 
                                                                                 in_array($st, ['Finance', 'Uang Muka'], true) && 
                                                                                 $unpaid_count > 0 &&
                                                                                 !in_array($st, ['Realisasi', 'Selesai']);
@@ -429,7 +429,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                     </button>
                                                                 <?php endif; ?>
 
-                                                                <?php if ($auth->canProcessPPX() && trim($row['status']) === 'Realisasi'): ?>
+                                                                <?php if ($canProcessFinancePPX && trim($row['status']) === 'Realisasi'): ?>
                                                                     <button type="button" class="btn btn-warning btn-action"
                                                                         onclick="verifikasiRealisasi('<?= htmlspecialchars($row['no_ppx']) ?>')"
                                                                         title="Verifikasi Realisasi (Opsional)">
@@ -440,7 +440,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 <?php
                                                                 // Button khusus untuk approve "Selesai Realisasi" menjadi "Selesai"
                                                                 // Hanya muncul jika status = Selesai Realisasi
-                                                                if ($auth->canProcessPPX() && $st == 'Selesai Realisasi'):
+                                                                if ($canProcessFinancePPX && $st == 'Selesai Realisasi'):
                                                                 ?>
                                                                     <button type="button" class="btn btn-outline-success btn-action"
                                                                         onclick="approveSelesaiRealisasi('<?= htmlspecialchars($row['no_ppx']) ?>')" 

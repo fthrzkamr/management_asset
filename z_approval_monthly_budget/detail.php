@@ -12,8 +12,8 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Check if user has permission
-if (!$auth->isManagerFinance() && !$auth->isSuperAdmin()) {
+// Check permission (sesuai Approval Anggaran Manager Finance di Administrator)
+if (!$auth->hasPermission('approval_budget_manager', 'approve') && !$auth->hasPermission('approval_budget_manager', 'read')) {
     header("Location: ../index.php");
     exit();
 }

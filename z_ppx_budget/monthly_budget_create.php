@@ -1,21 +1,14 @@
 <?php
 // Restore original config that creates DB connection
 include_once(__DIR__ . '/../dist/config/config.php');
+include_once(__DIR__ . '/../dist/config/auth_helper.php');
 
-// Auth helper might not exist, so check basic session
-if (!isset($_SESSION['id_user'])) {
+$auth = new AuthHelper($conn);
+if (!$auth->isLoggedIn()) {
     header("Location: ../login.php");
     exit();
 }
-
-// Check basic permissions (adjust based on your role system)
-$user_role = $_SESSION['role'] ?? '';
-$allowed_roles = ['ADMIN', 'FINANCE', 'MANAGER', 'LEADER'];
-// Allow all authenticated users for now - adjust as needed
-// if (!in_array($user_role, $allowed_roles)) {
-//     header("Location: ../index.php");
-//     exit();
-// }
+$auth->requirePermission('ppx_budget', 'create');
 
 // Get error messages
 $error_message = isset($_GET['error']) ? $_GET['error'] : '';

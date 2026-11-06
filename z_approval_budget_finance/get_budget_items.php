@@ -13,8 +13,8 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Cek permission - hanya Finance dan Super Admin
-if (!$auth->isFinance() && !$auth->isSuperAdmin()) {
+// Cek permission - Approval Realisasi (Finance) sesuai pengaturan Administrator
+if (!$auth->hasPermission('approval_budget_finance', 'approve') && !$auth->hasPermission('approval_budget_finance', 'read')) {
     echo json_encode(['success' => false, 'message' => 'No permission']);
     exit();
 }

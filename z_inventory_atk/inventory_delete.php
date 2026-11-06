@@ -16,7 +16,7 @@ if (!$auth->isLoggedIn()) {
     header("Location: ../login.php");
     exit();
 }
-if ($auth->hasPermission('inventory_atk_master', 'delete') || $auth->hasPermission('pt_bst_inventory', 'update')) {
+if ($auth->hasPermission('inventory_atk_master', 'delete') || $auth->hasPermission('pt_bst_inventory', 'delete')) {
     // Access granted
 } else {
     $auth->requirePermission('inventory_atk_master', 'delete'); 

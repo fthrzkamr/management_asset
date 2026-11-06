@@ -270,7 +270,7 @@ $recent_assets = mysqli_query($conn, "
                                         <i class="fas fa-box-open fa-2x fa-3x-md text-muted mb-3"></i>
                                         <p class="text-muted">Belum ada asset yang dibuat</p>
 
-                                        <?php if (!$auth->isKoordinator()): ?>
+                                        <?php if ($auth->hasPermission('management_asset', 'create')): ?>
                                             <a href="aset_add.php" class="btn btn-primary btn-sm">
                                                 <i class="fas fa-plus"></i>
                                                 <span class="d-none d-sm-inline">Tambah Asset Pertama</span>

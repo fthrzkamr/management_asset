@@ -30,7 +30,7 @@ if (!$auth->isLoggedIn()) {
 }
 
 // Cek permission — minimal harus punya salah satu approval permission
-$auth->requirePermission('ppx', 'approve');
+if (!$auth->canApprove()) { $auth->requirePermission('approval_ppx_leader', 'approve'); }
 
 // ========== DYNAMIC ROUTING: Bangun WHERE clause dari ppx_approval_routing ==========
 include_once __DIR__ . '/../z_admin_permissions/permissions_config.php';
@@ -40,9 +40,6 @@ $whereClause = "";
 if ($auth->isSuperAdmin()) {
     // Super admin melihat semua (tanpa where clause)
     $whereClause = "";
-} elseif ($auth->isKoordinator()) {
-    // Koordinator hanya lihat PPX milik sendiri
-    $whereClause = "WHERE pr.user_id = " . $_SESSION['id_user'];
 } else {
     // Ambil semua routing yang aktif
     $routing_query = "SELECT par.divisi_id, par.initial_status, par.approver_role, par.cabang
@@ -495,7 +492,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                     ) {
                                                                         $next_approver = 'Operasional';
                                                                         // Jika user adalah manager operasional
-                                                                        if ($auth->isOperationalManager()) {
+                                                                        if ($auth->hasPermission('approval_ppx_operasional', 'approve')) {
                                                                             $can_approve = true;
                                                                         }
                                                                     }
@@ -510,7 +507,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                     ) {
                                                                         $next_approver = 'HR';
                                                                         // Jika user adalah HR
-                                                                        if ($auth->isHr()) {
+                                                                        if ($auth->hasPermission('approval_ppx_hr', 'approve')) {
                                                                             $can_approve = true;
                                                                         }
                                                                     }
@@ -527,23 +524,23 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                     ) {
                                                                         $next_approver = 'Finance';
                                                                         // Jika user adalah finance
-                                                                        if ($auth->isManagerFinance()) {
+                                                                        if ($auth->hasPermission('approval_ppx_manager', 'approve')) {
                                                                             $can_approve = true;
                                                                         }
                                                                     }
                                                                     // Default: Kacab approve jika tidak masuk kategori khusus
                                                                     else {
-                                                                        if ($auth->isKacab()) {
+                                                                        if ($auth->hasPermission('approval_ppx_kacab', 'approve')) {
                                                                             $can_approve = true;
                                                                         }
                                                                     }
                                                                 }
                                                                 // Status lainnya tetap menggunakan logika sebelumnya
-                                                                elseif ($auth->isOperationalManager() && $current_status == 'Operasional') {
+                                                                elseif ($auth->hasPermission('approval_ppx_operasional', 'approve') && $current_status == 'Operasional') {
                                                                     $can_approve = true;
-                                                                } elseif ($auth->isHr() && $current_status == 'HR') {
+                                                                } elseif ($auth->hasPermission('approval_ppx_hr', 'approve') && $current_status == 'HR') {
                                                                     $can_approve = true;
-                                                                } elseif ($auth->isManagerFinance() && ($current_status == 'Manager' || $current_status == 'Finance')) {
+                                                                } elseif ($auth->hasPermission('approval_ppx_manager', 'approve') && ($current_status == 'Manager' || $current_status == 'Finance')) {
                                                                     $can_approve = true;
                                                                 }
 

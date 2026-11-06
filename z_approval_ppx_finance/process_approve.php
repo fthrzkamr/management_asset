@@ -23,8 +23,8 @@ function jsonResponse($success, $message, $data = []) {
     exit();
 }
 
-// Cek login dan permission
-if (!$auth->isLoggedIn() || (!$auth->canApprove() && !$auth->isFinance())) {
+// Cek login dan permission (sesuai Administrator)
+if (!$auth->isLoggedIn() || (!$auth->canApprove() && !$auth->hasPermission('approval_ppx_finance', 'process'))) {
     if ($isAjax) {
         jsonResponse(false, 'Anda tidak memiliki akses untuk melakukan tindakan ini!');
     }

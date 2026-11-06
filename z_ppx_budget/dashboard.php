@@ -26,12 +26,12 @@ $where_conditions = "mb.status != 'Deleted'"; // Show all except deleted
 // Get current user ID
 $user_id = $_SESSION['id_user'];
 
-// Apply user-based filtering (Super Admin sees all)
-if ($auth->isSuperAdmin()) {
-    // Super Admin sees all budgets - no additional filter
-} else {
-    // Regular users only see budgets they created
-    $where_conditions .= " AND mb.created_by = '" . mysqli_real_escape_string($conn, $user_id) . "'";
+// Apply permission-based filtering
+$u_cab_res = mysqli_query($conn, "SELECT id_cabang FROM user_dfm WHERE id_user = " . intval($user_id));
+$u_cab_row = $u_cab_res ? mysqli_fetch_assoc($u_cab_res) : null;
+$vis_cond  = $auth->getMonthlyBudgetVisibilityCondition('mb', 'u', 'creator_div_name', intval($u_cab_row['id_cabang'] ?? 0));
+if ($vis_cond !== '') {
+    $where_conditions .= " AND $vis_cond";
 }
 
 $budget_query = "SELECT 

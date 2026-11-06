@@ -10,6 +10,9 @@ if (!$auth->isLoggedIn()) {
     header("Location: ../login.php");
     exit();
 }
+if (!$auth->canReadOrApprovePPX()) {
+    $auth->requirePermission('ppx', 'read');
+}
 
 // Get no_ppx from URL
 $no_ppx = $_GET['no_ppx'] ?? '';

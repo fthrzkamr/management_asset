@@ -26,20 +26,23 @@ if ($id_budget == 0) {
     exit();
 }
 
-// Get current user's division name for filtering
+// Get current user's division & cabang for filtering
 $user_id = $_SESSION['id_user'];
-$user_query = "SELECT d.nama_divisi 
+$user_query = "SELECT d.nama_divisi, u.id_cabang 
                FROM user_dfm u 
                LEFT JOIN divisi d ON u.divisi = d.id_divisi 
                WHERE u.id_user = $user_id";
 $user_result = mysqli_query($conn, $user_query);
 $user_data = mysqli_fetch_assoc($user_result);
-$user_division = $user_data['nama_divisi'];
+$user_division = $user_data['nama_divisi'] ?? '';
+$user_cabang_id = intval($user_data['id_cabang'] ?? 0);
 
-// Get budget detail with division filtering
+// Get budget detail with division & cabang info
 $budget_query = "SELECT 
     mb.*,
     u.nama_user as created_by_name,
+    u.divisi as creator_div_id,
+    u.id_cabang as creator_cabang_id,
     creator_div_name.nama_divisi as creator_division
 FROM ppx_monthly_budget mb
 LEFT JOIN user_dfm u ON mb.created_by = u.id_user
@@ -56,39 +59,13 @@ if (!$budget) {
     exit();
 }
 
-$user_role = strtoupper($auth->getUserRole() ?? ($_SESSION['nama_role'] ?? ''));
-$is_superadmin = $auth->isSuperAdmin();
-$is_finance = $auth->isFinance() || (strpos($user_role, 'FINANCE') !== false);
-$is_manager = (strpos($user_role, 'MANAGER') !== false);
-$is_privileged = $is_superadmin || $is_finance || $is_manager;
-
-// Check if user can access this budget
-$can_access = false;
-$creator_division = $budget['creator_division'] ?? '';
-
-if ($is_superadmin || $is_finance) {
-    // Super Admin & Finance dapat mengakses seluruh budget bulanan
-    $can_access = true;
-} elseif ($budget['created_by'] == $user_id) {
-    // Pembuat budget selalu dapat melihat detail miliknya
-    $can_access = true;
-} elseif ($is_privileged) {
-    if (stripos($user_division, 'HR') !== false || stripos($user_division, 'IT') !== false || stripos($user_division, 'GA') !== false) {
-        if (stripos($creator_division, 'HR') !== false || stripos($creator_division, 'IT') !== false || stripos($creator_division, 'GA') !== false) {
-            $can_access = true;
-        }
-    } elseif (stripos($user_division, 'Finance AP') !== false) {
-        if (stripos($creator_division, 'Finance AP') !== false) {
-            $can_access = true;
-        }
-    } elseif (!empty($user_division) && $creator_division == $user_division) {
-        $can_access = true;
-    }
-} else {
-    if ($budget['created_by'] == $user_id || (!empty($user_division) && $creator_division == $user_division)) {
-        $can_access = true;
-    }
-}
+// Check if user can access this budget berdasarkan permission
+$can_access = $auth->canAccessMonthlyBudgetRecord(
+    $budget['created_by'],
+    $budget['creator_div_id'] ?? 0,
+    $budget['creator_cabang_id'] ?? 0,
+    $user_cabang_id
+);
 
 if (!$can_access) {
     header("Location: monthly_budget_list.php?error=" . urlencode("Anda tidak memiliki akses untuk melihat detail budget ini"));

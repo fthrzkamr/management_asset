@@ -57,30 +57,20 @@ if (isset($_SESSION['id_user'])) {
     }
 
     // Pengajuan Aset - hanya yang masih Pending (belum diproses)
-    if ($auth->hasPermission('pengajuan_asset', 'approve')) {
-        // Global approver: tampilkan semua pending
+    // Scope mengikuti permission approval (IT / GA / umum), sama dengan halaman Pengajuan Aset
+    $assetScopeNav = $auth->getAssetApprovalScope();
+    if ($assetScopeNav['any']) {
+        $subFilterNav = '';
+        if (!$assetScopeNav['all']) {
+            $subs = [];
+            if ($assetScopeNav['IT']) $subs[] = "'IT'";
+            if ($assetScopeNav['GA']) $subs[] = "'GA'";
+            $subFilterNav = " AND ka.sub_kategori IN (" . implode(',', $subs) . ")";
+        }
         $badge_counts['pengajuan_asset'] = getCount($conn,
             "SELECT COUNT(*) FROM asset_request ar
              LEFT JOIN kategori_asset ka ON ar.kategori_asset = ka.id_kategori
-             WHERE ar.status = 'Pending' AND (ar.is_deleted IS NULL OR ar.is_deleted = 0)");
-    } elseif ($auth->hasPermission('approval_asset_ga', 'approve') && $auth->hasPermission('approval_asset_it', 'approve')) {
-        // Punya keduanya: tampilkan semua pending
-        $badge_counts['pengajuan_asset'] = getCount($conn,
-            "SELECT COUNT(*) FROM asset_request ar
-             LEFT JOIN kategori_asset ka ON ar.kategori_asset = ka.id_kategori
-             WHERE ar.status = 'Pending' AND (ar.is_deleted IS NULL OR ar.is_deleted = 0)");
-    } elseif ($auth->hasPermission('approval_asset_ga', 'approve')) {
-        // GA approver: hanya GA
-        $badge_counts['pengajuan_asset'] = getCount($conn,
-            "SELECT COUNT(*) FROM asset_request ar
-             LEFT JOIN kategori_asset ka ON ar.kategori_asset = ka.id_kategori
-             WHERE ar.status = 'Pending' AND ka.sub_kategori = 'GA' AND (ar.is_deleted IS NULL OR ar.is_deleted = 0)");
-    } elseif ($auth->hasPermission('approval_asset_it', 'approve')) {
-        // IT approver: hanya IT
-        $badge_counts['pengajuan_asset'] = getCount($conn,
-            "SELECT COUNT(*) FROM asset_request ar
-             LEFT JOIN kategori_asset ka ON ar.kategori_asset = ka.id_kategori
-             WHERE ar.status = 'Pending' AND ka.sub_kategori = 'IT' AND (ar.is_deleted IS NULL OR ar.is_deleted = 0)");
+             WHERE ar.status = 'Pending'$subFilterNav AND (ar.is_deleted IS NULL OR ar.is_deleted = 0)");
     }
 
     // Pengajuan Renovasi - hanya yang masih Pending
@@ -531,14 +521,14 @@ function is_active($patterns) {
                 $peng_patterns = ['z_pengajuan_ppx', 'monthly_budget_list.php', 'monthly_budget_create.php', 'monthly_budget_edit.php', 'monthly_budget_detail.php'];
                 $isPengActive = is_active($peng_patterns);
                 
-                $hasPengMenu = $auth->hasPermission('ppx', 'create') || $auth->hasPermission('ppx_budget', 'update');
+                $hasPengMenu = $auth->hasPermission('ppx', 'create') || $auth->hasPermission('ppx_budget', 'create') || $auth->hasPermission('ppx_budget', 'update');
                 if ($hasPengMenu): ?>
                     <li class="submenu <?= $isPengActive ? 'active' : '' ?>">
                         <a href="javascript:void(0);" class="<?= $isPengActive ? 'subdrop' : '' ?>">
                             <i class="fas fa-file-invoice"></i> <span>Pengajuan</span> <span class="menu-arrow"></span>
                         </a>
                         <ul style="display: <?= $isPengActive ? 'block' : 'none' ?>;">
-                            <?php if ($auth->hasPermission('ppx_budget', 'update')): ?>
+                            <?php if ($auth->hasPermission('ppx_budget', 'create') || $auth->hasPermission('ppx_budget', 'update')): ?>
                                 <li class="<?= is_active(['monthly_budget_list.php', 'monthly_budget_create.php', 'monthly_budget_edit.php', 'monthly_budget_detail.php']) ? 'active' : '' ?>">
                                     <a href="<?= BASE_URL ?>/z_ppx_budget/monthly_budget_list.php">Monthly Budget</a>
                                 </li>
@@ -572,7 +562,7 @@ function is_active($patterns) {
                 <!-- PPX MANAGEMENT (grouped dropdown, setiap item dikontrol permission dari Administrator) -->
                 <?php
                 // Note: z_pengajuan_ppx is no longer in this pattern as it was moved to Pengajuan
-                $ppx_patterns = ['z_approval_ppx_kacab', 'z_approval_ppx_hr', 'z_approval_ppx_asmen', 'z_approval_ppx_finance', 'z_approval_ppx_operasional', 'z_approval_ppx_direktur', 'z_approval_ppx_manager'];
+                $ppx_patterns = ['z_approval_ppx_leader', 'z_approval_ppx_kacab', 'z_approval_ppx_hr', 'z_approval_ppx_asmen', 'z_approval_ppx_finance', 'z_approval_ppx_operasional', 'z_approval_ppx_direktur', 'z_approval_ppx_ga', 'z_approval_ppx_manager'];
                 $isPpxActive = is_active($ppx_patterns);
 
                 // Hitung total notifikasi PPX untuk menu induk
@@ -677,6 +667,7 @@ function is_active($patterns) {
                     $auth->hasPermission('approval_budget_asmen', 'approve') ||
                     $auth->hasPermission('approval_budget_manager', 'approve') ||
                     $auth->hasPermission('approval_budget_manajer_ops', 'read') ||
+                    $auth->hasPermission('approval_budget_manajer_ops', 'approve') ||
                     $auth->hasPermission('approval_budget_finance', 'approve') ||
                     $auth->hasPermission('budget_besar', 'read');
                 if ($hasAnggaranMenu): ?>
@@ -720,7 +711,7 @@ function is_active($patterns) {
                                     <a href="<?= BASE_URL ?>/z_approval_budget_manager/dashboard.php">Approval Budget (Manager)<?= navBadge('approval_budget_manager', $badge_counts) ?></a>
                                 </li>
                             <?php endif; ?>
-                            <?php if ($auth->hasPermission('approval_budget_manajer_ops', 'approve')): ?>
+                            <?php if ($auth->hasPermission('approval_budget_manajer_ops', 'approve') || $auth->hasPermission('approval_budget_manajer_ops', 'read')): ?>
                                 <li class="<?= is_active('z_approval_budget_manajer_ops/') ? 'active' : '' ?>">
                                     <a href="<?= BASE_URL ?>/z_approval_budget_manajer_ops/dashboard.php">Approval Budget (Manajer Ops)<?= navBadge('approval_budget_manajer_ops', $badge_counts) ?></a>
                                 </li>
@@ -782,8 +773,7 @@ function is_active($patterns) {
 
                 <!-- MODUL PT BST -->
                 <?php 
-                    $hasBSTMenu = $auth->hasPermission('inventory_atk_master', 'read') || 
-                                  $auth->hasPermission('pt_bst_inventory', 'read') || 
+                    $hasBSTMenu = $auth->hasPermission('pt_bst_inventory', 'read') || 
                                   $auth->hasPermission('pt_bst_po_pembelian', 'read') || 
                                   $auth->hasPermission('pt_bst_po_masuk', 'read') ||
                                   $auth->hasPermission('pt_bst_asset', 'read');
@@ -796,7 +786,7 @@ function is_active($patterns) {
                     <li class="submenu <?= $isBSTActive ? 'active' : '' ?>">
                         <a href="#" class="<?= $isBSTActive ? 'subdrop' : '' ?>"><i class="fas fa-truck-loading"></i> <span>PT BST</span> <span class="menu-arrow"></span></a>
                         <ul style="display: <?= $isBSTActive ? 'block' : 'none' ?>;">
-                            <?php if ($auth->hasPermission('inventory_atk_master', 'read')): ?>
+                            <?php if ($auth->hasPermission('pt_bst_inventory', 'read')): ?>
                                 <li class="<?= (is_active('z_inventory_atk/inventory_list') && isset($_GET['ref']) && $_GET['ref'] == 'bst') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_inventory_atk/inventory_list.php?ref=bst">Master Inventory</a></li>
                             <?php endif; ?>
                             <?php if ($auth->hasPermission('pt_bst_inventory', 'read')): ?>
@@ -856,9 +846,9 @@ function is_active($patterns) {
 
                 <!-- DATA MASTER -->
                 <?php 
-                $hasMasterMenu = $auth->hasPermission('master_data', 'read') || $auth->hasPermission('master_akun', 'read');
+                $hasMasterMenu = $auth->hasPermission('master_data', 'read') || $auth->hasPermission('master_akun', 'read') || $auth->hasPermission('master_vendor', 'read');
                 if ($hasMasterMenu): ?>
-                    <?php $isMasterActive = is_active(['z_master_data', 'z_master_akun']); ?>
+                    <?php $isMasterActive = is_active(['z_master_data', 'z_master_akun', 'z_master_vendor']); ?>
                     <li class="submenu <?= $isMasterActive ? 'active' : '' ?>">
                         <a href="javascript:void(0);" class="<?= $isMasterActive ? 'subdrop' : '' ?>">
                             <i class="fas fa-database"></i>
@@ -871,6 +861,9 @@ function is_active($patterns) {
                             <?php endif; ?>
                             <?php if ($auth->hasPermission('master_akun', 'read')): ?>
                                 <li class="<?= is_active('z_master_akun') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_master_akun/dashboard.php">Master Akun</a></li>
+                            <?php endif; ?>
+                            <?php if ($auth->hasPermission('master_vendor', 'read')): ?>
+                                <li class="<?= is_active('z_master_vendor') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_master_vendor/dashboard.php">Master Vendor</a></li>
                             <?php endif; ?>
                         </ul>
                     </li>

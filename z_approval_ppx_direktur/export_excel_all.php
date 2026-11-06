@@ -11,13 +11,13 @@ if (!$auth->isLoggedIn()) {
     header("Location: ../login.php");
     exit();
 }
-$auth->requirePermission('ppx', 'read');
+if (!$auth->canReadOrApprovePPX()) {
+    $auth->requirePermission('ppx', 'read');
+}
 
 // Query berdasarkan role
 $whereClause = "";
-if ($auth->isKoordinator()) {
-    $whereClause = "WHERE pr.user_id = " . (int)$_SESSION['id_user'];
-}
+// Visibilitas mengikuti permission approval PPX
 
 // Query summary per PPX (gabungkan detail untuk total nominal)
 // Tambahkan field status_mapped: jika status = 'Leader' => 'Kacap/Manager', jika status = 'Manager' => 'Manager Finance'

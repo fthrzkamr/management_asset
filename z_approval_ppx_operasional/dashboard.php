@@ -10,13 +10,13 @@ require_once __DIR__ . '/../dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
 
-// Only allow Manager Operasional or users with process permission
+// Hak akses halaman ditentukan dari permission Administrator (approval_ppx_operasional)
 if (!$auth->isLoggedIn()) {
     header("Location: ../login.php");
     exit();
 }
 
-if (!$auth->isOperationalManager() && !$auth->canProcessPPX()) {
+if (!$auth->hasPermission('approval_ppx_operasional', 'approve')) {
     die("Access Denied: Anda tidak memiliki akses ke halaman ini.");
 }
 
@@ -34,11 +34,6 @@ $status_labels = [
 // Filter: Manager Operasional handles Gudang(2), Bisnis(4), Operasional(17)
 // Manager Operasional bisa melihat SEMUA cabang untuk divisi ini
 $whereClause = "WHERE pr.status IN ('Operasional','Selesai') AND pr.divisi IN (2, 4, 17)";
-
-// Jika user adalah Koordinator, hanya tampilkan PPX miliknya sendiri
-if ($auth->isKoordinator()) {
-    $whereClause .= " AND pr.user_id = " . $_SESSION['id_user'];
-}
 
 $query = "SELECT 
     pr.no_ppx,
@@ -148,7 +143,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                             <td>Rp <?= number_format($row['total_nominal_detail'],0,',','.') ?></td>
                                             <td>
                                                 <a href="detail.php?no_ppx=<?= urlencode($row['no_ppx']) ?>" class="btn btn-sm btn-info">Detail</a>
-                                                <?php if ($row['status'] === 'Operasional' && $auth->isOperationalManager()): ?>
+                                                <?php if ($row['status'] === 'Operasional' && $auth->hasPermission('approval_ppx_operasional', 'approve')): ?>
                                                     <button class="btn btn-sm btn-success" onclick="location.href='process_approve.php?no_ppx=<?= urlencode($row['no_ppx']) ?>&action=approve'">Approve</button>
                                                 <?php elseif ($row['status'] === 'Selesai'): ?>
                                                     <span class="badge badge-success">Selesai</span>

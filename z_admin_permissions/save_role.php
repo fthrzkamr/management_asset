@@ -9,7 +9,7 @@ if (!$auth->isLoggedIn() || !$auth->isSuperAdmin()) {
     header('Location: ../index.php'); exit();
 }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: dashboard.php'); exit();
+    header('Location: dashboard.php?tab=roles'); exit();
 }
 
 $role_id  = intval($_POST['role_id'] ?? 0);
@@ -17,14 +17,14 @@ $deskripsi = mysqli_real_escape_string($conn, trim($_POST['deskripsi'] ?? ''));
 
 if (!$role_id) {
     $_SESSION['error'] = 'Role ID tidak valid.';
-    header('Location: dashboard.php'); exit();
+    header('Location: dashboard.php?tab=roles'); exit();
 }
 
 // Verifikasi role ada
 $chk = mysqli_query($conn, "SELECT id_role, nama_role FROM roles WHERE id_role = $role_id");
 if (!$chk || mysqli_num_rows($chk) === 0) {
     $_SESSION['error'] = 'Role tidak ditemukan.';
-    header('Location: dashboard.php'); exit();
+    header('Location: dashboard.php?tab=roles'); exit();
 }
 
 $role = mysqli_fetch_assoc($chk);
@@ -60,4 +60,4 @@ if (mysqli_stmt_execute($stmt)) {
 }
 mysqli_stmt_close($stmt);
 
-header('Location: dashboard.php'); exit();
+header('Location: dashboard.php?tab=roles'); exit();

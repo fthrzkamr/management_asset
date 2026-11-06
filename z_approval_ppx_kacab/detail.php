@@ -12,8 +12,8 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Cek permission - hanya Kacab
-if (!$auth->isKacab()) {
+// Cek permission - Approval PPX Kacab sesuai pengaturan Administrator
+if (!$auth->hasPermission('approval_ppx_kacab', 'approve')) {
     $_SESSION['error'] = 'Anda tidak memiliki akses ke halaman ini!';
     header("Location: dashboard.php");
     exit();

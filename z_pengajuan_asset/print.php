@@ -25,6 +25,9 @@ if (!empty($no_pengajuan)) {
     $no_pengajuan = trim($no_pengajuan);
     $no_pengajuan_safe = mysqli_real_escape_string($conn, $no_pengajuan);
 
+    $visibilityCond = $auth->getAssetRequestVisibilityCondition('ar', 'ka');
+    $visibilitySql  = $visibilityCond !== '' ? " AND $visibilityCond" : '';
+
     $query = "SELECT 
         ar.*,
         ka.kategori_asset,
@@ -39,7 +42,7 @@ if (!empty($no_pengajuan)) {
     LEFT JOIN user_dfm u ON ar.user_id = u.id_user
     LEFT JOIN user_dfm ua ON ar.approved_by = ua.id_user
     LEFT JOIN divisi d ON ar.divisi = d.id_divisi
-    WHERE ar.no_pengajuan = '$no_pengajuan_safe' AND (ar.is_deleted IS NULL OR ar.is_deleted = 0)
+    WHERE ar.no_pengajuan = '$no_pengajuan_safe' AND (ar.is_deleted IS NULL OR ar.is_deleted = 0)$visibilitySql
     LIMIT 1";
 
     $result = mysqli_query($conn, $query);
@@ -397,34 +400,27 @@ if (!empty($no_pengajuan)) {
     // PRINT ALL ASSET REQUESTS SUMMARY
     // (Aksi print global dari dashboard / filter jika diperlukan)
     
-    $isGlobalApprover = $auth->hasPermission('pengajuan_asset', 'approve');
-    $canApproveIT = $auth->hasPermission('approval_asset_it', 'approve');
-    $canApproveGA = $auth->hasPermission('approval_asset_ga', 'approve');
-    $canApproveAsset = $isGlobalApprover || $canApproveIT || $canApproveGA;
+    // Scope data berdasarkan PERMISSION (sama dengan dashboard)
+    $assetScope = $auth->getAssetApprovalScope();
+    $canApproveIT = $assetScope['IT'];
+    $canApproveGA = $assetScope['GA'];
+    $canApproveAsset = $assetScope['any'];
 
     $where_conditions = [];
     $user_id = (int)$_SESSION['id_user'];
     $own_request_condition = "ar.user_id = $user_id";
 
-    if ($auth->isSuperAdmin() || $auth->isHr()) {
-        // Super Admin & HR see all
+    if ($assetScope['all']) {
+        // Approver penuh (Super Admin / approver umum / IT+GA) lihat semua
     } elseif ($canApproveAsset) {
         $role_filters = [];
-        if ($canApproveIT && !$canApproveGA) {
+        if ($canApproveIT) {
             $role_filters[] = "ka.sub_kategori = 'IT'";
-        } elseif ($canApproveGA && !$canApproveIT) {
+        }
+        if ($canApproveGA) {
             $role_filters[] = "ka.sub_kategori = 'GA'";
         }
-        
-        if (!empty($role_filters)) {
-            if (!$isGlobalApprover) {
-                $where_conditions[] = "(" . implode(" OR ", $role_filters) . " OR $own_request_condition)";
-            }
-        } else {
-            if (!$isGlobalApprover) {
-                $where_conditions[] = $own_request_condition;
-            }
-        }
+        $where_conditions[] = "(" . implode(" OR ", $role_filters) . " OR $own_request_condition)";
     } else {
         $where_conditions[] = $own_request_condition;
     }

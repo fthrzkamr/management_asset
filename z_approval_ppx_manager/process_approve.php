@@ -6,8 +6,8 @@ include('../dist/config/auth_helper.php');
 
 $auth = new AuthHelper($conn);
 
-// Cek login dan permission
-if (!$auth->isLoggedIn() || (!$auth->isManagerFinance() && !$auth->isSuperAdmin())) {
+// Cek login dan permission (Approval PPX Manager sesuai Administrator)
+if (!$auth->isLoggedIn() || !$auth->hasPermission('approval_ppx_manager', 'approve')) {
     $_SESSION['error'] = 'Anda tidak memiliki akses untuk melakukan tindakan ini!';
     header("Location: dashboard.php");
     exit();
