@@ -94,7 +94,8 @@ header('Cache-Control: max-age=0');
                 <th>Metode Pembayaran</th>
                 <th>Lead Time Pengiriman (Hari)</th>
                 <th>Status Vendor</th>
-                <th>MoU</th>
+                <th>Status MoU</th>
+                <th>File MoU</th>
                 <th>Keterangan</th>
                 <th>Catatan Performa / Review</th>
             </tr>
@@ -125,6 +126,7 @@ header('Cache-Control: max-age=0');
                 <td><?= htmlspecialchars($row['lead_time'] ?? '') ?></td>
                 <td class="center"><?= htmlspecialchars($row['status_vendor'] ?? '') ?></td>
                 <td class="center"><?= htmlspecialchars($row['status_mou'] ?? '') ?></td>
+                <td><?= !empty($row['file_mou']) ? htmlspecialchars($row['file_mou']) : '-' ?></td>
                 <td><?= htmlspecialchars($row['keterangan'] ?? '') ?></td>
                 <td><?= htmlspecialchars($row['review_performa'] ?? '') ?></td>
             </tr>

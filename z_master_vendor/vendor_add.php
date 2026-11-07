@@ -69,7 +69,7 @@ sort($kategoriOptions);
                     <div class="col-sm-12">
                         <div class="card">
                             <div class="card-body">
-                                <form action="vendor_insert.php" method="POST">
+                                <form action="vendor_insert.php" method="POST" enctype="multipart/form-data">
                                     <div class="row">
                                         <!-- BAGIAN 1: INFORMASI UTAMA VENDOR -->
                                         <div class="col-12">
@@ -80,8 +80,8 @@ sort($kategoriOptions);
 
                                         <div class="col-12 col-md-3">
                                             <div class="form-group">
-                                                <label>Kode / ID Vendor <small class="text-success font-weight-bold">(Otomatis)</small></label>
-                                                <input type="text" name="kode_vendor" id="kode_vendor" class="form-control" value="<?= htmlspecialchars($initialKode) ?>" />
+                                                <label>Kode / ID Vendor <span class="text-danger">*</span> <small class="text-success font-weight-bold">(Otomatis)</small></label>
+                                                <input type="text" name="kode_vendor" id="kode_vendor" class="form-control" value="<?= htmlspecialchars($initialKode) ?>" required />
                                                 <small class="text-muted">Otomatis berubah sesuai Kategori.</small>
                                             </div>
                                         </div>
@@ -93,8 +93,8 @@ sort($kategoriOptions);
                                         </div>
                                         <div class="col-12 col-md-3">
                                             <div class="form-group">
-                                                <label>Status Hukum</label>
-                                                <select name="status_hukum" class="form-control select2">
+                                                <label>Status Hukum <span class="text-danger">*</span></label>
+                                                <select name="status_hukum" class="form-control select2" required>
                                                     <option value="">-- Pilih Status Hukum --</option>
                                                     <option value="PT">PT</option>
                                                     <option value="CV">CV</option>
@@ -108,8 +108,8 @@ sort($kategoriOptions);
 
                                         <div class="col-12 col-md-4">
                                             <div class="form-group">
-                                                <label>Kategori Vendor</label>
-                                                <select name="kategori_vendor" id="kategori_vendor" class="form-control select2">
+                                                <label>Kategori Vendor <span class="text-danger">*</span></label>
+                                                <select name="kategori_vendor" id="kategori_vendor" class="form-control select2" required>
                                                     <option value="">-- Pilih Kategori Vendor --</option>
                                                     <?php foreach ($kategoriOptions as $opt): ?>
                                                         <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
@@ -119,14 +119,15 @@ sort($kategoriOptions);
                                         </div>
                                         <div class="col-12 col-md-4">
                                             <div class="form-group">
-                                                <label>Peruntukan Vendor</label>
-                                                <input type="text" name="peruntukan_vendor" class="form-control" placeholder="Contoh: Pest Control, Karangan Bunga, AC, dll" />
+                                                <label>Peruntukan Vendor <span class="text-danger">*</span></label>
+                                                <input type="text" name="peruntukan_vendor" class="form-control" placeholder="Contoh: Pest Control, Karangan Bunga, AC, dll" required />
                                             </div>
                                         </div>
                                         <div class="col-12 col-md-2">
                                             <div class="form-group">
-                                                <label>Area Layanan</label>
-                                                <select name="area" class="form-control select2">
+                                                <label>Area Layanan <span class="text-danger">*</span></label>
+                                                <select name="area" class="form-control select2" required>
+                                                    <option value="">-- Pilih Area --</option>
                                                     <option value="HO">HO</option>
                                                     <option value="HO dan Cabang" selected>HO dan Cabang</option>
                                                     <option value="Cabang">Cabang</option>
@@ -136,8 +137,8 @@ sort($kategoriOptions);
                                         </div>
                                         <div class="col-12 col-md-2">
                                             <div class="form-group">
-                                                <label>Status Vendor</label>
-                                                <select name="status_vendor" class="form-control select2">
+                                                <label>Status Vendor <span class="text-danger">*</span></label>
+                                                <select name="status_vendor" class="form-control select2" required>
                                                     <option value="Aktif" selected>Aktif</option>
                                                     <option value="Non-Aktif">Non-Aktif</option>
                                                 </select>
@@ -153,26 +154,26 @@ sort($kategoriOptions);
 
                                         <div class="col-12 col-md-4">
                                             <div class="form-group">
-                                                <label>Nama PIC Tim GA</label>
-                                                <input type="text" name="pic_ga" class="form-control" placeholder="Contoh: Ara / Faris / Qibty" />
+                                                <label>Nama PIC Tim GA <span class="text-danger">*</span></label>
+                                                <input type="text" name="pic_ga" class="form-control" placeholder="Contoh: Ara / Faris / Qibty" required />
                                             </div>
                                         </div>
                                         <div class="col-12 col-md-4">
                                             <div class="form-group">
-                                                <label>Contact Vendor / WhatsApp</label>
-                                                <input type="text" name="kontak_vendor" class="form-control" placeholder="Contoh: 0858-6060-6106" />
+                                                <label>Contact Vendor / WhatsApp <span class="text-danger">*</span></label>
+                                                <input type="text" name="kontak_vendor" class="form-control" placeholder="Contoh: 0858-6060-6106" required />
                                             </div>
                                         </div>
                                         <div class="col-12 col-md-4">
                                             <div class="form-group">
-                                                <label>Email Vendor</label>
-                                                <input type="email" name="email" class="form-control" placeholder="Contoh: info@vendor.com" />
+                                                <label>Email Vendor <span class="text-danger">*</span></label>
+                                                <input type="email" name="email" class="form-control" placeholder="Contoh: info@vendor.com" required />
                                             </div>
                                         </div>
                                         <div class="col-12">
                                             <div class="form-group">
-                                                <label>Alamat Lengkap</label>
-                                                <textarea name="alamat" class="form-control" rows="2" placeholder="Alamat kantor, ruko, gedung, atau workshop vendor"></textarea>
+                                                <label>Alamat Lengkap <span class="text-danger">*</span></label>
+                                                <textarea name="alamat" class="form-control" rows="2" placeholder="Alamat kantor, ruko, gedung, atau workshop vendor" required></textarea>
                                             </div>
                                         </div>
 
@@ -185,14 +186,15 @@ sort($kategoriOptions);
 
                                         <div class="col-12 col-md-4">
                                             <div class="form-group">
-                                                <label>NPWP</label>
-                                                <input type="text" name="npwp" class="form-control" placeholder="Contoh: 01.000.179.0-058.000" />
+                                                <label>NPWP <span class="text-danger">*</span></label>
+                                                <input type="text" name="npwp" class="form-control" placeholder="Contoh: 01.000.179.0-058.000" required />
                                             </div>
                                         </div>
                                         <div class="col-12 col-md-4">
                                             <div class="form-group">
-                                                <label>Status PKP</label>
-                                                <select name="status_pkp" class="form-control select2">
+                                                <label>Status PKP <span class="text-danger">*</span></label>
+                                                <select name="status_pkp" class="form-control select2" required>
+                                                    <option value="">-- Pilih Status PKP --</option>
                                                     <option value="Non PKP" selected>Non PKP</option>
                                                     <option value="PKP">PKP</option>
                                                 </select>
@@ -200,8 +202,9 @@ sort($kategoriOptions);
                                         </div>
                                         <div class="col-12 col-md-4">
                                             <div class="form-group">
-                                                <label>MoU (Memorandum of Understanding)</label>
-                                                <select name="status_mou" class="form-control select2">
+                                                <label>MoU (Memorandum of Understanding) <span class="text-danger">*</span></label>
+                                                <select name="status_mou" id="status_mou" class="form-control select2" required>
+                                                    <option value="">-- Pilih Status MoU --</option>
                                                     <option value="Ada">Ada</option>
                                                     <option value="Tidak Ada" selected>Tidak Ada</option>
                                                     <option value="Belum Ada">Belum Ada</option>
@@ -209,53 +212,64 @@ sort($kategoriOptions);
                                             </div>
                                         </div>
 
-                                        <div class="col-12 col-md-3">
+                                        <div class="col-12 col-md-6">
                                             <div class="form-group">
-                                                <label>Nama Bank</label>
-                                                <input type="text" name="nama_bank" class="form-control" placeholder="Contoh: BCA / Mandiri / BNI" />
-                                            </div>
-                                        </div>
-                                        <div class="col-12 col-md-3">
-                                            <div class="form-group">
-                                                <label>No. Rekening</label>
-                                                <input type="text" name="no_rekening" class="form-control" placeholder="Contoh: 0664778700063218" />
-                                            </div>
-                                        </div>
-                                        <div class="col-12 col-md-3">
-                                            <div class="form-group">
-                                                <label>Atas Nama Rekening</label>
-                                                <input type="text" name="atas_nama_rekening" class="form-control" placeholder="Contoh: PT. Rentokil Indonesia" />
-                                            </div>
-                                        </div>
-                                        <div class="col-12 col-md-3">
-                                            <div class="form-group">
-                                                <label>Metode Pembayaran</label>
-                                                <input type="text" name="metode_pembayaran" class="form-control" placeholder="Contoh: Transfer / Cash / TOP" />
+                                                <label>Soft File Dokumen MoU <span class="text-danger" id="file_mou_required" style="display:none;">*</span> <small class="text-muted" id="lbl_mou_opt">(Jika Status MoU: Ada)</small></label>
+                                                <div class="custom-file">
+                                                    <input type="file" name="file_mou" id="file_mou" class="custom-file-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                                                    <label class="custom-file-label" for="file_mou">Pilih soft file MoU (PDF, DOC/DOCX, Gambar)...</label>
+                                                </div>
+                                                <small class="text-muted">Format: PDF, Word (DOC/DOCX), JPG, PNG (Maksimal 10MB)</small>
                                             </div>
                                         </div>
                                         <div class="col-12 col-md-6">
                                             <div class="form-group">
-                                                <label>Lead Time Pengiriman / Pengerjaan</label>
-                                                <input type="text" name="lead_time" class="form-control" placeholder="Contoh: 3 hari setelah order / Hari H after service" />
+                                                <label>Lead Time Pengiriman / Pengerjaan <span class="text-danger">*</span></label>
+                                                <input type="text" name="lead_time" class="form-control" placeholder="Contoh: 3 hari setelah order / Hari H after service" required />
                                             </div>
                                         </div>
 
-                                        <!-- BAGIAN 4: KETERANGAN & CATATAN EVALUASI -->
+                                        <div class="col-12 col-md-3">
+                                            <div class="form-group">
+                                                <label>Nama Bank <span class="text-danger">*</span></label>
+                                                <input type="text" name="nama_bank" class="form-control" placeholder="Contoh: BCA / Mandiri / BNI" required />
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <div class="form-group">
+                                                <label>No. Rekening <span class="text-danger">*</span></label>
+                                                <input type="text" name="no_rekening" class="form-control" placeholder="Contoh: 0664778700063218" required />
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <div class="form-group">
+                                                <label>Atas Nama Rekening <span class="text-danger">*</span></label>
+                                                <input type="text" name="atas_nama_rekening" class="form-control" placeholder="Contoh: PT. Rentokil Indonesia" required />
+                                            </div>
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <div class="form-group">
+                                                <label>Metode Pembayaran <span class="text-danger">*</span></label>
+                                                <input type="text" name="metode_pembayaran" class="form-control" placeholder="Contoh: Transfer / Cash / TOP" required />
+                                            </div>
+                                        </div>
+
+                                        <!-- BAGIAN 4: KETERANGAN & CATATAN EVALUASI (OPSIONAL) -->
                                         <div class="col-12 mt-3">
                                             <h5 class="form-title">
-                                                <span>Keterangan & Catatan Performa</span>
+                                                <span>Keterangan & Catatan Performa <small class="text-muted font-italic" style="font-size:0.75rem; text-transform:none;">(Tidak Wajib Diisi)</small></span>
                                             </h5>
                                         </div>
 
                                         <div class="col-12 col-md-6">
                                             <div class="form-group">
-                                                <label>Keterangan Tambahan</label>
+                                                <label>Keterangan Tambahan <small class="text-muted font-italic">(Opsional)</small></label>
                                                 <textarea name="keterangan" class="form-control" rows="3" placeholder="Contoh: By PO, By Project, Ada di HR, dll"></textarea>
                                             </div>
                                         </div>
                                         <div class="col-12 col-md-6">
                                             <div class="form-group">
-                                                <label>Catatan Performa / Review</label>
+                                                <label>Catatan Performa / Review <small class="text-muted font-italic">(Opsional)</small></label>
                                                 <textarea name="review_performa" class="form-control" rows="3" placeholder="Contoh: Hasil pekerjaan rapi, harga bersahabat, pengerjaan cepat"></textarea>
                                             </div>
                                         </div>
@@ -316,6 +330,28 @@ sort($kategoriOptions);
                 const autoKode = prefix + '-VND-' + padNum;
                 $('#kode_vendor').val(autoKode);
             });
+
+            // Update label custom-file-input saat file dipilih
+            $('#file_mou').on('change', function() {
+                const fileName = $(this).val().split('\\').pop();
+                $(this).next('.custom-file-label').addClass("selected").html(fileName || 'Pilih soft file MoU...');
+            });
+
+            // Tampilkan required indicator jika status MoU = Ada
+            function checkMouStatus() {
+                const mou = $('#status_mou').val();
+                if (mou === 'Ada') {
+                    $('#file_mou_required').show();
+                    $('#lbl_mou_opt').html('<span class="text-danger font-weight-bold">(Wajib diunggah saat ada MoU)</span>');
+                    $('#file_mou').attr('required', true);
+                } else {
+                    $('#file_mou_required').hide();
+                    $('#lbl_mou_opt').html('(Jika Status MoU: Ada)');
+                    $('#file_mou').removeAttr('required');
+                }
+            }
+            $('#status_mou').on('change', checkMouStatus);
+            checkMouStatus();
         });
     </script>
 </body>

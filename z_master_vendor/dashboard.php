@@ -284,7 +284,10 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                         echo "<span class='badge badge-light border text-muted small'>" . htmlspecialchars($row['status_hukum']) . "</span> ";
                                                     }
                                                     if (!empty($row['status_pkp'])) {
-                                                        echo "<span class='badge badge-light border text-muted small'>" . htmlspecialchars($row['status_pkp']) . "</span>";
+                                                        echo "<span class='badge badge-light border text-muted small'>" . htmlspecialchars($row['status_pkp']) . "</span> ";
+                                                    }
+                                                    if (!empty($row['file_mou'])) {
+                                                        echo "<a href='../uploads/vendor_mou/" . htmlspecialchars($row['file_mou']) . "' target='_blank' class='badge badge-primary small' title='Lihat Dokumen MoU'><i class='fas fa-file-download mr-1'></i>MoU</a>";
                                                     }
                                                     echo "</td>";
                                                     echo "<td><span class='badge badge-info'>" . htmlspecialchars($row['kategori_vendor'] ?: '-') . "</span></td>";
@@ -483,7 +486,10 @@ unset($_SESSION['success'], $_SESSION['error']);
                             </div>
                             <div class="col-md-4 col-sm-6">
                                 <div class="modal-detail-label">Dokumen MoU</div>
-                                <div class="modal-detail-val">${v.status_mou || '-'}</div>
+                                <div class="modal-detail-val">
+                                    ${v.status_mou || '-'}
+                                    ${v.file_mou ? ` <a href="../uploads/vendor_mou/${encodeURIComponent(v.file_mou)}" target="_blank" class="btn btn-xs btn-outline-primary ml-1 py-0 px-2" style="font-size: 0.72rem;"><i class="fas fa-file-download mr-1"></i>Unduh MoU</a>` : ''}
+                                </div>
                             </div>
 
                             <div class="col-12 mt-2"><div class="modal-section-title">2. Kontak & Lokasi</div></div>
