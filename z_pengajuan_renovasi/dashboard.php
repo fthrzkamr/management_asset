@@ -15,6 +15,25 @@ if (!$auth->isLoggedIn()) {
 // Cek permission
 $auth->requirePermission('pengajuan_renovasi', 'read');
 
+// Auto-ensure tabel renovation_request memiliki kolom id (PRIMARY KEY AUTO_INCREMENT) dan indeks unik
+$chk_id = @mysqli_query($conn, "SHOW COLUMNS FROM renovation_request LIKE 'id'");
+if ($chk_id && mysqli_num_rows($chk_id) === 0) {
+    $chk_pri = @mysqli_query($conn, "SHOW KEYS FROM renovation_request WHERE Key_name = 'PRIMARY'");
+    if ($chk_pri && mysqli_num_rows($chk_pri) > 0) {
+        @mysqli_query($conn, "ALTER TABLE renovation_request ADD COLUMN id INT(11) NOT NULL AUTO_INCREMENT FIRST, ADD UNIQUE KEY (id)");
+    } else {
+        @mysqli_query($conn, "ALTER TABLE renovation_request ADD COLUMN id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST");
+    }
+}
+$chk_idx = @mysqli_query($conn, "SHOW INDEX FROM renovation_request WHERE Column_name = 'no_pengajuan'");
+if ($chk_idx && mysqli_num_rows($chk_idx) === 0) {
+    @mysqli_query($conn, "ALTER TABLE renovation_request ADD UNIQUE KEY uq_no_pengajuan (no_pengajuan)");
+}
+$chk_rej = @mysqli_query($conn, "SHOW COLUMNS FROM renovation_request LIKE 'rejected_by'");
+if ($chk_rej && mysqli_num_rows($chk_rej) === 0) {
+    @mysqli_query($conn, "ALTER TABLE renovation_request ADD COLUMN rejected_by INT(11) NULL AFTER approved_at, ADD COLUMN rejected_at DATETIME NULL AFTER rejected_by");
+}
+
 // Buat kondisi WHERE berdasarkan permission
 // User dengan 'approve', 'update', atau superadmin bisa lihat semua, yang lain hanya milik sendiri
 $canApprove = $auth->hasPermission('pengajuan_renovasi', 'approve');
@@ -230,7 +249,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                             $no = 1;
                                             while ($row = mysqli_fetch_assoc($result)): 
                                             ?>
-                                                <tr>
+                                                <tr data-id="<?= htmlspecialchars($row['id'] ?? '') ?>" data-no="<?= htmlspecialchars($row['no_pengajuan']) ?>">
                                                     <td><small class="font-weight-bold"><?= $no++ ?></small></td>
                                                     <td><small class="font-weight-bold"><?= htmlspecialchars($row['no_pengajuan']) ?></small></td>
                                                     <td><small><?= date('d/m/Y', strtotime($row['tanggal_pengajuan'])) ?></small></td>
@@ -263,7 +282,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                     <td>
                                                         <div class="btn-group" role="group">
                                                             <!-- Detail Button -->
-                                                            <a href="detail.php?no_pengajuan=<?= urlencode($row['no_pengajuan']) ?>" class="btn btn-outline-info btn-action"
+                                                            <a href="detail.php?id=<?= urlencode($row['id'] ?? $row['no_pengajuan']) ?>&no_pengajuan=<?= urlencode($row['no_pengajuan']) ?>" class="btn btn-outline-info btn-action"
                                                                 title="Detail">
                                                                 <i class="fas fa-eye fa-xs"></i>
                                                             </a>
@@ -288,7 +307,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                             }
                                                             ?>
                                                             <?php if ($can_edit): ?>
-                                                                <a href="edit.php?id=<?= urlencode($row['no_pengajuan']) ?>&no_pengajuan=<?= urlencode($row['no_pengajuan']) ?>"
+                                                                <a href="edit.php?id=<?= urlencode($row['id'] ?? $row['no_pengajuan']) ?>&no_pengajuan=<?= urlencode($row['no_pengajuan']) ?>"
                                                                     class="btn btn-outline-warning btn-action" title="Edit">
                                                                     <i class="fas fa-edit fa-xs"></i>
                                                                 </a>
@@ -314,7 +333,7 @@ unset($_SESSION['success'], $_SESSION['error']);
 
                                                             <?php if ($can_delete): ?>
                                                                 <button type="button" class="btn btn-outline-danger btn-action"
-                                                                    onclick="deleteRenovasi('<?= $row['no_pengajuan'] ?>', '<?= $row['status'] ?>')" title="Hapus">
+                                                                    onclick="deleteRenovasi('<?= $row['no_pengajuan'] ?>', '<?= $row['status'] ?>', '<?= $row['id'] ?? '' ?>')" title="Hapus">
                                                                     <i class="fas fa-trash fa-xs"></i>
                                                                 </button>
                                                             <?php endif; ?>

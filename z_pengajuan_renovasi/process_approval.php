@@ -28,14 +28,14 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     // Ambil data dari POST
-    $no_pengajuan = $_POST['no_pengajuan'] ?? '';
+    $param = trim($_POST['no_pengajuan'] ?? $_POST['id'] ?? '');
     
     // Cek apakah ada field 'decision' atau 'action'
     $decision = $_POST['decision'] ?? $_POST['action'] ?? '';
     $catatan_approval = trim($_POST['catatan'] ?? $_POST['catatan_approval'] ?? '');
     
     // Validasi input
-    if (empty($no_pengajuan)) {
+    if (empty($param)) {
         throw new Exception('Nomor pengajuan tidak boleh kosong!');
     }
     
@@ -55,10 +55,17 @@ try {
     // Start transaction
     mysqli_begin_transaction($conn);
     
-    // Cek apakah pengajuan exists
-    $check_query = "SELECT * FROM renovation_request WHERE no_pengajuan = ?";
+    // Cek apakah pengajuan exists (support pencarian via id numeric atau no_pengajuan string)
+    $is_num = is_numeric($param);
+    $check_query = $is_num 
+        ? "SELECT * FROM renovation_request WHERE id = ? OR no_pengajuan = ?" 
+        : "SELECT * FROM renovation_request WHERE no_pengajuan = ?";
     $check_stmt = mysqli_prepare($conn, $check_query);
-    mysqli_stmt_bind_param($check_stmt, "s", $no_pengajuan);
+    if ($is_num) {
+        mysqli_stmt_bind_param($check_stmt, "ss", $param, $param);
+    } else {
+        mysqli_stmt_bind_param($check_stmt, "s", $param);
+    }
     mysqli_stmt_execute($check_stmt);
     $check_result = mysqli_stmt_get_result($check_stmt);
     
@@ -67,6 +74,7 @@ try {
     }
     
     $renovation_data = mysqli_fetch_assoc($check_result);
+    $no_pengajuan = $renovation_data['no_pengajuan'];
     
     // Cek status current
     if ($renovation_data['status'] !== 'Pending') {

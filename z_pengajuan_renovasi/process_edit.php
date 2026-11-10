@@ -19,7 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Validasi dan ambil data dari form
-$no_pengajuan = mysqli_real_escape_string($conn, $_POST['no_pengajuan']);
+$param = trim($_POST['no_pengajuan'] ?? $_POST['id'] ?? '');
+$no_pengajuan = mysqli_real_escape_string($conn, $param);
 $nama_pic = mysqli_real_escape_string($conn, $_POST['nama_pic']);
 $jabatan = mysqli_real_escape_string($conn, $_POST['jabatan']);
 $jabatan_lainnya = mysqli_real_escape_string($conn, $_POST['jabatan_lainnya'] ?? '');
@@ -53,16 +54,19 @@ if ($jenis_pekerjaan === 'Lainnya' && !empty($jenis_pekerjaan_lainnya)) {
 }
 
 // Cek apakah pengajuan exists dan permission
-$check_query = "SELECT * FROM renovation_request WHERE no_pengajuan = '$no_pengajuan'";
+$is_num = is_numeric($param);
+$where_find = $is_num ? "(id = '$no_pengajuan' OR no_pengajuan = '$no_pengajuan')" : "no_pengajuan = '$no_pengajuan'";
+$check_query = "SELECT * FROM renovation_request WHERE $where_find";
 $check_result = mysqli_query($conn, $check_query);
 
-if (mysqli_num_rows($check_result) == 0) {
+if (!$check_result || mysqli_num_rows($check_result) == 0) {
     $_SESSION['error'] = 'Pengajuan tidak ditemukan!';
     header("Location: dashboard.php");
     exit();
 }
 
 $existing_data = mysqli_fetch_assoc($check_result);
+$no_pengajuan = $existing_data['no_pengajuan'];
 
 // Cek permission berdasarkan jenis akses
 $isSuperAdmin = $auth->isSuperAdmin();

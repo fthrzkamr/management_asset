@@ -12,11 +12,26 @@ if (!$auth->isLoggedIn()) {
 }
 
 // Cek parameter no_pengajuan atau id
-$no_pengajuan = trim($_GET['no_pengajuan'] ?? $_GET['id'] ?? '');
-if (empty($no_pengajuan)) {
+$param = trim($_GET['no_pengajuan'] ?? $_GET['id'] ?? '');
+if (empty($param)) {
     $_SESSION['error'] = 'Nomor pengajuan tidak valid!';
     header("Location: dashboard.php");
     exit();
+}
+
+// Auto-ensure tabel renovation_request memiliki kolom id (PRIMARY KEY AUTO_INCREMENT)
+$chk_id = @mysqli_query($conn, "SHOW COLUMNS FROM renovation_request LIKE 'id'");
+if ($chk_id && mysqli_num_rows($chk_id) === 0) {
+    $chk_pri = @mysqli_query($conn, "SHOW KEYS FROM renovation_request WHERE Key_name = 'PRIMARY'");
+    if ($chk_pri && mysqli_num_rows($chk_pri) > 0) {
+        @mysqli_query($conn, "ALTER TABLE renovation_request ADD COLUMN id INT(11) NOT NULL AUTO_INCREMENT FIRST, ADD UNIQUE KEY (id)");
+    } else {
+        @mysqli_query($conn, "ALTER TABLE renovation_request ADD COLUMN id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST");
+    }
+}
+$chk_idx = @mysqli_query($conn, "SHOW INDEX FROM renovation_request WHERE Column_name = 'no_pengajuan'");
+if ($chk_idx && mysqli_num_rows($chk_idx) === 0) {
+    @mysqli_query($conn, "ALTER TABLE renovation_request ADD UNIQUE KEY uq_no_pengajuan (no_pengajuan)");
 }
 
 // Cek dan tambahkan kolom rejected_by jika belum ada di database server
@@ -28,6 +43,10 @@ if (!$has_rejected_by) {
     $has_rejected_by = ($chk_col2 && mysqli_num_rows($chk_col2) > 0);
 }
 
+// Tentukan apakah query menggunakan id (numeric) atau no_pengajuan (string)
+$is_num = is_numeric($param);
+$where_cond = $is_num ? "(rr.id = ? OR rr.no_pengajuan = ?)" : "rr.no_pengajuan = ?";
+
 // Query dinamis yang aman dari error kolom tidak ditemukan
 if ($has_rejected_by) {
     $query = "SELECT rr.*,
@@ -36,26 +55,31 @@ if ($has_rejected_by) {
               FROM renovation_request rr
               LEFT JOIN user_dfm ua ON rr.approved_by = ua.id_user
               LEFT JOIN user_dfm ur ON rr.rejected_by = ur.id_user
-              WHERE rr.no_pengajuan = ?";
+              WHERE $where_cond";
 } else {
     $query = "SELECT rr.*,
                      ua.nama_user as nama_approver,
                      NULL as nama_rejector
               FROM renovation_request rr
               LEFT JOIN user_dfm ua ON rr.approved_by = ua.id_user
-              WHERE rr.no_pengajuan = ?";
+              WHERE $where_cond";
 }
 
 $stmt = mysqli_prepare($conn, $query);
 if (!$stmt) {
     // Fallback query paling sederhana jika prepare gagal
-    $safe_query = "SELECT *, NULL as nama_approver, NULL as nama_rejector FROM renovation_request WHERE no_pengajuan = ?";
+    $safe_where = $is_num ? "(id = ? OR no_pengajuan = ?)" : "no_pengajuan = ?";
+    $safe_query = "SELECT *, NULL as nama_approver, NULL as nama_rejector FROM renovation_request WHERE $safe_where";
     $stmt = mysqli_prepare($conn, $safe_query);
 }
 
 $data = null;
 if ($stmt) {
-    mysqli_stmt_bind_param($stmt, "s", $no_pengajuan);
+    if ($is_num) {
+        mysqli_stmt_bind_param($stmt, "ss", $param, $param);
+    } else {
+        mysqli_stmt_bind_param($stmt, "s", $param);
+    }
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
     if ($result && mysqli_num_rows($result) > 0) {
@@ -66,8 +90,9 @@ if ($stmt) {
 
 // Jika data tetap tidak ada lewat prepare, coba direct query
 if (!$data) {
-    $esc = mysqli_real_escape_string($conn, $no_pengajuan);
-    $direct = mysqli_query($conn, "SELECT * FROM renovation_request WHERE no_pengajuan = '$esc'");
+    $esc = mysqli_real_escape_string($conn, $param);
+    $direct_where = $is_num ? "(id = '$esc' OR no_pengajuan = '$esc')" : "no_pengajuan = '$esc'";
+    $direct = mysqli_query($conn, "SELECT * FROM renovation_request WHERE $direct_where");
     if ($direct && mysqli_num_rows($direct) > 0) {
         $data = mysqli_fetch_assoc($direct);
     }
@@ -78,6 +103,8 @@ if (!$data) {
     header("Location: dashboard.php");
     exit();
 }
+
+$no_pengajuan = $data['no_pengajuan'];
 
 // DEBUG: Cek data foto
 echo "<!-- DEBUG: foto_area = " . htmlspecialchars($data['foto_area'] ?? 'NULL') . " -->";

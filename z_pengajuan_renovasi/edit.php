@@ -12,27 +12,45 @@ if (!$auth->isLoggedIn()) {
 }
 
 // Get pengajuan ID (support baik parameter no_pengajuan maupun id)
-$no_pengajuan = trim($_GET['no_pengajuan'] ?? $_GET['id'] ?? '');
-if (empty($no_pengajuan)) {
+$param = trim($_GET['no_pengajuan'] ?? $_GET['id'] ?? '');
+if (empty($param)) {
     $_SESSION['error'] = 'ID pengajuan tidak ditemukan!';
     header("Location: dashboard.php");
     exit();
 }
 
-$no_pengajuan = mysqli_real_escape_string($conn, $no_pengajuan);
+// Auto-ensure tabel renovation_request memiliki kolom id (PRIMARY KEY AUTO_INCREMENT)
+$chk_id = @mysqli_query($conn, "SHOW COLUMNS FROM renovation_request LIKE 'id'");
+if ($chk_id && mysqli_num_rows($chk_id) === 0) {
+    $chk_pri = @mysqli_query($conn, "SHOW KEYS FROM renovation_request WHERE Key_name = 'PRIMARY'");
+    if ($chk_pri && mysqli_num_rows($chk_pri) > 0) {
+        @mysqli_query($conn, "ALTER TABLE renovation_request ADD COLUMN id INT(11) NOT NULL AUTO_INCREMENT FIRST, ADD UNIQUE KEY (id)");
+    } else {
+        @mysqli_query($conn, "ALTER TABLE renovation_request ADD COLUMN id INT(11) NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST");
+    }
+}
+$chk_idx = @mysqli_query($conn, "SHOW INDEX FROM renovation_request WHERE Column_name = 'no_pengajuan'");
+if ($chk_idx && mysqli_num_rows($chk_idx) === 0) {
+    @mysqli_query($conn, "ALTER TABLE renovation_request ADD UNIQUE KEY uq_no_pengajuan (no_pengajuan)");
+}
+
+$esc_param = mysqli_real_escape_string($conn, $param);
+$is_num = is_numeric($param);
+$where_find = $is_num ? "(rr.id = '$esc_param' OR rr.no_pengajuan = '$esc_param')" : "rr.no_pengajuan = '$esc_param'";
 
 // Get pengajuan data
 $query = "SELECT rr.*,
     u.nama_user as nama_pengaju
 FROM renovation_request rr
 LEFT JOIN user_dfm u ON rr.user_id = u.id_user
-WHERE rr.no_pengajuan = '$no_pengajuan'";
+WHERE $where_find";
 
 $result = mysqli_query($conn, $query);
 
 if (!$result || mysqli_num_rows($result) == 0) {
     // Fallback direct query sederhana jika JOIN bermasalah di database
-    $fallback = mysqli_query($conn, "SELECT * FROM renovation_request WHERE no_pengajuan = '$no_pengajuan'");
+    $fb_where = $is_num ? "(id = '$esc_param' OR no_pengajuan = '$esc_param')" : "no_pengajuan = '$esc_param'";
+    $fallback = mysqli_query($conn, "SELECT * FROM renovation_request WHERE $fb_where");
     if ($fallback && mysqli_num_rows($fallback) > 0) {
         $pengajuan = mysqli_fetch_assoc($fallback);
     } else {
@@ -43,6 +61,8 @@ if (!$result || mysqli_num_rows($result) == 0) {
 } else {
     $pengajuan = mysqli_fetch_assoc($result);
 }
+
+$no_pengajuan = $pengajuan['no_pengajuan'];
 
 // Cek permission berdasarkan jenis akses
 $isSuperAdmin = $auth->isSuperAdmin();
@@ -252,6 +272,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                                 </div>
 
                                 <form action="process_edit.php" method="POST" enctype="multipart/form-data" id="renovasiForm">
+                                    <input type="hidden" name="id" value="<?= htmlspecialchars($pengajuan['id'] ?? '') ?>">
                                     <input type="hidden" name="no_pengajuan" value="<?= htmlspecialchars($pengajuan['no_pengajuan']) ?>">
                                     
                                     <!-- Informasi Dasar -->
