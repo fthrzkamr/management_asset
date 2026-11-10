@@ -37,6 +37,23 @@ $role_perms   = json_decode($user['role_permissions'] ?? '{}', true) ?: [];
 // Jika belum ada custom, tampilkan dengan role permission sebagai default (checked)
 $current_perms = $has_custom ? $custom_perms : $role_perms;
 
+// Auto-repair pada tampilan form: jika ada aksi operasional yang aktif, pastikan 'read' ikut tercentang
+foreach ($PERMISSION_MODULES as $m_key => $m_cfg) {
+    if (!empty($current_perms[$m_key]) && in_array('read', $m_cfg['actions'])) {
+        if (!in_array('read', $current_perms[$m_key])) {
+            $current_perms[$m_key][] = 'read';
+        }
+    }
+}
+// Jika ada hak approval IT atau GA, pastikan pengajuan_asset memiliki hak 'read'
+if (!empty($current_perms['approval_asset_it']) || !empty($current_perms['approval_asset_ga'])) {
+    if (!isset($current_perms['pengajuan_asset'])) {
+        $current_perms['pengajuan_asset'] = ['read'];
+    } elseif (!in_array('read', $current_perms['pengajuan_asset'])) {
+        $current_perms['pengajuan_asset'][] = 'read';
+    }
+}
+
 $initial = strtoupper(substr($user['nama_user'] ?? 'U', 0, 1));
 $color_list = ['#4361ee','#3a0ca3','#7209b7','#f72585','#4cc9f0'];
 $bg_color = $color_list[crc32($user['id_user']) % count($color_list)];
@@ -210,7 +227,10 @@ $is_super = ($user['nama_role'] === 'super_admin');
                                     <tr>
                                         <td>
                                             <i class="<?= $mod['icon'] ?> text-primary mr-1"></i>
-                                            <span><?= htmlspecialchars($mod['label']) ?></span><br>
+                                            <span class="font-weight-bold"><?= htmlspecialchars($mod['label']) ?></span><br>
+                                            <?php if (!empty($mod['hint'])): ?>
+                                                <small class="text-muted d-block" style="font-size:0.7rem; line-height:1.2; margin-bottom:2px;"><?= htmlspecialchars($mod['hint']) ?></small>
+                                            <?php endif; ?>
                                             <code style="font-size:.68rem;color:#888"><?= $mod_key ?></code>
                                         </td>
                                         <?php foreach ($ALL_ACTIONS as $act):
@@ -221,7 +241,7 @@ $is_super = ($user['nama_role'] === 'super_admin');
                                             <td style="<?= !$available ? 'background:#f5f5f5' : '' ?>"
                                                 class="<?= ($available && $is_role_checked && !$has_custom) ? 'role-inherited' : '' ?>">
                                                 <?php if ($available): ?>
-                                                    <div class="custom-control custom-checkbox d-flex justify-content-center">
+                                                    <div class="custom-control custom-checkbox d-flex flex-column align-items-center justify-content-center">
                                                         <input type="checkbox"
                                                                class="custom-control-input perm-check action-<?= $act ?> module-<?= $mod_key ?>"
                                                                id="perm_<?= $mod_key ?>_<?= $act ?>"
@@ -231,6 +251,13 @@ $is_super = ($user['nama_role'] === 'super_admin');
                                                                <?= $is_checked ? 'checked' : '' ?>>
                                                         <label class="custom-control-label"
                                                                for="perm_<?= $mod_key ?>_<?= $act ?>"></label>
+                                                        <?php if ($mod_key === 'pengajuan_asset' && $act === 'approve'): ?>
+                                                            <span class="badge badge-light border text-secondary mt-1" style="font-size:0.58rem;" title="Menyetujui/menolak pengajuan semua kategori (IT & GA)">Semua (IT+GA)</span>
+                                                        <?php elseif ($mod_key === 'approval_asset_it' && $act === 'approve'): ?>
+                                                            <span class="badge badge-info mt-1" style="font-size:0.58rem;">Khusus IT</span>
+                                                        <?php elseif ($mod_key === 'approval_asset_ga' && $act === 'approve'): ?>
+                                                            <span class="badge badge-success mt-1" style="font-size:0.58rem;">Khusus GA</span>
+                                                        <?php endif; ?>
                                                     </div>
                                                 <?php else: ?>
                                                     <span class="text-muted">—</span>
@@ -277,12 +304,42 @@ $is_super = ($user['nama_role'] === 'super_admin');
 var rolePerms = <?= $role_perms_js ?>;
 
 $(function() {
+    // Auto-centang 'read' saat aksi operasional dicentang
+    $(document).on('change', '.perm-check', function() {
+        const $this = $(this);
+        const val = $this.val();
+        const isChecked = $this.is(':checked');
+        const classes = $this.attr('class').split(' ');
+        let modClass = '';
+        for (let c of classes) {
+            if (c.startsWith('module-')) {
+                modClass = c;
+                break;
+            }
+        }
+        if (!modClass) return;
+
+        if (isChecked && val !== 'read') {
+            $('.' + modClass + '.action-read').prop('checked', true);
+        }
+
+        // Jika approval aset IT atau GA dicentang, otomatis centang read di pengajuan_asset
+        if (isChecked && (modClass === 'module-approval_asset_it' || modClass === 'module-approval_asset_ga')) {
+            $('.module-pengajuan_asset.action-read').prop('checked', true);
+            $('.' + modClass + '.action-read').prop('checked', true);
+        }
+    });
+
     // Check all per action (klik header kolom)
     $('.check-all-col').on('click', function() {
         var act = $(this).data('action');
         var checks = $('.action-' + act);
         var allChecked = checks.filter(':checked').length === checks.length;
         checks.prop('checked', !allChecked);
+
+        if (!allChecked && act !== 'read') {
+            $('.action-read').prop('checked', true);
+        }
     });
 
     // Check all per row

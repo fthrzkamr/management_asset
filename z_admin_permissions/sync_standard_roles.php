@@ -11,7 +11,7 @@ if (!$auth->isLoggedIn() || !$auth->isSuperAdmin()) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: dashboard.php?tab=roles');
+    header('Location: dashboard.php');
     exit();
 }
 
@@ -121,6 +121,6 @@ $_SESSION['success'] = "Berhasil menstandarisasi default permission untuk <stron
     . ($cleaned_users > 0 ? " dan membersihkan key usang pada <strong>$cleaned_users user</strong>" : "")
     . " (hak akses custom per-user tetap aman terjaga).";
 
-header('Location: dashboard.php?tab=roles');
+header('Location: dashboard.php');
 exit();
 

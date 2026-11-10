@@ -19,6 +19,7 @@ $users_result = mysqli_query($conn,
     "SELECT u.id_user, u.nama_user, u.username, u.id_role, u.jabatan,
             u.custom_permissions,
             r.nama_role,
+            r.permissions AS role_permissions,
             d.nama_divisi,
             dep.nama_departemen,
             mc.nama_cabang
@@ -29,15 +30,11 @@ $users_result = mysqli_query($conn,
      LEFT JOIN master_cabang mc ON u.id_cabang = mc.id_cabang
      ORDER BY u.nama_user ASC");
 
-// Ambil semua roles beserta jumlah user
-$roles_list_result = mysqli_query($conn,
-    "SELECT r.*, COUNT(u.id_user) AS user_count
-     FROM roles r
-     LEFT JOIN user_dfm u ON u.id_role = r.id_role
-     GROUP BY r.id_role
-     ORDER BY r.id_role ASC");
-
-$active_tab = (isset($_GET['tab']) && $_GET['tab'] === 'roles') ? 'roles' : 'users';
+// Redirect bersih jika parameter tab masih diakses
+if (isset($_GET['tab'])) {
+    header('Location: dashboard.php');
+    exit();
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -105,29 +102,12 @@ $active_tab = (isset($_GET['tab']) && $_GET['tab'] === 'roles') ? 'roles' : 'use
                 <?php unset($_SESSION['error']); ?>
             <?php endif; ?>
 
-            <!-- Navigation Tabs: Per User vs Default Role -->
-            <ul class="nav nav-tabs mb-3" role="tablist">
-                <li class="nav-item">
-                    <a class="nav-link <?= $active_tab === 'users' ? 'active font-weight-bold' : '' ?>"
-                       href="?tab=users">
-                        <i class="fas fa-user-cog mr-1"></i> Permission Per User
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= $active_tab === 'roles' ? 'active font-weight-bold' : '' ?>"
-                       href="?tab=roles">
-                        <i class="fas fa-shield-alt mr-1"></i> Kelola Role (Default Role)
-                    </a>
-                </li>
-            </ul>
-
-            <?php if ($active_tab === 'users'): ?>
             <!-- Info Box -->
             <div class="alert alert-info py-2 mb-3">
                 <i class="fas fa-info-circle"></i>
-                <strong>Cara pakai:</strong> Cari user di tabel, lalu klik <strong>Edit Permission</strong> untuk mengatur akses modul user tersebut secara individual.
+                <strong>Kelola Permission Pengguna:</strong> Cari pengguna di tabel, lalu klik tombol <strong>Edit</strong> untuk mengatur hak akses modul pengguna tersebut secara individual.
                 <span class="badge badge-custom ml-2"><i class="fas fa-user-cog"></i> Custom</span>
-                = user sudah punya permission khusus (override role).
+                = pengguna memiliki permission khusus.
             </div>
 
             <!-- Search + Filter -->
@@ -244,6 +224,12 @@ $active_tab = (isset($_GET['tab']) && $_GET['tab'] === 'roles') ? 'roles' : 'use
                                         </small>
                                     </td>
                                     <td>
+                                        <?php
+                                        $effective_perms = $has_custom ? $custom_perms : (json_decode($u['role_permissions'] ?? '{}', true) ?: []);
+                                        $is_it_approver  = !empty($effective_perms['approval_asset_it']) && in_array('approve', $effective_perms['approval_asset_it']);
+                                        $is_ga_approver  = !empty($effective_perms['approval_asset_ga']) && in_array('approve', $effective_perms['approval_asset_ga']);
+                                        $is_all_approver = !empty($effective_perms['pengajuan_asset']) && in_array('approve', $effective_perms['pengajuan_asset']);
+                                        ?>
                                         <?php if ($has_custom): ?>
                                             <span class="badge badge-custom">
                                                 <i class="fas fa-user-cog"></i> Custom
@@ -261,6 +247,21 @@ $active_tab = (isset($_GET['tab']) && $_GET['tab'] === 'roles') ? 'roles' : 'use
                                                 Ikut permission role
                                             </small>
                                         <?php endif; ?>
+                                        <div class="mt-1">
+                                            <?php if ($role_slug === 'super_admin'): ?>
+                                                <span class="badge badge-light border text-danger" style="font-size:0.62rem;" title="Full Super Admin"><i class="fas fa-infinity"></i> Full Akses</span>
+                                            <?php else: ?>
+                                                <?php if ($is_all_approver): ?>
+                                                    <span class="badge badge-secondary" style="font-size:0.62rem;" title="Approver Semua Kategori Aset"><i class="fas fa-check-double"></i> Approver Aset (Semua)</span>
+                                                <?php endif; ?>
+                                                <?php if ($is_it_approver): ?>
+                                                    <span class="badge badge-info" style="font-size:0.62rem;" title="Approver Khusus Pengajuan Aset IT"><i class="fas fa-laptop-code"></i> Approver IT</span>
+                                                <?php endif; ?>
+                                                <?php if ($is_ga_approver): ?>
+                                                    <span class="badge badge-success" style="font-size:0.62rem;" title="Approver Khusus Pengajuan Aset GA"><i class="fas fa-building"></i> Approver GA</span>
+                                                <?php endif; ?>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                     <td onclick="event.stopPropagation()">
                                         <a href="edit_user_permissions.php?id=<?= urlencode($u['id_user']) ?>"
@@ -283,90 +284,6 @@ $active_tab = (isset($_GET['tab']) && $_GET['tab'] === 'roles') ? 'roles' : 'use
                     </div>
                 </div>
             </div>
-            <?php else: ?>
-            <!-- TAB KELOLA ROLE (DEFAULT ROLE) -->
-            <div class="alert alert-info py-2 mb-3 d-flex justify-content-between align-items-center flex-wrap" style="gap:8px">
-                <div>
-                    <i class="fas fa-info-circle"></i>
-                    <strong>Default Role:</strong> Mengatur hak akses bawaan untuk setiap role (berlaku bagi user dengan status <em>Default Role</em> dan sebagai template dasar saat mereset permission user).
-                </div>
-                <div class="d-flex" style="gap:8px">
-                    <form action="sync_standard_roles.php" method="POST" class="d-inline"
-                          onsubmit="return confirm('Standarisasi default permission semua role sesuai struktur modul terbaru?\n\nCatatan: Custom permission milik masing-masing user TIDAK akan ditimpa.');">
-                        <button type="submit" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-sync-alt"></i> Standarisasi Default Role
-                        </button>
-                    </form>
-                    <a href="add_role.php" class="btn btn-sm btn-success">
-                        <i class="fas fa-plus"></i> Tambah Role Baru
-                    </a>
-                </div>
-            </div>
-
-            <div class="card shadow-sm">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0"><i class="fas fa-shield-alt"></i> Daftar Role & Default Permission</h6>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead class="thead-light">
-                                <tr>
-                                    <th style="width:50px">#</th>
-                                    <th>Nama Role</th>
-                                    <th>Deskripsi</th>
-                                    <th>Jumlah Modul Aktif</th>
-                                    <th>Pengguna</th>
-                                    <th style="width:170px">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php $rno = 1; while ($rl = mysqli_fetch_assoc($roles_list_result)): ?>
-                                <?php
-                                $rperms = json_decode($rl['permissions'] ?? '{}', true) ?: [];
-                                $is_sa  = ($rl['nama_role'] === 'super_admin');
-                                ?>
-                                <tr>
-                                    <td><small class="text-muted"><?= $rno++ ?></small></td>
-                                    <td>
-                                        <span class="badge badge-<?= $is_sa ? 'danger' : 'primary' ?>" style="font-size:0.82rem">
-                                            <?= htmlspecialchars(ucfirst(str_replace('_', ' ', $rl['nama_role']))) ?>
-                                        </span>
-                                        <br><small class="text-muted"><code><?= htmlspecialchars($rl['nama_role']) ?></code></small>
-                                    </td>
-                                    <td><small><?= htmlspecialchars($rl['deskripsi'] ?: '—') ?></small></td>
-                                    <td>
-                                        <?php if ($is_sa): ?>
-                                            <span class="badge badge-danger"><i class="fas fa-infinity"></i> Semua Modul (Full Access)</span>
-                                        <?php else: ?>
-                                            <span class="badge badge-info"><?= count($rperms) ?> modul</span>
-                                        <?php endif; ?>
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-secondary"><?= (int)$rl['user_count'] ?> user</span>
-                                    </td>
-                                    <td>
-                                        <a href="edit_role.php?id=<?= (int)$rl['id_role'] ?>" class="btn btn-warning btn-sm">
-                                            <i class="fas fa-edit fa-xs"></i> Edit Role
-                                        </a>
-                                        <?php if (!$is_sa && (int)$rl['user_count'] === 0): ?>
-                                        <a href="delete_role.php?id=<?= (int)$rl['id_role'] ?>"
-                                           class="btn btn-outline-danger btn-sm"
-                                           onclick="return confirm('Hapus role <?= htmlspecialchars($rl['nama_role']) ?>?');"
-                                           title="Hapus Role">
-                                            <i class="fas fa-trash fa-xs"></i>
-                                        </a>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                                <?php endwhile; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
-
             <?php include('../layouts/footer.php'); ?>
         </div>
     </div>

@@ -52,6 +52,11 @@ $divisi = strtolower($pengajuan['nama_divisi']);
 // (hak ditentukan dari PERMISSION Administrator, bukan nama role)
 $can_reject = false;
 
+if ($auth->hasPermission('approval_ppx_leader', 'approve') || $auth->canApprove()) {
+    if (in_array($current_status, ['Leader', 'Pending'])) {
+        $can_reject = true;
+    }
+}
 if ($auth->hasPermission('approval_ppx_kacab', 'approve')) {
     // Kacab bisa reject status Leader untuk divisi non-operasional, non-IT/GA/HR, non-finance
     if ($current_status == 'Leader' && 

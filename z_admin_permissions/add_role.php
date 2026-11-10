@@ -28,7 +28,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($PERMISSION_MODULES as $mod_key => $mod) {
                 if (isset($posted[$mod_key]) && is_array($posted[$mod_key])) {
                     $valid = array_intersect($posted[$mod_key], $mod['actions']);
-                    if (!empty($valid)) $new_perms[$mod_key] = array_values($valid);
+                    if (!empty($valid)) {
+                        // Auto-ensure 'read' jika ada aksi operasional yang memerlukan hak lihat
+                        if (in_array('read', $mod['actions']) && !in_array('read', $valid)) {
+                            $valid[] = 'read';
+                        }
+                        $new_perms[$mod_key] = array_values(array_unique($valid));
+                    }
+                }
+            }
+
+            // Jika memiliki hak approval aset IT atau GA, pastikan pengajuan_asset memiliki hak 'read'
+            if (isset($new_perms['approval_asset_it']) || isset($new_perms['approval_asset_ga'])) {
+                if (!isset($new_perms['pengajuan_asset'])) {
+                    $new_perms['pengajuan_asset'] = ['read'];
+                } elseif (!in_array('read', $new_perms['pengajuan_asset'])) {
+                    $new_perms['pengajuan_asset'][] = 'read';
                 }
             }
             $perms_json = json_encode($new_perms, JSON_UNESCAPED_UNICODE);
@@ -38,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             mysqli_stmt_bind_param($ins, "sss", $nama_role, $deskripsi, $perms_json);
             if (mysqli_stmt_execute($ins)) {
                 $_SESSION['success'] = 'Role "' . htmlspecialchars($nama_role) . '" berhasil ditambahkan.';
-                header('Location: dashboard.php?tab=roles'); exit();
+                header('Location: dashboard.php'); exit();
             } else {
                 $error = 'Gagal menyimpan: ' . mysqli_error($conn);
             }
@@ -159,20 +174,30 @@ $current_perms = [];
                                     <tr>
                                         <td>
                                             <i class="<?= $mod['icon'] ?> text-primary mr-1"></i>
-                                            <?= htmlspecialchars($mod['label']) ?><br>
+                                            <span class="font-weight-bold"><?= htmlspecialchars($mod['label']) ?></span><br>
+                                            <?php if (!empty($mod['hint'])): ?>
+                                                <small class="text-muted d-block" style="font-size:0.7rem; line-height:1.2; margin-bottom:2px;"><?= htmlspecialchars($mod['hint']) ?></small>
+                                            <?php endif; ?>
                                             <code style="font-size:0.68rem;color:#888"><?= $mod_key ?></code>
                                         </td>
                                         <?php foreach ($ALL_ACTIONS as $act): ?>
                                             <?php $available = in_array($act, $mod['actions']); ?>
                                             <td style="<?= !$available ? 'background:#f5f5f5' : '' ?>">
                                                 <?php if ($available): ?>
-                                                    <div class="custom-control custom-checkbox d-flex justify-content-center">
+                                                    <div class="custom-control custom-checkbox d-flex flex-column align-items-center justify-content-center">
                                                         <input type="checkbox"
                                                                class="custom-control-input perm-check action-<?= $act ?> module-<?= $mod_key ?>"
                                                                id="perm_<?= $mod_key ?>_<?= $act ?>"
                                                                name="permissions[<?= $mod_key ?>][]"
                                                                value="<?= $act ?>">
                                                         <label class="custom-control-label" for="perm_<?= $mod_key ?>_<?= $act ?>"></label>
+                                                        <?php if ($mod_key === 'pengajuan_asset' && $act === 'approve'): ?>
+                                                            <span class="badge badge-light border text-secondary mt-1" style="font-size:0.58rem;" title="Menyetujui/menolak pengajuan semua kategori (IT & GA)">Semua (IT+GA)</span>
+                                                        <?php elseif ($mod_key === 'approval_asset_it' && $act === 'approve'): ?>
+                                                            <span class="badge badge-info mt-1" style="font-size:0.58rem;">Khusus IT</span>
+                                                        <?php elseif ($mod_key === 'approval_asset_ga' && $act === 'approve'): ?>
+                                                            <span class="badge badge-success mt-1" style="font-size:0.58rem;">Khusus GA</span>
+                                                        <?php endif; ?>
                                                     </div>
                                                 <?php else: ?>
                                                     <span class="text-muted">—</span>
@@ -195,7 +220,7 @@ $current_perms = [];
                     <button type="submit" class="btn btn-success">
                         <i class="fas fa-plus"></i> Buat Role
                     </button>
-                    <a href="dashboard.php?tab=roles" class="btn btn-secondary">
+                    <a href="dashboard.php" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Kembali
                     </a>
                 </div>
@@ -207,16 +232,54 @@ $current_perms = [];
 </div>
 <script>
 $(function() {
+    // Auto-centang 'read' saat aksi operasional dicentang
+    $(document).on('change', '.perm-check', function() {
+        const $this = $(this);
+        const val = $this.val();
+        const isChecked = $this.is(':checked');
+        const classes = $this.attr('class').split(' ');
+        let modClass = '';
+        for (let c of classes) {
+            if (c.startsWith('module-')) {
+                modClass = c;
+                break;
+            }
+        }
+        if (!modClass) return;
+
+        if (isChecked && val !== 'read') {
+            $('.' + modClass + '.action-read').prop('checked', true);
+        }
+
+        // Jika approval aset IT atau GA dicentang, otomatis centang read di pengajuan_asset
+        if (isChecked && (modClass === 'module-approval_asset_it' || modClass === 'module-approval_asset_ga')) {
+            $('.module-pengajuan_asset.action-read').prop('checked', true);
+            $('.' + modClass + '.action-read').prop('checked', true);
+        }
+    });
+
     $('.check-all-col').on('click', function() {
         const act = $(this).data('action');
         const checks = $('.action-' + act);
-        checks.prop('checked', checks.filter(':checked').length !== checks.length);
+        const willCheck = checks.filter(':checked').length !== checks.length;
+        checks.prop('checked', willCheck);
+
+        if (willCheck && act !== 'read') {
+            $('.action-read').prop('checked', true);
+        }
     });
+
     $(document).on('click', '.btn-check-all-row', function() {
         const mod = $(this).data('module');
         const checks = $('.module-' + mod);
-        checks.prop('checked', checks.filter(':checked').length !== checks.length);
+        const willCheck = checks.filter(':checked').length !== checks.length;
+        checks.prop('checked', willCheck);
+
+        if (willCheck && (mod === 'approval_asset_it' || mod === 'approval_asset_ga')) {
+            $('.module-pengajuan_asset.action-read').prop('checked', true);
+        }
     });
+
     $('#btn-check-all').on('click', () => $('.perm-check').prop('checked', true));
     $('#btn-uncheck-all').on('click', () => $('.perm-check').prop('checked', false));
 });

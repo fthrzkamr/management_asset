@@ -19,6 +19,23 @@ if (!$res || mysqli_num_rows($res) === 0) {
 }
 $role = mysqli_fetch_assoc($res);
 $current_perms = json_decode($role['permissions'] ?? '{}', true) ?: [];
+
+// Auto-repair pada tampilan form: jika ada aksi operasional yang aktif, pastikan 'read' ikut tercentang
+foreach ($PERMISSION_MODULES as $m_key => $m_cfg) {
+    if (!empty($current_perms[$m_key]) && in_array('read', $m_cfg['actions'])) {
+        if (!in_array('read', $current_perms[$m_key])) {
+            $current_perms[$m_key][] = 'read';
+        }
+    }
+}
+// Jika ada hak approval IT atau GA, pastikan pengajuan_asset memiliki hak 'read'
+if (!empty($current_perms['approval_asset_it']) || !empty($current_perms['approval_asset_ga'])) {
+    if (!isset($current_perms['pengajuan_asset'])) {
+        $current_perms['pengajuan_asset'] = ['read'];
+    } elseif (!in_array('read', $current_perms['pengajuan_asset'])) {
+        $current_perms['pengajuan_asset'][] = 'read';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -61,7 +78,7 @@ $current_perms = json_decode($role['permissions'] ?? '{}', true) ?: [];
                         </h3>
                         <ul class="breadcrumb">
                             <li class="breadcrumb-item"><a href="../index.php">Dashboard</a></li>
-                            <li class="breadcrumb-item"><a href="dashboard.php?tab=roles">Administrator</a></li>
+                            <li class="breadcrumb-item"><a href="dashboard.php">Administrator</a></li>
                             <li class="breadcrumb-item active">Edit Permission</li>
                         </ul>
                     </div>
@@ -122,17 +139,20 @@ $current_perms = json_decode($role['permissions'] ?? '{}', true) ?: [];
                                     <tr>
                                         <td>
                                             <i class="<?= $mod['icon'] ?> text-primary mr-1"></i>
-                                            <span><?= htmlspecialchars($mod['label']) ?></span><br>
+                                            <span class="font-weight-bold"><?= htmlspecialchars($mod['label']) ?></span><br>
+                                            <?php if (!empty($mod['hint'])): ?>
+                                                <small class="text-muted d-block" style="font-size:0.7rem; line-height:1.2; margin-bottom:2px;"><?= htmlspecialchars($mod['hint']) ?></small>
+                                            <?php endif; ?>
                                             <code style="font-size:0.68rem;color:#888"><?= $mod_key ?></code>
                                         </td>
                                         <?php foreach ($ALL_ACTIONS as $act): ?>
                                             <?php
-                                            $available = in_array($act, $mod['actions']);
+                                             $available = in_array($act, $mod['actions']);
                                             $checked   = isset($current_perms[$mod_key]) && in_array($act, $current_perms[$mod_key]);
                                             ?>
                                             <td style="<?= !$available ? 'background:#f5f5f5' : '' ?>">
                                                 <?php if ($available): ?>
-                                                    <div class="custom-control custom-checkbox d-flex justify-content-center">
+                                                    <div class="custom-control custom-checkbox d-flex flex-column align-items-center justify-content-center">
                                                         <input type="checkbox"
                                                                class="custom-control-input perm-check action-<?= $act ?> module-<?= $mod_key ?>"
                                                                id="perm_<?= $mod_key ?>_<?= $act ?>"
@@ -140,6 +160,13 @@ $current_perms = json_decode($role['permissions'] ?? '{}', true) ?: [];
                                                                value="<?= $act ?>"
                                                                <?= $checked ? 'checked' : '' ?>>
                                                         <label class="custom-control-label" for="perm_<?= $mod_key ?>_<?= $act ?>"></label>
+                                                        <?php if ($mod_key === 'pengajuan_asset' && $act === 'approve'): ?>
+                                                            <span class="badge badge-light border text-secondary mt-1" style="font-size:0.58rem;" title="Menyetujui/menolak pengajuan semua kategori (IT & GA)">Semua (IT+GA)</span>
+                                                        <?php elseif ($mod_key === 'approval_asset_it' && $act === 'approve'): ?>
+                                                            <span class="badge badge-info mt-1" style="font-size:0.58rem;">Khusus IT</span>
+                                                        <?php elseif ($mod_key === 'approval_asset_ga' && $act === 'approve'): ?>
+                                                            <span class="badge badge-success mt-1" style="font-size:0.58rem;">Khusus GA</span>
+                                                        <?php endif; ?>
                                                     </div>
                                                 <?php else: ?>
                                                     <span class="text-muted" title="Tidak tersedia">—</span>
@@ -172,7 +199,7 @@ $current_perms = json_decode($role['permissions'] ?? '{}', true) ?: [];
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-save"></i> Simpan Permission
                             </button>
-                            <a href="dashboard.php?tab=roles" class="btn btn-secondary">
+                            <a href="dashboard.php" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> Kembali
                             </a>
                         </div>
@@ -186,12 +213,43 @@ $current_perms = json_decode($role['permissions'] ?? '{}', true) ?: [];
 </div>
 <script>
 $(function() {
+    // Auto-centang 'read' saat aksi operasional (create, update, delete, approve, process, export) dicentang
+    $(document).on('change', '.perm-check', function() {
+        const $this = $(this);
+        const val = $this.val();
+        const isChecked = $this.is(':checked');
+        const classes = $this.attr('class').split(' ');
+        let modClass = '';
+        for (let c of classes) {
+            if (c.startsWith('module-')) {
+                modClass = c;
+                break;
+            }
+        }
+        if (!modClass) return;
+
+        if (isChecked && val !== 'read') {
+            $('.' + modClass + '.action-read').prop('checked', true);
+        }
+
+        // Jika approval aset IT atau GA dicentang, otomatis centang read di pengajuan_asset
+        if (isChecked && (modClass === 'module-approval_asset_it' || modClass === 'module-approval_asset_ga')) {
+            $('.module-pengajuan_asset.action-read').prop('checked', true);
+            $('.' + modClass + '.action-read').prop('checked', true);
+        }
+    });
+
     // Check all per action (kolom)
     $('.check-all-col').on('click', function() {
         const act = $(this).data('action');
         const checkboxes = $('.action-' + act + ':not(:disabled)');
         const allChecked = checkboxes.filter(':checked').length === checkboxes.length;
         checkboxes.prop('checked', !allChecked);
+
+        // Jika mencentang aksi selain read, pastikan read tercentang
+        if (!allChecked && act !== 'read') {
+            $('.action-read:not(:disabled)').prop('checked', true);
+        }
     });
 
     // Check all per row (baris modul)
@@ -200,6 +258,10 @@ $(function() {
         const checks = $('.module-' + mod);
         const allChecked = checks.filter(':checked').length === checks.length;
         checks.prop('checked', !allChecked);
+
+        if (!allChecked && (mod === 'approval_asset_it' || mod === 'approval_asset_ga')) {
+            $('.module-pengajuan_asset.action-read').prop('checked', true);
+        }
     });
 
     // Check ALL

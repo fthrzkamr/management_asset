@@ -57,7 +57,7 @@ if ($ppx_data['status'] != 'Kacab') {
     exit();
 }
 
-if ($ppx_data['cabang'] != $user_cabang_nama) {
+if (!$auth->isSuperAdmin() && !empty($ppx_data['cabang']) && $ppx_data['cabang'] != $user_cabang_nama) {
     $_SESSION['error'] = 'PPX ini bukan untuk cabang Anda! (PPX: ' . $ppx_data['cabang'] . ', User: ' . $user_cabang_nama . ')';
     header("Location: dashboard.php");
     exit();

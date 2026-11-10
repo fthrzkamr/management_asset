@@ -1,12 +1,14 @@
 <?php
-
-require_once '../config.php';
+require_once __DIR__ . '/../dist/config/config.php';
+require_once __DIR__ . '/../dist/config/auth_helper.php';
 
 // Set JSON header
 header('Content-Type: application/json');
 
+$auth = new AuthHelper($conn);
+
 // Check login
-if (!isset($_SESSION['username'])) {
+if (!$auth->isLoggedIn()) {
     echo json_encode([
         'success' => false,
         'message' => 'Session expired. Silakan login kembali.'
@@ -14,19 +16,16 @@ if (!isset($_SESSION['username'])) {
     exit;
 }
 
-// Check if Finance role
-$username = $_SESSION['username'];
-$user_query = "SELECT role FROM akun WHERE username = '$username'";
-$user_result = mysqli_query($conn, $user_query);
-$user_data = mysqli_fetch_assoc($user_result);
-
-if ($user_data['role'] !== 'Finance') {
+// Check if Finance permission
+if (!$auth->isSuperAdmin() && !$auth->hasPermission('approval_ppx_finance', 'process') && !$auth->hasPermission('approval_ppx_finance', 'approve') && !$auth->canApprove()) {
     echo json_encode([
         'success' => false,
         'message' => 'Anda tidak memiliki akses untuk melakukan aksi ini.'
     ]);
     exit;
 }
+
+$username = $_SESSION['nama_user'] ?? $_SESSION['username'] ?? 'Finance';
 
 // Validate input
 if (!isset($_POST['no_ppx']) || empty($_POST['no_ppx'])) {
@@ -84,7 +83,7 @@ $total_reimbursement = 0;
 $realisasi_ids = [];
 
 while ($realisasi = mysqli_fetch_assoc($realisasi_result)) {
-    $realisasi_ids[] = $realisasi['id_realisasi'];
+    $realisasi_ids[] = (int)$realisasi['id_realisasi'];
     $total_reimbursement += abs($realisasi['uang_kembali']); // uang_kembali is negative for 'kurang'
 }
 
@@ -97,12 +96,15 @@ $update_query = "UPDATE ppx_realisasi
                  WHERE id_realisasi IN ($ids_string)";
 
 if (mysqli_query($conn, $update_query)) {
-    // Log the reimbursement action
-    $log_query = "INSERT INTO ppx_log (no_ppx, username, action, keterangan, created_at) 
-                  VALUES ('$no_ppx', '$username', 'Reimbursement', 
-                          'Reimbursement sebesar Rp " . number_format($total_reimbursement, 0, ',', '.') . " telah diproses oleh Finance', 
-                          NOW())";
-    mysqli_query($conn, $log_query);
+    // Log the reimbursement action if ppx_log exists
+    $chk_table = mysqli_query($conn, "SHOW TABLES LIKE 'ppx_log'");
+    if ($chk_table && mysqli_num_rows($chk_table) > 0) {
+        $log_query = "INSERT INTO ppx_log (no_ppx, username, action, keterangan, created_at) 
+                      VALUES ('$no_ppx', '$username', 'Reimbursement', 
+                              'Reimbursement sebesar Rp " . number_format($total_reimbursement, 0, ',', '.') . " telah diproses oleh Finance', 
+                              NOW())";
+        mysqli_query($conn, $log_query);
+    }
 
     echo json_encode([
         'success' => true,

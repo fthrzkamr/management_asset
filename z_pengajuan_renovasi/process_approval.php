@@ -103,23 +103,47 @@ try {
         $status_message = 'ditolak';
         $rejection_date = date('Y-m-d H:i:s');
         
-        // Update query untuk reject
-        $update_query = "UPDATE renovation_request 
-                        SET status = ?, 
-                            rejected_by = ?, 
-                            rejected_at = ?, 
-                            catatan_approval = ?, 
-                            updated_at = NOW() 
-                        WHERE no_pengajuan = ?";
-        
-        $update_stmt = mysqli_prepare($conn, $update_query);
-        mysqli_stmt_bind_param($update_stmt, "sisss", 
-            $new_status, 
-            $_SESSION['id_user'], 
-            $rejection_date, 
-            $catatan_approval, 
-            $no_pengajuan
-        );
+        // Update query untuk reject dengan pengecekan kolom toleran
+        $chk_col = mysqli_query($conn, "SHOW COLUMNS FROM renovation_request LIKE 'rejected_by'");
+        if ($chk_col && mysqli_num_rows($chk_col) > 0) {
+            $update_query = "UPDATE renovation_request 
+                            SET status = ?, 
+                                approved_by = ?, 
+                                approved_at = ?, 
+                                rejected_by = ?, 
+                                rejected_at = ?, 
+                                catatan_approval = ?, 
+                                updated_at = NOW() 
+                            WHERE no_pengajuan = ?";
+            
+            $update_stmt = mysqli_prepare($conn, $update_query);
+            mysqli_stmt_bind_param($update_stmt, "sississ", 
+                $new_status, 
+                $_SESSION['id_user'], 
+                $rejection_date,
+                $_SESSION['id_user'], 
+                $rejection_date, 
+                $catatan_approval, 
+                $no_pengajuan
+            );
+        } else {
+            $update_query = "UPDATE renovation_request 
+                            SET status = ?, 
+                                approved_by = ?, 
+                                approved_at = ?, 
+                                catatan_approval = ?, 
+                                updated_at = NOW() 
+                            WHERE no_pengajuan = ?";
+            
+            $update_stmt = mysqli_prepare($conn, $update_query);
+            mysqli_stmt_bind_param($update_stmt, "sisss", 
+                $new_status, 
+                $_SESSION['id_user'], 
+                $rejection_date, 
+                $catatan_approval, 
+                $no_pengajuan
+            );
+        }
     }
     
     // Execute update

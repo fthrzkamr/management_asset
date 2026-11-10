@@ -8,19 +8,22 @@
 $PERMISSION_MODULES = [
     // === PENGAJUAN ===
     'pengajuan_asset' => [
-        'label' => 'Pengajuan Aset (Umum)',
+        'label' => 'Pengajuan Aset (Pengaju)',
+        'hint'  => 'Akses Pengaju/Staf (Buat, lihat, & edit pengajuan milik sendiri)',
         'icon'  => 'fas fa-clipboard-list',
         'group' => 'Pengajuan',
         'actions' => ['create', 'read', 'update', 'delete', 'approve'],
     ],
     'approval_asset_it' => [
-        'label' => 'Approval Pengajuan Aset IT',
+        'label' => 'Approval Aset IT (Verifikator IT)',
+        'hint'  => 'Akses Verifikator IT (Setujui & tolak pengajuan aset IT)',
         'icon'  => 'fas fa-laptop-code',
         'group' => 'Pengajuan',
         'actions' => ['read', 'approve'],
     ],
     'approval_asset_ga' => [
-        'label' => 'Approval Pengajuan Aset GA',
+        'label' => 'Approval Aset GA (Verifikator GA)',
+        'hint'  => 'Akses Verifikator GA (Setujui & tolak pengajuan aset GA)',
         'icon'  => 'fas fa-building',
         'group' => 'Pengajuan',
         'actions' => ['read', 'approve'],
@@ -337,7 +340,7 @@ $ACTION_LABELS = [
     'read'            => 'Lihat',
     'update'          => 'Edit',
     'delete'          => 'Hapus',
-    'approve'         => 'Setujui',
+    'approve'         => 'Approve / Tolak',
     'process'         => 'Proses',
     'manage_category' => 'Kel. Kategori',
     'export'          => 'Export',

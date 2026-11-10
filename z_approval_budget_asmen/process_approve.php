@@ -55,9 +55,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'approve') {
         $next_status = $helper->getNextStatusFrom('Asmen Finance', $budget['creator_id_cabang'], $budget['creator_id_divisi']);
 
-        $update = "UPDATE ppx_monthly_budget SET status = ?, approved_at = NOW() WHERE id_budget = ?";
+        $update = "UPDATE ppx_monthly_budget SET status = ?, approved_by = ?, approved_at = NOW() WHERE id_budget = ?";
         $stmt_up = mysqli_prepare($conn, $update);
-        mysqli_stmt_bind_param($stmt_up, 'si', $next_status, $id_budget);
+        mysqli_stmt_bind_param($stmt_up, 'sii', $next_status, $_SESSION['id_user'], $id_budget);
 
         if (mysqli_stmt_execute($stmt_up)) {
             $_SESSION['success'] = "Budget berhasil disetujui. Status selanjutnya: " . $next_status;
@@ -68,10 +68,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($notes)) {
             $_SESSION['error'] = "Catatan penolakan harus diisi!";
         } else {
-            $rejected_status = 'Ditolak';
-            $update = "UPDATE ppx_monthly_budget SET status = ?, approval_notes = ?, approved_at = NOW() WHERE id_budget = ?";
+            $rejected_status = 'Rejected';
+            $combined_notes = trim($budget['notes'] ?? '');
+            $combined_notes .= ($combined_notes ? "\n\n" : "") . "Rejected by Asmen Finance: " . $notes;
+            $update = "UPDATE ppx_monthly_budget SET status = ?, notes = ?, approved_by = ?, approved_at = NOW() WHERE id_budget = ?";
             $stmt_up = mysqli_prepare($conn, $update);
-            mysqli_stmt_bind_param($stmt_up, 'ssi', $rejected_status, $notes, $id_budget);
+            mysqli_stmt_bind_param($stmt_up, 'ssii', $rejected_status, $combined_notes, $_SESSION['id_user'], $id_budget);
             if (mysqli_stmt_execute($stmt_up)) {
                 $_SESSION['success'] = "Budget ditolak.";
                 header("Location: dashboard.php");

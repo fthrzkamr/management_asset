@@ -35,8 +35,21 @@ foreach ($PERMISSION_MODULES as $mod_key => $mod) {
         // Hanya aksi yang valid untuk modul ini
         $valid = array_intersect($posted[$mod_key], $mod['actions']);
         if (!empty($valid)) {
-            $new_permissions[$mod_key] = array_values($valid);
+            // Auto-ensure 'read' jika ada aksi operasional yang memerlukan hak lihat
+            if (in_array('read', $mod['actions']) && !in_array('read', $valid)) {
+                $valid[] = 'read';
+            }
+            $new_permissions[$mod_key] = array_values(array_unique($valid));
         }
+    }
+}
+
+// Jika memiliki hak approval aset IT atau GA, pastikan pengajuan_asset memiliki hak 'read'
+if (isset($new_permissions['approval_asset_it']) || isset($new_permissions['approval_asset_ga'])) {
+    if (!isset($new_permissions['pengajuan_asset'])) {
+        $new_permissions['pengajuan_asset'] = ['read'];
+    } elseif (!in_array('read', $new_permissions['pengajuan_asset'])) {
+        $new_permissions['pengajuan_asset'][] = 'read';
     }
 }
 

@@ -11,19 +11,24 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Cek parameter no_pengajuan (bukan id)
-if (!isset($_GET['no_pengajuan']) || empty($_GET['no_pengajuan'])) {
+// Cek parameter no_pengajuan atau id
+$no_pengajuan = trim($_GET['no_pengajuan'] ?? $_GET['id'] ?? '');
+if (empty($no_pengajuan)) {
     $_SESSION['error'] = 'Nomor pengajuan tidak valid!';
     header("Location: dashboard.php");
     exit();
 }
 
-$no_pengajuan = trim($_GET['no_pengajuan']);
-
 // Ambil data pengajuan renovasi berdasarkan no_pengajuan (string, bukan integer)
-$query = "SELECT * FROM renovation_request WHERE no_pengajuan = ?";
+$query = "SELECT rr.*,
+                 ua.nama_user as nama_approver,
+                 ur.nama_user as nama_rejector
+          FROM renovation_request rr
+          LEFT JOIN user_dfm ua ON rr.approved_by = ua.id_user
+          LEFT JOIN user_dfm ur ON rr.rejected_by = ur.id_user
+          WHERE rr.no_pengajuan = ?";
 $stmt = mysqli_prepare($conn, $query);
-mysqli_stmt_bind_param($stmt, "s", $no_pengajuan); // "s" untuk string, bukan "i"
+mysqli_stmt_bind_param($stmt, "s", $no_pengajuan);
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 
@@ -54,13 +59,16 @@ function getStatusBadge($status)
         case 'Pending':
             return '<span class="badge badge-warning">Pending</span>';
         case 'Approved':
-            return '<span class="badge badge-success">Approved</span>';
+        case 'Disetujui':
+            return '<span class="badge badge-success">Disetujui</span>';
         case 'Rejected':
-            return '<span class="badge badge-danger">Rejected</span>';
+        case 'Ditolak':
+            return '<span class="badge badge-danger">Ditolak</span>';
         case 'In Progress':
             return '<span class="badge badge-info">In Progress</span>';
         case 'Completed':
-            return '<span class="badge badge-primary">Completed</span>';
+        case 'Selesai':
+            return '<span class="badge badge-primary">Selesai</span>';
         default:
             return '<span class="badge badge-secondary">' . htmlspecialchars($status) . '</span>';
     }
@@ -300,6 +308,40 @@ function getPriorityBadge($prioritas)
                                         </div>
                                     </div>
                                 </div>
+
+                                <?php if ($data['status'] === 'Ditolak'): ?>
+                                    <hr class="my-4">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="alert alert-danger mb-0">
+                                                <h6 class="font-weight-bold mb-2"><i class="fas fa-times-circle mr-1"></i> Informasi Penolakan</h6>
+                                                <p class="mb-1"><strong>Ditolak oleh:</strong> <?= htmlspecialchars($data['nama_rejector'] ?? $data['nama_approver'] ?? 'Verifikator') ?></p>
+                                                <?php if (!empty($data['rejected_at']) || !empty($data['approved_at'])): ?>
+                                                    <p class="mb-1"><strong>Tanggal Penolakan:</strong> <?= date('d F Y, H:i', strtotime($data['rejected_at'] ?? $data['approved_at'])) ?> WIB</p>
+                                                <?php endif; ?>
+                                                <?php if (!empty($data['catatan_approval'])): ?>
+                                                    <p class="mb-0"><strong>Alasan Penolakan:</strong> <?= nl2br(htmlspecialchars($data['catatan_approval'])) ?></p>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php elseif ($data['status'] === 'Disetujui'): ?>
+                                    <hr class="my-4">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="alert alert-success mb-0">
+                                                <h6 class="font-weight-bold mb-2"><i class="fas fa-check-circle mr-1"></i> Informasi Persetujuan</h6>
+                                                <p class="mb-1"><strong>Disetujui oleh:</strong> <?= htmlspecialchars($data['nama_approver'] ?? 'Verifikator') ?></p>
+                                                <?php if (!empty($data['approved_at'])): ?>
+                                                    <p class="mb-1"><strong>Tanggal Persetujuan:</strong> <?= date('d F Y, H:i', strtotime($data['approved_at'])) ?> WIB</p>
+                                                <?php endif; ?>
+                                                <?php if (!empty($data['catatan_approval'])): ?>
+                                                    <p class="mb-0"><strong>Catatan:</strong> <?= nl2br(htmlspecialchars($data['catatan_approval'])) ?></p>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
 
                                 <hr class="my-4">
 

@@ -68,16 +68,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $approval_notes = trim($_POST['approval_notes'] ?? '');
     
     if ($action === 'approve') {
-        // Approve budget - ubah status jadi Approved
+        // Approve budget - ubah status jadi Active (sesuai ENUM ppx_monthly_budget)
+        $combined_notes = trim($budget['notes'] ?? '');
+        if (!empty($approval_notes)) {
+            $combined_notes .= ($combined_notes ? "\n\n" : "") . "Disetujui: " . $approval_notes;
+        }
+
         $update_sql = "UPDATE ppx_monthly_budget SET 
-                      status = 'Approved',
+                      status = 'Active',
                       approved_by = ?,
                       approved_at = NOW(),
-                      approval_notes = ?
+                      notes = ?
                       WHERE id_budget = ?";
         
         $stmt_update = mysqli_prepare($conn, $update_sql);
-        mysqli_stmt_bind_param($stmt_update, 'isi', $_SESSION['id_user'], $approval_notes, $id_budget);
+        mysqli_stmt_bind_param($stmt_update, 'isi', $_SESSION['id_user'], $combined_notes, $id_budget);
         
         if (mysqli_stmt_execute($stmt_update)) {
             $_SESSION['success'] = 'Budget berhasil disetujui!';
@@ -88,19 +93,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } 
     elseif ($action === 'reject') {
-        // Reject budget - ubah status jadi Rejected
+        // Reject budget - ubah status jadi Rejected (sesuai ENUM ppx_monthly_budget)
         if (empty($approval_notes)) {
             $_SESSION['error'] = 'Alasan penolakan harus diisi!';
         } else {
+            $combined_notes = trim($budget['notes'] ?? '');
+            $combined_notes .= ($combined_notes ? "\n\n" : "") . "Ditolak: " . $approval_notes;
+
             $update_sql = "UPDATE ppx_monthly_budget SET 
                           status = 'Rejected',
                           approved_by = ?,
                           approved_at = NOW(),
-                          approval_notes = ?
+                          notes = ?
                           WHERE id_budget = ?";
             
             $stmt_update = mysqli_prepare($conn, $update_sql);
-            mysqli_stmt_bind_param($stmt_update, 'isi', $_SESSION['id_user'], $approval_notes, $id_budget);
+            mysqli_stmt_bind_param($stmt_update, 'isi', $_SESSION['id_user'], $combined_notes, $id_budget);
             
             if (mysqli_stmt_execute($stmt_update)) {
                 $_SESSION['success'] = 'Budget berhasil ditolak!';

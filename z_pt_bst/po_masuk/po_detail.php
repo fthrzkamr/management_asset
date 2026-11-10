@@ -76,7 +76,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         }
     } 
     elseif ($action == 'tolak' && $po['status'] == 'Pending') {
-        mysqli_query($conn, "UPDATE bst_po SET status = 'Ditolak', keterangan = '$keterangan_admin' WHERE id_po = $id_po");
+        $q_upd = mysqli_query($conn, "UPDATE bst_po SET status = 'Ditolak', keterangan = '$keterangan_admin' WHERE id_po = $id_po");
+        if (!$q_upd) {
+            mysqli_query($conn, "UPDATE bst_po SET status = 'Rejected', keterangan = '$keterangan_admin' WHERE id_po = $id_po");
+        }
         echo "<script>alert('Pesanan PO Ditolak.'); window.location.href='dashboard.php';</script>";
     }
 }
