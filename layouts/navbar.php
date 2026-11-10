@@ -422,9 +422,7 @@ function is_active($patterns) {
 
                 <!-- PENGAJUAN ASET -->
                 <?php 
-                $canReadAsset = $auth->hasPermission('pengajuan_asset', 'read') || 
-                                $auth->hasPermission('approval_asset_it', 'read') || 
-                                $auth->hasPermission('approval_asset_ga', 'read');
+                $canReadAsset = $auth->canReadAsset();
                 if ($canReadAsset): 
                 ?>
                     <li class="<?= is_active('z_pengajuan_asset') ? 'active' : '' ?>">

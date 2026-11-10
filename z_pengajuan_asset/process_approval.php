@@ -16,7 +16,7 @@ if (!$auth->isLoggedIn()) {
 // Hak approve ditentukan dari PERMISSION (Administrator), bukan dari nama role.
 // approval_asset_it / approval_asset_ga (spesifik) membatasi sub kategori; pengajuan_asset:approve = approver umum.
 if (!$auth->getAssetApprovalScope()['any']) {
-    $_SESSION['error'] = 'Anda tidak memiliki izin untuk approve pengajuan asset!';
+    $_SESSION['error'] = 'Anda tidak memiliki izin untuk memproses (approve/reject) pengajuan asset!';
     header('Location: dashboard.php');
     exit();
 }
@@ -84,7 +84,8 @@ try {
     
     // Validasi berdasarkan sub kategori (sesuai permission Administrator)
     if (!$auth->canApproveAssetSubKategori($asset_data['sub_kategori'])) {
-        throw new Exception('Anda tidak memiliki izin untuk menyetujui pengajuan asset dengan sub kategori ' . ($asset_data['sub_kategori'] ?: '-') . '!');
+        $action_word = ($decision === 'reject') ? 'menolak' : 'menyetujui';
+        throw new Exception("Anda tidak memiliki izin untuk $action_word pengajuan asset dengan sub kategori " . ($asset_data['sub_kategori'] ?: '-') . "!");
     }
     
     // Set status dan update field berdasarkan decision
@@ -114,23 +115,54 @@ try {
         $status_message = 'ditolak';
         $rejection_date = date('Y-m-d H:i:s');
         
-        // Update query untuk reject
-        $update_query = "UPDATE asset_request 
-                        SET status = ?, 
-                            rejected_by = ?, 
-                            rejected_at = ?, 
-                            catatan_approval = ?, 
-                            updated_at = NOW() 
-                        WHERE no_pengajuan = ?";
-        
-        $update_stmt = mysqli_prepare($conn, $update_query);
-        mysqli_stmt_bind_param($update_stmt, "sisss", 
-            $new_status, 
-            $_SESSION['id_user'], 
-            $rejection_date, 
-            $catatan_approval, 
-            $no_pengajuan
-        );
+        // Cek ketersediaan kolom rejected_by & rejected_at di tabel asset_request
+        $has_rejected_col = false;
+        $chk_col = mysqli_query($conn, "SHOW COLUMNS FROM asset_request LIKE 'rejected_by'");
+        if ($chk_col && mysqli_num_rows($chk_col) > 0) {
+            $has_rejected_col = true;
+        }
+
+        if ($has_rejected_col) {
+            // Update rejected_by & rejected_at dan juga approved_by & approved_at agar kompatibel dengan detail/print/export
+            $update_query = "UPDATE asset_request 
+                            SET status = ?, 
+                                approved_by = ?, 
+                                approved_at = ?, 
+                                rejected_by = ?, 
+                                rejected_at = ?, 
+                                catatan_approval = ?, 
+                                updated_at = NOW() 
+                            WHERE no_pengajuan = ?";
+            
+            $update_stmt = mysqli_prepare($conn, $update_query);
+            mysqli_stmt_bind_param($update_stmt, "sisisss", 
+                $new_status, 
+                $_SESSION['id_user'], 
+                $rejection_date, 
+                $_SESSION['id_user'], 
+                $rejection_date, 
+                $catatan_approval, 
+                $no_pengajuan
+            );
+        } else {
+            // Fallback aman menggunakan approved_by & approved_at yang selalu ada di tabel
+            $update_query = "UPDATE asset_request 
+                            SET status = ?, 
+                                approved_by = ?, 
+                                approved_at = ?, 
+                                catatan_approval = ?, 
+                                updated_at = NOW() 
+                            WHERE no_pengajuan = ?";
+            
+            $update_stmt = mysqli_prepare($conn, $update_query);
+            mysqli_stmt_bind_param($update_stmt, "sisss", 
+                $new_status, 
+                $_SESSION['id_user'], 
+                $rejection_date, 
+                $catatan_approval, 
+                $no_pengajuan
+            );
+        }
     }
     
     // Execute update

@@ -205,19 +205,19 @@ if (!$data) {
 
 <?php if ($data['status'] != 'Pending'): ?>
 <div class="detail-section">
-    <div class="section-title">Informasi Approval</div>
+    <div class="section-title"><?= ($data['status'] === 'Ditolak') ? 'Informasi Penolakan' : 'Informasi Persetujuan' ?></div>
     <table class="table table-sm detail-table">
         <tr>
-            <td width="25%">Diproses oleh</td>
+            <td width="25%"><?= ($data['status'] === 'Ditolak') ? 'Ditolak oleh' : 'Disetujui oleh' ?></td>
             <td>: <?= htmlspecialchars($data['nama_approver'] ?: '-') ?></td>
         </tr>
         <tr>
-            <td>Tanggal Approval</td>
+            <td><?= ($data['status'] === 'Ditolak') ? 'Tanggal Penolakan' : 'Tanggal Persetujuan' ?></td>
             <td>: <?= $data['approved_at'] ? date('d/m/Y H:i', strtotime($data['approved_at'])) : '-' ?></td>
         </tr>
         <?php if ($data['catatan_approval']): ?>
         <tr>
-            <td>Catatan</td>
+            <td><?= ($data['status'] === 'Ditolak') ? 'Alasan Penolakan' : 'Catatan Approval' ?></td>
             <td>: 
                 <div class="text-content mt-1">
                     <?= nl2br(htmlspecialchars($data['catatan_approval'])) ?>

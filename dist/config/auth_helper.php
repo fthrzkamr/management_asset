@@ -184,6 +184,8 @@ class AuthHelper
     public function canReadAsset()
     {
         return $this->hasPermission('pengajuan_asset', 'read')
+            || $this->hasPermission('pengajuan_asset', 'create')
+            || $this->hasPermission('pengajuan_asset', 'update')
             || $this->hasPermission('approval_asset_it', 'read')
             || $this->hasPermission('approval_asset_ga', 'read')
             || $this->canApproveAsset();

@@ -721,12 +721,12 @@ function getDistributionBadge($status) {
                             <?php if ($canApproveIT && !$canApproveGA): ?>
                                 <div class="alert alert-info">
                                     <i class="fas fa-laptop-code fa-sm"></i> 
-                                    <small>Anda bertindak sebagai <strong>IT</strong> untuk menyetujui pengajuan ini.</small>
+                                    <small>Anda bertindak sebagai <strong>IT</strong> untuk memproses pengajuan ini (setujui / tolak).</small>
                                 </div>
                             <?php elseif ($canApproveGA && !$canApproveIT): ?>
                                 <div class="alert alert-success">
                                     <i class="fas fa-building fa-sm"></i> 
-                                    <small>Anda bertindak sebagai <strong>GA</strong> untuk menyetujui pengajuan ini.</small>
+                                    <small>Anda bertindak sebagai <strong>GA</strong> untuk memproses pengajuan ini (setujui / tolak).</small>
                                 </div>
                             <?php endif; ?>
 
