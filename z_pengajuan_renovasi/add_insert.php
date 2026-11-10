@@ -10,6 +10,13 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
+// Cek permission - harus punya izin create
+if (!$auth->hasPermission('pengajuan_renovasi', 'create')) {
+    $_SESSION['error'] = 'Anda tidak memiliki hak akses untuk membuat pengajuan renovasi!';
+    header("Location: dashboard.php");
+    exit();
+}
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     $_SESSION['error'] = 'Akses tidak valid!';
     header("Location: add.php");
