@@ -295,13 +295,14 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 </button>
                                                             <?php endif; ?>
 
-                                                            <!-- Edit: user dengan hak update bisa edit semua yang pending, user dengan hak create hanya milik sendiri yang pending -->
+                                                            <!-- Edit: Hanya bisa diedit oleh pembuat pengajuan itu sendiri saat status Pending (atau Super Admin) -->
                                                             <?php
                                                             $can_edit = false;
-                                                            if ($row['status'] == 'Pending') {
-                                                                if ($auth->isSuperAdmin() || $auth->hasPermission('pengajuan_renovasi', 'update')) {
+                                                            if ($row['status'] === 'Pending') {
+                                                                $is_creator = ((int)$row['user_id'] === (int)$_SESSION['id_user']);
+                                                                if ($auth->isSuperAdmin()) {
                                                                     $can_edit = true;
-                                                                } elseif ($auth->hasPermission('pengajuan_renovasi', 'create') && $row['user_id'] == $_SESSION['id_user']) {
+                                                                } elseif ($is_creator && ($auth->hasPermission('pengajuan_renovasi', 'update') || $auth->hasPermission('pengajuan_renovasi', 'create'))) {
                                                                     $can_edit = true;
                                                                 }
                                                             }

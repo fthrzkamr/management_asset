@@ -64,31 +64,31 @@ if (!$result || mysqli_num_rows($result) == 0) {
 
 $no_pengajuan = $pengajuan['no_pengajuan'];
 
-// Cek permission berdasarkan jenis akses
+// Cek permission berdasarkan jenis akses - hanya pembuat pengajuan sendiri yang bisa edit saat Pending (atau Super Admin)
 $isSuperAdmin = $auth->isSuperAdmin();
-$canUpdate = $auth->hasPermission('pengajuan_renovasi', 'update') || $isSuperAdmin;
+$canUpdate = $auth->hasPermission('pengajuan_renovasi', 'update');
 $canCreate = $auth->hasPermission('pengajuan_renovasi', 'create');
 
-if (!$canUpdate && !$canCreate) {
+if (!$isSuperAdmin && !$canUpdate && !$canCreate) {
     $_SESSION['error'] = 'Anda tidak memiliki akses untuk mengedit pengajuan!';
     header("Location: dashboard.php");
     exit();
 }
 
-// User yang hanya punya 'create' hanya bisa edit milik sendiri dan status Pending
-if (!$canUpdate && $canCreate) {
-    if ($pengajuan['user_id'] != $_SESSION['id_user'] || $pengajuan['status'] != 'Pending') {
-        $_SESSION['error'] = 'Anda tidak dapat mengedit pengajuan ini!';
-        header("Location: dashboard.php");
-        exit();
-    }
-}
-
-// User dengan 'update' atau superadmin hanya bisa edit yang status Pending
-if ($canUpdate && $pengajuan['status'] != 'Pending') {
+// Pengajuan yang sudah diproses tidak dapat diedit
+if ($pengajuan['status'] !== 'Pending') {
     $_SESSION['error'] = 'Pengajuan yang sudah diproses tidak dapat diedit!';
     header("Location: dashboard.php");
     exit();
+}
+
+// Selain Super Admin, hanya pembuat pengajuan itu sendiri yang bisa edit
+if (!$isSuperAdmin) {
+    if ((int)$pengajuan['user_id'] !== (int)$_SESSION['id_user']) {
+        $_SESSION['error'] = 'Anda tidak dapat mengedit pengajuan milik pengguna lain!';
+        header("Location: dashboard.php");
+        exit();
+    }
 }
 
 // Daftar jabatan

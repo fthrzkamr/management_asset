@@ -624,13 +624,14 @@ function getDistributionBadge($status) {
                                                                 </button>
                                                             <?php endif; ?>
 
-                                                            <!-- Edit: user dengan hak update bisa edit semua yang pending, user dengan hak create hanya milik sendiri yang pending -->
+                                                            <!-- Edit: Hanya bisa diedit oleh pembuat pengajuan itu sendiri saat status Pending (atau Super Admin) -->
                                                             <?php
                                                             $can_edit_asset = false;
-                                                            if ($row['status'] == 'Pending') {
-                                                                if ($auth->isSuperAdmin() || $auth->canUpdateAsset()) {
+                                                            if ($row['status'] === 'Pending') {
+                                                                $is_creator = ((int)$row['user_id'] === (int)$_SESSION['id_user']);
+                                                                if ($auth->isSuperAdmin()) {
                                                                     $can_edit_asset = true;
-                                                                } elseif ($auth->canCreateAsset() && $row['user_id'] == $_SESSION['id_user']) {
+                                                                } elseif ($is_creator && ($auth->canUpdateAsset() || $auth->canCreateAsset())) {
                                                                     $can_edit_asset = true;
                                                                 }
                                                             }
