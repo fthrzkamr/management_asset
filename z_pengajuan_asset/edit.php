@@ -12,14 +12,15 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Get pengajuan ID
-if (!isset($_GET['id'])) {
+// Get pengajuan ID (support parameter no_pengajuan atau id)
+$no_pengajuan = trim($_GET['no_pengajuan'] ?? $_GET['id'] ?? '');
+if (empty($no_pengajuan)) {
     $_SESSION['error'] = 'ID pengajuan tidak ditemukan!';
     header("Location: dashboard.php");
     exit();
 }
 
-$no_pengajuan = mysqli_real_escape_string($conn, $_GET['id']);
+$no_pengajuan = mysqli_real_escape_string($conn, $no_pengajuan);
 
 // Get pengajuan data
 $query = "SELECT 
@@ -35,16 +36,23 @@ WHERE ar.no_pengajuan = '$no_pengajuan'";
 
 $result = mysqli_query($conn, $query);
 
-if (mysqli_num_rows($result) == 0) {
-    $_SESSION['error'] = 'Pengajuan tidak ditemukan!';
-    header("Location: dashboard.php");
-    exit();
+if (!$result || mysqli_num_rows($result) == 0) {
+    // Fallback query langsung jika JOIN bermasalah
+    $fallback = mysqli_query($conn, "SELECT * FROM asset_request WHERE no_pengajuan = '$no_pengajuan'");
+    if ($fallback && mysqli_num_rows($fallback) > 0) {
+        $pengajuan = mysqli_fetch_assoc($fallback);
+    } else {
+        $_SESSION['error'] = 'Data pengajuan tidak ditemukan!';
+        header("Location: dashboard.php");
+        exit();
+    }
+} else {
+    $pengajuan = mysqli_fetch_assoc($result);
 }
 
-$pengajuan = mysqli_fetch_assoc($result);
-
 // Cek permission - harus punya izin update atau create (edit pengajuan sendiri)
-$canUpdate = $auth->hasPermission('pengajuan_asset', 'update');
+$isSuperAdmin = $auth->isSuperAdmin();
+$canUpdate = $auth->hasPermission('pengajuan_asset', 'update') || $isSuperAdmin;
 $canCreate = $auth->hasPermission('pengajuan_asset', 'create');
 
 if (!$canUpdate && !$canCreate) {
@@ -54,7 +62,7 @@ if (!$canUpdate && !$canCreate) {
 }
 
 // Yang hanya punya 'create' (pengaju biasa) hanya bisa edit milik sendiri dan status Pending
-if ($canCreate && !$canUpdate) {
+if (!$canUpdate && $canCreate) {
     if ($pengajuan['user_id'] != $_SESSION['id_user'] || $pengajuan['status'] != 'Pending') {
         $_SESSION['error'] = 'Anda tidak dapat mengedit pengajuan ini!';
         header("Location: dashboard.php");
@@ -62,7 +70,7 @@ if ($canCreate && !$canUpdate) {
     }
 }
 
-// Yang punya 'update' (HR/Admin) tapi status bukan Pending
+// Yang punya 'update' tapi status bukan Pending
 if ($canUpdate && $pengajuan['status'] != 'Pending') {
     $_SESSION['error'] = 'Pengajuan yang sudah diproses tidak dapat diedit!';
     header("Location: dashboard.php");

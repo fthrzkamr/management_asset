@@ -19,27 +19,65 @@ if (empty($no_pengajuan)) {
     exit();
 }
 
-// Ambil data pengajuan renovasi berdasarkan no_pengajuan (string, bukan integer)
-$query = "SELECT rr.*,
-                 ua.nama_user as nama_approver,
-                 ur.nama_user as nama_rejector
-          FROM renovation_request rr
-          LEFT JOIN user_dfm ua ON rr.approved_by = ua.id_user
-          LEFT JOIN user_dfm ur ON rr.rejected_by = ur.id_user
-          WHERE rr.no_pengajuan = ?";
-$stmt = mysqli_prepare($conn, $query);
-mysqli_stmt_bind_param($stmt, "s", $no_pengajuan);
-mysqli_stmt_execute($stmt);
-$result = mysqli_stmt_get_result($stmt);
+// Cek dan tambahkan kolom rejected_by jika belum ada di database server
+$chk_col = mysqli_query($conn, "SHOW COLUMNS FROM renovation_request LIKE 'rejected_by'");
+$has_rejected_by = ($chk_col && mysqli_num_rows($chk_col) > 0);
+if (!$has_rejected_by) {
+    @mysqli_query($conn, "ALTER TABLE renovation_request ADD COLUMN rejected_by INT(11) NULL AFTER approved_at, ADD COLUMN rejected_at DATETIME NULL AFTER rejected_by");
+    $chk_col2 = mysqli_query($conn, "SHOW COLUMNS FROM renovation_request LIKE 'rejected_by'");
+    $has_rejected_by = ($chk_col2 && mysqli_num_rows($chk_col2) > 0);
+}
 
-if (mysqli_num_rows($result) == 0) {
+// Query dinamis yang aman dari error kolom tidak ditemukan
+if ($has_rejected_by) {
+    $query = "SELECT rr.*,
+                     ua.nama_user as nama_approver,
+                     ur.nama_user as nama_rejector
+              FROM renovation_request rr
+              LEFT JOIN user_dfm ua ON rr.approved_by = ua.id_user
+              LEFT JOIN user_dfm ur ON rr.rejected_by = ur.id_user
+              WHERE rr.no_pengajuan = ?";
+} else {
+    $query = "SELECT rr.*,
+                     ua.nama_user as nama_approver,
+                     NULL as nama_rejector
+              FROM renovation_request rr
+              LEFT JOIN user_dfm ua ON rr.approved_by = ua.id_user
+              WHERE rr.no_pengajuan = ?";
+}
+
+$stmt = mysqli_prepare($conn, $query);
+if (!$stmt) {
+    // Fallback query paling sederhana jika prepare gagal
+    $safe_query = "SELECT *, NULL as nama_approver, NULL as nama_rejector FROM renovation_request WHERE no_pengajuan = ?";
+    $stmt = mysqli_prepare($conn, $safe_query);
+}
+
+$data = null;
+if ($stmt) {
+    mysqli_stmt_bind_param($stmt, "s", $no_pengajuan);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+    if ($result && mysqli_num_rows($result) > 0) {
+        $data = mysqli_fetch_assoc($result);
+    }
+    mysqli_stmt_close($stmt);
+}
+
+// Jika data tetap tidak ada lewat prepare, coba direct query
+if (!$data) {
+    $esc = mysqli_real_escape_string($conn, $no_pengajuan);
+    $direct = mysqli_query($conn, "SELECT * FROM renovation_request WHERE no_pengajuan = '$esc'");
+    if ($direct && mysqli_num_rows($direct) > 0) {
+        $data = mysqli_fetch_assoc($direct);
+    }
+}
+
+if (!$data) {
     $_SESSION['error'] = 'Data pengajuan tidak ditemukan!';
     header("Location: dashboard.php");
     exit();
 }
-
-$data = mysqli_fetch_assoc($result);
-mysqli_stmt_close($stmt);
 
 // DEBUG: Cek data foto
 echo "<!-- DEBUG: foto_area = " . htmlspecialchars($data['foto_area'] ?? 'NULL') . " -->";

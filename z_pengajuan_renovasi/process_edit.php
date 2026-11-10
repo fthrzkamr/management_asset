@@ -65,7 +65,8 @@ if (mysqli_num_rows($check_result) == 0) {
 $existing_data = mysqli_fetch_assoc($check_result);
 
 // Cek permission berdasarkan jenis akses
-$canUpdate = $auth->hasPermission('pengajuan_renovasi', 'update');
+$isSuperAdmin = $auth->isSuperAdmin();
+$canUpdate = $auth->hasPermission('pengajuan_renovasi', 'update') || $isSuperAdmin;
 $canCreate = $auth->hasPermission('pengajuan_renovasi', 'create');
 
 if (!$canUpdate && !$canCreate) {
@@ -74,7 +75,7 @@ if (!$canUpdate && !$canCreate) {
     exit();
 }
 
-if ($canCreate && !$canUpdate) {
+if (!$canUpdate && $canCreate) {
     if ($existing_data['user_id'] != $_SESSION['id_user'] || $existing_data['status'] != 'Pending') {
         $_SESSION['error'] = 'Anda tidak dapat mengedit pengajuan ini!';
         header("Location: dashboard.php");

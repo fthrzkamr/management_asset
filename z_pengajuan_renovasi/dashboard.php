@@ -16,9 +16,10 @@ if (!$auth->isLoggedIn()) {
 $auth->requirePermission('pengajuan_renovasi', 'read');
 
 // Buat kondisi WHERE berdasarkan permission
-// User dengan 'approve' bisa lihat semua, yang lain hanya milik sendiri
+// User dengan 'approve', 'update', atau superadmin bisa lihat semua, yang lain hanya milik sendiri
 $canApprove = $auth->hasPermission('pengajuan_renovasi', 'approve');
-$whereClause = $canApprove ? "" : "WHERE rr.user_id = " . (int)$_SESSION['id_user'];
+$canViewAll = $canApprove || $auth->hasPermission('pengajuan_renovasi', 'update') || $auth->isSuperAdmin();
+$whereClause = $canViewAll ? "" : "WHERE rr.user_id = " . (int)$_SESSION['id_user'];
 
 // Query untuk mengambil data renovasi dengan ordering berdasarkan status dan tanggal
 $query = "SELECT 
@@ -275,9 +276,19 @@ unset($_SESSION['success'], $_SESSION['error']);
                                                                 </button>
                                                             <?php endif; ?>
 
-                                                            <!-- Edit untuk user yang mengajukan sendiri jika pending dan punya hak create/update -->
-                                                            <?php if (($auth->hasPermission('pengajuan_renovasi', 'update') || ($auth->hasPermission('pengajuan_renovasi', 'create') && $row['status'] == 'Pending')) && $row['user_id'] == $_SESSION['id_user']): ?>
-                                                                <a href="edit.php?id=<?= $row['no_pengajuan'] ?>"
+                                                            <!-- Edit: user dengan hak update bisa edit semua yang pending, user dengan hak create hanya milik sendiri yang pending -->
+                                                            <?php
+                                                            $can_edit = false;
+                                                            if ($row['status'] == 'Pending') {
+                                                                if ($auth->isSuperAdmin() || $auth->hasPermission('pengajuan_renovasi', 'update')) {
+                                                                    $can_edit = true;
+                                                                } elseif ($auth->hasPermission('pengajuan_renovasi', 'create') && $row['user_id'] == $_SESSION['id_user']) {
+                                                                    $can_edit = true;
+                                                                }
+                                                            }
+                                                            ?>
+                                                            <?php if ($can_edit): ?>
+                                                                <a href="edit.php?id=<?= urlencode($row['no_pengajuan']) ?>&no_pengajuan=<?= urlencode($row['no_pengajuan']) ?>"
                                                                     class="btn btn-outline-warning btn-action" title="Edit">
                                                                     <i class="fas fa-edit fa-xs"></i>
                                                                 </a>

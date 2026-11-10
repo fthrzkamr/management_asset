@@ -624,9 +624,19 @@ function getDistributionBadge($status) {
                                                                 </button>
                                                             <?php endif; ?>
 
-                                                            <!-- Edit untuk user yang mengajukan sendiri jika pending dan punya hak create/update -->
-                                                            <?php if (($auth->canUpdateAsset() || ($auth->canCreateAsset() && $row['status'] == 'Pending')) && $row['user_id'] == $_SESSION['id_user']): ?>
-                                                                <a href="edit.php?id=<?= $row['no_pengajuan'] ?>"
+                                                            <!-- Edit: user dengan hak update bisa edit semua yang pending, user dengan hak create hanya milik sendiri yang pending -->
+                                                            <?php
+                                                            $can_edit_asset = false;
+                                                            if ($row['status'] == 'Pending') {
+                                                                if ($auth->isSuperAdmin() || $auth->canUpdateAsset()) {
+                                                                    $can_edit_asset = true;
+                                                                } elseif ($auth->canCreateAsset() && $row['user_id'] == $_SESSION['id_user']) {
+                                                                    $can_edit_asset = true;
+                                                                }
+                                                            }
+                                                            ?>
+                                                            <?php if ($can_edit_asset): ?>
+                                                                <a href="edit.php?id=<?= urlencode($row['no_pengajuan']) ?>&no_pengajuan=<?= urlencode($row['no_pengajuan']) ?>"
                                                                     class="btn btn-outline-warning btn-action" title="Edit">
                                                                     <i class="fas fa-edit fa-xs"></i>
                                                                 </a>
