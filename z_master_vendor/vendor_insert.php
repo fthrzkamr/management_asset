@@ -57,7 +57,8 @@ if (empty($kode_vendor)) {
         'Perawatan Gedung'  => 'PG',
         'Ekspedisi'         => 'EKS',
         'Percetakan'        => 'PRC',
-        'Internet'          => 'INT'
+        'Internet'          => 'INT',
+        'Perlengkapan'      => 'PLG'
     ];
     $cleanKat = trim($kategori_vendor);
     $prefix = $prefixMap[$cleanKat] ?? '';

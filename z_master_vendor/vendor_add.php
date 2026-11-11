@@ -166,8 +166,8 @@ sort($kategoriOptions);
                                         </div>
                                         <div class="col-12 col-md-4">
                                             <div class="form-group">
-                                                <label>Email Vendor <span class="text-danger">*</span></label>
-                                                <input type="email" name="email" class="form-control" placeholder="Contoh: info@vendor.com" required />
+                                                <label>Email Vendor <small class="text-muted">(Opsional)</small></label>
+                                                <input type="email" name="email" class="form-control" placeholder="Contoh: info@vendor.com" />
                                             </div>
                                         </div>
                                         <div class="col-12">
@@ -311,7 +311,8 @@ sort($kategoriOptions);
                 'Perawatan Gedung': 'PG',
                 'Ekspedisi': 'EKS',
                 'Percetakan': 'PRC',
-                'Internet': 'INT'
+                'Internet': 'INT',
+                'Perlengkapan': 'PLG'
             };
 
             $('#kategori_vendor').on('change', function() {

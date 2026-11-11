@@ -55,7 +55,6 @@ $requiredFields = [
     'Status Vendor'              => $status_vendor,
     'Nama PIC Tim GA'            => $pic_ga,
     'Contact Vendor / WhatsApp'  => $kontak_vendor,
-    'Email Vendor'               => $email,
     'Alamat Lengkap'             => $alamat,
     'NPWP'                       => $npwp,
     'Status PKP'                 => $status_pkp,
