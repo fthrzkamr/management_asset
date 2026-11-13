@@ -44,7 +44,7 @@ $q_budgets = mysqli_query($conn, "
     LEFT JOIN (
         SELECT 
             id_budget,
-            SUM(CASE WHEN status = 'Disetujui' THEN nominal_realisasi ELSE 0 END) AS total_approved,
+            SUM(CASE WHEN status = 'Disetujui' AND jenis_transaksi = 'BKM' THEN -nominal_realisasi WHEN status = 'Disetujui' THEN nominal_realisasi ELSE 0 END) AS total_approved,
             SUM(CASE WHEN status = 'Menunggu Approval' THEN nominal_realisasi ELSE 0 END) AS total_pending,
             COUNT(CASE WHEN status = 'Menunggu Approval' THEN 1 END) AS count_pending,
             COUNT(CASE WHEN status = 'Disetujui' THEN 1 END) AS count_approved,
@@ -385,31 +385,49 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
                                         <table class="sub-table">
                                             <thead>
                                                 <tr>
-                                                    <th width="14%">No. Realisasi</th>
-                                                    <th width="11%">Tanggal</th>
-                                                    <th width="15%" class="text-right">Nominal Realisasi</th>
-                                                    <th width="12%" class="text-right">Uang Kembali</th>
-                                                    <th width="22%">Catatan Pengaju</th>
-                                                    <th width="10%">Bukti</th>
-                                                    <th width="16%">Status / Keputusan</th>
+                                                    <th width="8%">Jenis</th>
+                                                    <th width="14%">No. Transaksi</th>
+                                                    <th width="10%">Tanggal</th>
+                                                    <th width="14%" class="text-right">Nominal</th>
+                                                    <th width="18%">Penerima / Vendor</th>
+                                                    <th width="18%">Keperluan & Catatan</th>
+                                                    <th width="8%">Bukti</th>
+                                                    <th width="10%">Status / Aksi</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 <?php foreach ($it_reals as $rl): 
                                                     $rd_id = (int)$rl['id_real_detail'];
                                                     $st    = $rl['status'];
+                                                    $jenis = $rl['jenis_transaksi'] ?? 'BKK';
                                                 ?>
                                                 <tr>
+                                                    <td>
+                                                        <?php if ($jenis === 'BKM'): ?>
+                                                            <span class="badge badge-success px-2 py-1" style="font-size:11px; font-weight:700;">
+                                                                <i class="fas fa-arrow-down mr-1"></i> BKM
+                                                            </span>
+                                                        <?php else: ?>
+                                                            <span class="badge badge-primary px-2 py-1" style="font-size:11px; font-weight:700; background:#1e3a8a;">
+                                                                <i class="fas fa-arrow-up mr-1"></i> BKK
+                                                            </span>
+                                                        <?php endif; ?>
+                                                    </td>
                                                     <td><strong class="text-dark"><?= htmlspecialchars($rl['no_realisasi'] ?: '-') ?></strong></td>
                                                     <td><?= $rl['tanggal_realisasi'] ? date('d/m/Y', strtotime($rl['tanggal_realisasi'])) : '-' ?></td>
-                                                    <td class="text-right font-weight-bold text-success">
-                                                        Rp <?= number_format($rl['nominal_realisasi'], 0, ',', '.') ?>
-                                                    </td>
-                                                    <td class="text-right text-muted">
-                                                        <?= $rl['uang_kembali'] > 0 ? 'Rp ' . number_format($rl['uang_kembali'], 0, ',', '.') : '—' ?>
+                                                    <td class="text-right font-weight-bold <?= $jenis === 'BKM' ? 'text-info' : 'text-success' ?>">
+                                                        <?= $jenis === 'BKM' ? '+' : '' ?>Rp <?= number_format($rl['nominal_realisasi'], 0, ',', '.') ?>
                                                     </td>
                                                     <td>
-                                                        <?= htmlspecialchars($rl['catatan'] ?: '—') ?>
+                                                        <div style="font-weight:600; color:#1e293b;"><?= htmlspecialchars($rl['dibayar_kepada'] ?: '—') ?></div>
+                                                    </td>
+                                                    <td>
+                                                        <?php if (!empty($rl['keperluan'])): ?>
+                                                            <div style="color:#334155; font-size:12px; font-weight:500;"><?= htmlspecialchars($rl['keperluan']) ?></div>
+                                                        <?php endif; ?>
+                                                        <?php if (!empty($rl['catatan']) && $rl['catatan'] !== $rl['keperluan']): ?>
+                                                            <small class="text-muted d-block"><?= htmlspecialchars($rl['catatan']) ?></small>
+                                                        <?php endif; ?>
                                                         <?php if ($rl['catatan_approval']): ?>
                                                         <div class="text-danger small mt-1 font-italic">
                                                             <i class="fas fa-comment mr-1"></i> <?= htmlspecialchars($rl['catatan_approval']) ?>
@@ -441,18 +459,18 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
                                                         <?php if ($st === 'Menunggu Approval'): ?>
                                                             <div class="d-flex align-items-center" style="gap:5px;">
                                                                 <!-- Form Setujui -->
-                                                                <form action="action.php" method="POST" style="display:inline;" onsubmit="return confirm('Setujui realisasi ini?');">
+                                                                <form action="action.php" method="POST" style="display:inline;" onsubmit="return confirm('Setujui transaksi <?= $jenis ?> ini?');">
                                                                     <input type="hidden" name="id_real_detail" value="<?= $rd_id ?>">
                                                                     <input type="hidden" name="action" value="Disetujui">
                                                                     <input type="hidden" name="redirect_to" value="dashboard.php">
-                                                                    <button type="submit" class="btn-act-ok" title="Setujui Item Ini">
-                                                                        <i class="fas fa-check"></i> Setujui
+                                                                    <button type="submit" class="btn-act-ok" title="Setujui Transaksi Ini">
+                                                                        <i class="fas fa-check"></i>
                                                                     </button>
                                                                 </form>
                                                                 <!-- Tombol Tolak (Modal prompt) -->
-                                                                <button type="button" class="btn-act-ng" title="Tolak Item Ini"
+                                                                <button type="button" class="btn-act-ng" title="Tolak Transaksi Ini"
                                                                         onclick="promptReject(<?= $rd_id ?>, '<?= htmlspecialchars($rl['no_realisasi'] ?: '') ?>')">
-                                                                    <i class="fas fa-times"></i> Tolak
+                                                                    <i class="fas fa-times"></i>
                                                                 </button>
                                                             </div>
                                                         <?php elseif ($st === 'Disetujui'): ?>

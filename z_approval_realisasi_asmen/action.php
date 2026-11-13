@@ -77,16 +77,33 @@ try {
 
         // Jika disetujui, update budget terpakai & sisa
         if ($action === 'Disetujui' && $nominal > 0) {
-            mysqli_query($conn, "UPDATE ppx_monthly_budget 
-                SET total_used = total_used + $nominal,
-                    total_remaining = GREATEST(0, total_remaining - $nominal)
-                WHERE id_budget = $b_id");
+            $is_bkm = (($rd['jenis_transaksi'] ?? 'BKK') === 'BKM');
+            if ($is_bkm) {
+                // Kas Masuk / Pengembalian: kurangi used, tambah sisa
+                mysqli_query($conn, "UPDATE ppx_monthly_budget 
+                    SET total_used = GREATEST(0, total_used - $nominal),
+                        total_remaining = total_remaining + $nominal
+                    WHERE id_budget = $b_id");
 
-            if ($id_cat > 0) {
-                mysqli_query($conn, "UPDATE ppx_monthly_budget_item 
-                    SET used_amount = used_amount + $nominal,
-                        remaining = GREATEST(0, remaining - $nominal)
-                    WHERE id_budget = $b_id AND id_category = $id_cat");
+                if ($id_cat > 0) {
+                    mysqli_query($conn, "UPDATE ppx_monthly_budget_item 
+                        SET used_amount = GREATEST(0, used_amount - $nominal),
+                            remaining = remaining + $nominal
+                        WHERE id_budget = $b_id AND id_category = $id_cat");
+                }
+            } else {
+                // Kas Keluar (BKK): tambah used, kurangi sisa
+                mysqli_query($conn, "UPDATE ppx_monthly_budget 
+                    SET total_used = total_used + $nominal,
+                        total_remaining = GREATEST(0, total_remaining - $nominal)
+                    WHERE id_budget = $b_id");
+
+                if ($id_cat > 0) {
+                    mysqli_query($conn, "UPDATE ppx_monthly_budget_item 
+                        SET used_amount = used_amount + $nominal,
+                            remaining = GREATEST(0, remaining - $nominal)
+                        WHERE id_budget = $b_id AND id_category = $id_cat");
+                }
             }
         }
 
@@ -118,17 +135,32 @@ try {
                         updated_at       = NOW()
                        WHERE id_real_detail = $rd_id");
 
+            $is_bkm = (($rd['jenis_transaksi'] ?? 'BKK') === 'BKM');
             if ($nominal > 0) {
-                mysqli_query($conn, "UPDATE ppx_monthly_budget 
-                    SET total_used = total_used + $nominal,
-                        total_remaining = GREATEST(0, total_remaining - $nominal)
-                    WHERE id_budget = $id_budget");
+                if ($is_bkm) {
+                    mysqli_query($conn, "UPDATE ppx_monthly_budget 
+                        SET total_used = GREATEST(0, total_used - $nominal),
+                            total_remaining = total_remaining + $nominal
+                        WHERE id_budget = $id_budget");
 
-                if ($id_cat > 0) {
-                    mysqli_query($conn, "UPDATE ppx_monthly_budget_item 
-                        SET used_amount = used_amount + $nominal,
-                            remaining = GREATEST(0, remaining - $nominal)
-                        WHERE id_budget = $id_budget AND id_category = $id_cat");
+                    if ($id_cat > 0) {
+                        mysqli_query($conn, "UPDATE ppx_monthly_budget_item 
+                            SET used_amount = GREATEST(0, used_amount - $nominal),
+                                remaining = remaining + $nominal
+                            WHERE id_budget = $id_budget AND id_category = $id_cat");
+                    }
+                } else {
+                    mysqli_query($conn, "UPDATE ppx_monthly_budget 
+                        SET total_used = total_used + $nominal,
+                            total_remaining = GREATEST(0, total_remaining - $nominal)
+                        WHERE id_budget = $id_budget");
+
+                    if ($id_cat > 0) {
+                        mysqli_query($conn, "UPDATE ppx_monthly_budget_item 
+                            SET used_amount = used_amount + $nominal,
+                                remaining = GREATEST(0, remaining - $nominal)
+                            WHERE id_budget = $id_budget AND id_category = $id_cat");
+                    }
                 }
             }
             $cnt++;
@@ -167,16 +199,31 @@ try {
                            WHERE id_real_detail = $rd_id");
 
                 if ($action === 'Disetujui' && $nominal > 0) {
-                    mysqli_query($conn, "UPDATE ppx_monthly_budget 
-                        SET total_used = total_used + $nominal,
-                            total_remaining = GREATEST(0, total_remaining - $nominal)
-                        WHERE id_budget = $b_id");
+                    $is_bkm = (($rd['jenis_transaksi'] ?? 'BKK') === 'BKM');
+                    if ($is_bkm) {
+                        mysqli_query($conn, "UPDATE ppx_monthly_budget 
+                            SET total_used = GREATEST(0, total_used - $nominal),
+                                total_remaining = total_remaining + $nominal
+                            WHERE id_budget = $b_id");
 
-                    if ($id_cat > 0) {
-                        mysqli_query($conn, "UPDATE ppx_monthly_budget_item 
-                            SET used_amount = used_amount + $nominal,
-                                remaining = GREATEST(0, remaining - $nominal)
-                            WHERE id_budget = $b_id AND id_category = $id_cat");
+                        if ($id_cat > 0) {
+                            mysqli_query($conn, "UPDATE ppx_monthly_budget_item 
+                                SET used_amount = GREATEST(0, used_amount - $nominal),
+                                    remaining = remaining + $nominal
+                                WHERE id_budget = $b_id AND id_category = $id_cat");
+                        }
+                    } else {
+                        mysqli_query($conn, "UPDATE ppx_monthly_budget 
+                            SET total_used = total_used + $nominal,
+                                total_remaining = GREATEST(0, total_remaining - $nominal)
+                            WHERE id_budget = $b_id");
+
+                        if ($id_cat > 0) {
+                            mysqli_query($conn, "UPDATE ppx_monthly_budget_item 
+                                SET used_amount = used_amount + $nominal,
+                                    remaining = GREATEST(0, remaining - $nominal)
+                                WHERE id_budget = $b_id AND id_category = $id_cat");
+                        }
                     }
                 }
             }
@@ -201,12 +248,16 @@ try {
 // Helper sync header ppx_realisasi_monthly
 function syncMonthlyHeader($conn, $id_budget) {
     $q_sum = mysqli_query($conn, "SELECT 
-        SUM(CASE WHEN status = 'Disetujui' THEN nominal_realisasi ELSE 0 END) as total_approved,
+        SUM(CASE 
+            WHEN status = 'Disetujui' AND jenis_transaksi = 'BKM' THEN -nominal_realisasi 
+            WHEN status = 'Disetujui' THEN nominal_realisasi 
+            ELSE 0 
+        END) as total_approved,
         COUNT(CASE WHEN status = 'Menunggu Approval' THEN 1 END) as pending_cnt,
         COUNT(CASE WHEN status = 'Ditolak' THEN 1 END) as rejected_cnt
     FROM ppx_realisasi_detail2 WHERE id_budget = $id_budget");
     $data = mysqli_fetch_assoc($q_sum);
-    $tot_app = (float)($data['total_approved'] ?? 0);
+    $tot_app = max(0, (float)($data['total_approved'] ?? 0));
     $pend_cnt = (int)($data['pending_cnt'] ?? 0);
     $rej_cnt = (int)($data['rejected_cnt'] ?? 0);
 

@@ -64,16 +64,21 @@ foreach ($items as $it) {
 
 // ── Ambil SEMUA riwayat realisasi untuk anggaran ini ────────────────────
 $real_by_detail = []; // [id_detail_budget => [ list of realizations ]]
+$all_real_list  = [];
+
 $all_real_q = mysqli_query($conn, "
-    SELECT rd.*, u.nama_user as approver_name
+    SELECT rd.*, u.nama_user as approver_name, mbd.rincian as nama_item, bc.category_name
     FROM ppx_realisasi_detail2 rd
     LEFT JOIN user_dfm u ON rd.approved_by = u.id_user
+    LEFT JOIN ppx_monthly_budget_item_detail mbd ON rd.id_detail_budget = mbd.id
+    LEFT JOIN ppx_budget_category bc ON mbd.id_category = bc.id_category
     WHERE rd.id_budget = $id_budget
     ORDER BY rd.tanggal_realisasi DESC, rd.id_real_detail DESC
 ");
 if ($all_real_q) {
     while ($rl = mysqli_fetch_assoc($all_real_q)) {
         $real_by_detail[$rl['id_detail_budget']][] = $rl;
+        $all_real_list[] = $rl;
     }
 }
 
@@ -81,6 +86,7 @@ if ($all_real_q) {
 $total_alokasi_budget  = (float)$budget['total_allocation'];
 $total_approved_budget = 0;
 $total_pending_budget  = 0;
+$total_kembali_budget  = 0;
 $items_realized_count  = 0;
 
 foreach ($items as $it) {
@@ -88,8 +94,12 @@ foreach ($items as $it) {
     $item_app = 0;
     foreach ($item_reals as $r) {
         if ($r['status'] === 'Disetujui') {
-            $total_approved_budget += (float)$r['nominal_realisasi'];
-            $item_app += (float)$r['nominal_realisasi'];
+            if ($r['jenis_transaksi'] === 'BKM') {
+                $total_kembali_budget += (float)$r['uang_kembali'];
+            } else {
+                $total_approved_budget += (float)$r['nominal_realisasi'];
+                $item_app += (float)$r['nominal_realisasi'];
+            }
         } elseif ($r['status'] === 'Menunggu Approval') {
             $total_pending_budget += (float)$r['nominal_realisasi'];
         }
@@ -107,7 +117,7 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Realisasi Per Detail – <?= htmlspecialchars($budget['budget_name']) ?></title>
+    <title>Realisasi Kas (BKK/BKM) – <?= htmlspecialchars($budget['budget_name']) ?></title>
     <link rel="icon" href="../assets/img/dua.png" type="image/png">
     <?php
     $layout_dir = realpath(__DIR__ . '/../layouts');
@@ -121,9 +131,6 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
         
         .summary-card   { border-radius: 10px; border: none; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
         .info-box       { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px 20px; margin-bottom: 22px; }
-        .info-grid      { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 20px; font-size: 13px; }
-        .lbl            { color: #64748b; font-size: 12px; margin-bottom: 2px; }
-        .val            { font-weight: 600; color: #1e293b; font-size: 13.5px; }
 
         .item-card      { border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 16px; background: #fff; transition: box-shadow .2s; }
         .item-card:hover{ box-shadow: 0 3px 10px rgba(0,0,0,.04); }
@@ -142,10 +149,29 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
         .real-table td  { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
         .real-table tr:last-child td { border-bottom: none; }
 
-        .form-real-box  { display: none; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-top: 12px; }
         .bukti-link     { display: inline-flex; align-items: center; gap: 4px; background: #e0f2fe; border-radius: 5px; padding: 2px 8px; font-size: 11px; color: #0369a1; text-decoration: none; margin: 2px; }
         .bukti-link:hover { background: #bae6fd; text-decoration: none; }
-        .prev-item      { background: #e0f2fe; border-radius: 5px; padding: 3px 8px; font-size: 11px; color: #0369a1; display: inline-block; margin: 2px; }
+        .prev-item      { background: #e0f2fe; border-radius: 5px; padding: 4px 10px; font-size: 11.5px; color: #0369a1; display: inline-block; margin: 3px; }
+
+        /* ── Modal BKK/BKM Styling (Persis sesuai gambar) ── */
+        .modal-kas-title { font-weight: 700; font-size: 18px; color: #0f172a; }
+        .modal-kas-sub   { font-size: 12px; color: #64748b; font-weight: 600; }
+        
+        .kas-tab-group   { display: flex; gap: 12px; margin-bottom: 18px; }
+        .kas-tab-btn     { flex: 1; padding: 12px 16px; border-radius: 8px; font-weight: 700; font-size: 13.5px;
+                           border: 2px solid #cbd5e1; background: #fff; color: #334155; text-align: center; cursor: pointer; transition: all .2s; }
+        .kas-tab-btn.active-bkk { background: #1e3a8a; border-color: #1e3a8a; color: #fff; box-shadow: 0 2px 6px rgba(30,58,138,0.25); }
+        .kas-tab-btn.active-bkm { background: #047857; border-color: #047857; color: #fff; box-shadow: 0 2px 6px rgba(4,120,87,0.25); }
+
+        .drop-zone {
+            border: 2px dashed #94a3b8; border-radius: 8px; padding: 22px 16px; text-align: center;
+            background: #f8fafc; cursor: pointer; transition: background .2s, border-color .2s;
+        }
+        .drop-zone:hover { background: #f1f5f9; border-color: #3b82f6; }
+        
+        .rincian-table th { background: #1e3a8a; color: #fff; padding: 9px 12px; font-size: 12px; font-weight: 600; border: none; }
+        .rincian-table td { padding: 8px 10px; vertical-align: middle; background: #fff; }
+        .rincian-table.table-bkm th { background: #047857; }
     </style>
 </head>
 <body style="background: #f4f6f9;">
@@ -159,7 +185,7 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                 <div class="row align-items-center">
                     <div class="col">
                         <h3 class="page-title mb-1">
-                            <i class="fa-solid fa-receipt text-primary mr-1"></i> Realisasi Detail Anggaran
+                            <i class="fa-solid fa-receipt text-primary mr-1"></i> Transaksi Kas & Realisasi Anggaran
                         </h3>
                         <ul class="breadcrumb mb-0">
                             <li class="breadcrumb-item"><a href="../index.php">Dashboard</a></li>
@@ -167,8 +193,11 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                             <li class="breadcrumb-item active"><?= htmlspecialchars($budget['budget_name']) ?></li>
                         </ul>
                     </div>
-                    <div class="col-auto">
-                        <a href="dashboard.php" class="btn btn-outline-secondary btn-sm">
+                    <div class="col-auto d-flex" style="gap:8px;">
+                        <button type="button" class="btn btn-primary font-weight-bold" onclick="openKasModal('BKK', 0)">
+                            <i class="fas fa-plus-circle mr-1"></i> Input Transaksi Kas (BKK / BKM)
+                        </button>
+                        <a href="dashboard.php" class="btn btn-outline-secondary">
                             <i class="fas fa-arrow-left"></i> Kembali
                         </a>
                     </div>
@@ -215,33 +244,26 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                     </div>
                     <div class="col-6 col-md-3 mb-2">
                         <div class="summary-card bg-success text-white">
-                            <div class="small" style="opacity:0.85;">Realisasi Disetujui</div>
+                            <div class="small" style="opacity:0.85;">Realisasi Pengeluaran (BKK)</div>
                             <h5 class="font-weight-bold mb-0 mt-1">Rp <?= number_format($total_approved_budget, 0, ',', '.') ?></h5>
                             <small class="d-block mt-1" style="font-size:11px; opacity:0.8;"><?= $budget_progress_pct ?>% Terpakai (<?= $items_realized_count ?> item)</small>
                         </div>
                     </div>
                     <div class="col-6 col-md-3 mb-2">
                         <div class="summary-card bg-warning text-dark">
-                            <div class="small text-muted font-weight-bold">Menunggu Approval</div>
+                            <div class="small text-muted font-weight-bold">Menunggu Approval Asmen</div>
                             <h5 class="font-weight-bold mb-0 mt-1">Rp <?= number_format($total_pending_budget, 0, ',', '.') ?></h5>
-                            <small class="d-block mt-1 text-muted" style="font-size:11px;">Dalam proses verifikasi Asmen</small>
+                            <small class="d-block mt-1 text-muted" style="font-size:11px;">Dalam proses verifikasi nota</small>
                         </div>
                     </div>
                     <div class="col-6 col-md-3 mb-2">
                         <div class="summary-card bg-info text-white">
-                            <div class="small" style="opacity:0.85;">Sisa Alokasi</div>
+                            <div class="small" style="opacity:0.85;">Sisa Alokasi Anggaran</div>
                             <h5 class="font-weight-bold mb-0 mt-1">Rp <?= number_format($total_sisa_budget, 0, ',', '.') ?></h5>
                             <small class="d-block mt-1" style="font-size:11px; opacity:0.8;">Tersedia untuk direalisasikan</small>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Petunjuk Pengaju -->
-            <div class="alert alert-light border mb-4" style="font-size:12.5px; background:#fff;">
-                <i class="fas fa-info-circle text-primary mr-1"></i>
-                <strong>Petunjuk Realisasi Per Detail Item:</strong>
-                Anda dapat merealisasikan rincian item pengajuan secara mandiri dan berkali-kali. Klik tombol <strong>"+ Input Realisasi"</strong> pada masing-masing item untuk memasukkan nota/struk pengeluaran aktual tanpa perlu menunggu item lain selesai.
             </div>
 
             <!-- Rincian Item Anggaran -->
@@ -273,8 +295,11 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                         $it_approved = 0;
                         $it_pending  = 0;
                         foreach ($item_reals as $r) {
-                            if ($r['status'] === 'Disetujui')        $it_approved += (float)$r['nominal_realisasi'];
-                            elseif ($r['status'] === 'Menunggu Approval') $it_pending += (float)$r['nominal_realisasi'];
+                            if ($r['status'] === 'Disetujui' && $r['jenis_transaksi'] === 'BKK') {
+                                $it_approved += (float)$r['nominal_realisasi'];
+                            } elseif ($r['status'] === 'Menunggu Approval' && $r['jenis_transaksi'] === 'BKK') {
+                                $it_pending += (float)$r['nominal_realisasi'];
+                            }
                         }
                         $it_sisa = max(0, $it_alokasi - $it_approved);
                         
@@ -313,73 +338,18 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                                 </div>
                                 <div class="mt-2">
                                     <button type="button" class="btn btn-sm btn-outline-primary"
-                                            onclick="openFormRealisasi(<?= $it_id ?>, 0)">
-                                        <i class="fas fa-plus mr-1"></i> Input Realisasi
+                                            onclick="openKasModal('BKK', <?= $it_id ?>)">
+                                        <i class="fas fa-plus mr-1"></i> Input Transaksi
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Form Box (Untuk Create & Edit) -->
-                        <div class="form-real-box" id="formBox_<?= $it_id ?>">
-                            <h6 class="font-weight-bold mb-3 text-primary" id="formTitle_<?= $it_id ?>">
-                                <i class="fas fa-pen-to-square mr-1"></i> Form Input Realisasi Item
-                            </h6>
-                            <form action="save_realisasi.php" method="POST" enctype="multipart/form-data" id="realForm_<?= $it_id ?>">
-                                <input type="hidden" name="id_budget" value="<?= $id_budget ?>">
-                                <input type="hidden" name="id_detail" value="<?= $it_id ?>">
-                                <input type="hidden" name="id_real_detail" id="idRealDetail_<?= $it_id ?>" value="0">
-
-                                <div class="row">
-                                    <div class="col-md-3 mb-2">
-                                        <label class="small font-weight-bold mb-1">Tanggal Realisasi <span class="text-danger">*</span></label>
-                                        <input type="date" name="tanggal_realisasi" id="tgl_<?= $it_id ?>" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" required>
-                                    </div>
-                                    <div class="col-md-3 mb-2">
-                                        <label class="small font-weight-bold mb-1">Nominal Aktual <span class="text-danger">*</span></label>
-                                        <div class="input-group input-group-sm">
-                                            <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
-                                            <input type="text" name="nominal_realisasi" id="nom_<?= $it_id ?>" class="form-control rupiah-input" placeholder="0" required>
-                                        </div>
-                                        <small class="text-muted" style="font-size:10.5px;">Sisa alokasi: Rp <?= number_format($it_sisa, 0, ',', '.') ?></small>
-                                    </div>
-                                    <div class="col-md-3 mb-2">
-                                        <label class="small font-weight-bold mb-1">Uang Kembali (Opsional)</label>
-                                        <div class="input-group input-group-sm">
-                                            <div class="input-group-prepend"><span class="input-group-text">Rp</span></div>
-                                            <input type="text" name="uang_kembali" id="uk_<?= $it_id ?>" class="form-control rupiah-input" placeholder="0">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3 mb-2">
-                                        <label class="small font-weight-bold mb-1">Catatan Pengeluaran</label>
-                                        <input type="text" name="catatan" id="cat_<?= $it_id ?>" class="form-control form-control-sm" placeholder="Keterangan pembelian / nota">
-                                    </div>
-                                    <div class="col-12 mt-2">
-                                        <label class="small font-weight-bold mb-1">
-                                            Upload Bukti Nota / Kwitansi / Transfer <span class="text-danger">*</span>
-                                        </label>
-                                        <input type="file" name="bukti[]" class="form-control form-control-sm bukti-input" data-idx="<?= $it_id ?>" accept=".jpg,.jpeg,.png,.pdf" multiple>
-                                        <small class="text-muted" style="font-size:10.5px;">Format JPG, PNG, atau PDF (Maksimal 5 file × 5MB). Lampirkan foto nota/struk pembelian asli.</small>
-                                        <div class="mt-1" id="prev_<?= $it_id ?>"></div>
-                                    </div>
-                                    <div class="col-12 mt-3 d-flex justify-content-end" style="gap:8px;">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="closeFormRealisasi(<?= $it_id ?>)">Batal</button>
-                                        <button type="submit" name="action" value="draft" class="btn btn-sm btn-info text-white">
-                                            <i class="fas fa-save mr-1"></i> Simpan Draft
-                                        </button>
-                                        <button type="submit" name="action" value="submit" class="btn btn-sm btn-success" onclick="return confirm('Kirim realisasi item ini ke Asmen Finance?');">
-                                            <i class="fas fa-paper-plane mr-1"></i> Kirim ke Asmen
-                                        </button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-
                         <!-- Daftar Riwayat Realisasi untuk Item ini -->
-                        <div class="p-3 pt-0">
+                        <div class="p-3 pt-2">
                             <?php if (empty($item_reals)): ?>
-                                <div class="text-muted small py-2 font-italic" style="font-size:12px;">
-                                    <i class="fas fa-info-circle mr-1"></i> Belum ada realisasi untuk item ini.
+                                <div class="text-muted small py-1 font-italic" style="font-size:12px;">
+                                    <i class="fas fa-info-circle mr-1"></i> Belum ada transaksi kas untuk item ini.
                                 </div>
                             <?php else: ?>
                                 <div class="table-responsive">
@@ -387,14 +357,14 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                                         <thead>
                                             <tr>
                                                 <th width="4%">No</th>
-                                                <th width="12%">No. Realisasi</th>
-                                                <th width="11%">Tanggal</th>
-                                                <th width="14%" class="text-right">Nominal Realisasi</th>
-                                                <th width="11%" class="text-right">Uang Kembali</th>
-                                                <th width="20%">Catatan</th>
-                                                <th width="12%">Bukti</th>
+                                                <th width="10%">Jenis</th>
+                                                <th width="13%">No. Transaksi</th>
+                                                <th width="10%">Tanggal</th>
+                                                <th width="18%">Dibayar Kepada / Vendor</th>
+                                                <th width="14%" class="text-right">Jumlah (Rp)</th>
+                                                <th width="13%">Bukti Nota</th>
                                                 <th width="12%">Status</th>
-                                                <th width="8%" class="text-center">Aksi</th>
+                                                <th width="6%" class="text-center">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -415,24 +385,31 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                                                     $st_lbl = '<i class="fas fa-clock mr-1"></i> Menunggu Asmen';
                                                 }
                                                 $can_edit = in_array($st, ['Draft', 'Ditolak']);
+                                                $is_bkm   = ($rl['jenis_transaksi'] === 'BKM');
+                                                $nom_disp = $is_bkm ? (float)$rl['uang_kembali'] : (float)$rl['nominal_realisasi'];
                                             ?>
                                             <tr>
                                                 <td><?= $r_no++ ?></td>
+                                                <td>
+                                                    <span class="badge badge-<?= $is_bkm ? 'success' : 'primary' ?> px-2 py-1 font-weight-bold" style="font-size:10.5px;">
+                                                        <?= $rl['jenis_transaksi'] ?>
+                                                    </span>
+                                                </td>
                                                 <td><span class="font-weight-bold text-dark"><?= htmlspecialchars($rl['no_realisasi'] ?: '-') ?></span></td>
                                                 <td><?= $rl['tanggal_realisasi'] ? date('d/m/Y', strtotime($rl['tanggal_realisasi'])) : '-' ?></td>
-                                                <td class="text-right font-weight-bold text-success">
-                                                    Rp <?= number_format($rl['nominal_realisasi'], 0, ',', '.') ?>
-                                                </td>
-                                                <td class="text-right text-muted">
-                                                    <?= $rl['uang_kembali'] > 0 ? 'Rp ' . number_format($rl['uang_kembali'], 0, ',', '.') : '—' ?>
-                                                </td>
                                                 <td>
-                                                    <?= htmlspecialchars($rl['catatan'] ?: '—') ?>
+                                                    <strong><?= htmlspecialchars($rl['dibayar_kepada'] ?: ($rl['keperluan'] ?: '—')) ?></strong>
+                                                    <?php if ($rl['catatan'] && $rl['catatan'] !== $rl['dibayar_kepada']): ?>
+                                                    <div class="text-muted small"><?= htmlspecialchars($rl['catatan']) ?></div>
+                                                    <?php endif; ?>
                                                     <?php if ($rl['catatan_approval']): ?>
                                                     <div class="text-danger small mt-1 font-italic">
                                                         <i class="fas fa-comment mr-1"></i> Catatan Asmen: <?= htmlspecialchars($rl['catatan_approval']) ?>
                                                     </div>
                                                     <?php endif; ?>
+                                                </td>
+                                                <td class="text-right font-weight-bold <?= $is_bkm ? 'text-info' : 'text-success' ?>">
+                                                    <?= $is_bkm ? '+ ' : '' ?>Rp <?= number_format($nom_disp, 0, ',', '.') ?>
                                                 </td>
                                                 <td>
                                                     <?php if (!empty($rl['bukti_files'])): ?>
@@ -459,14 +436,13 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                                                     <?php if ($can_edit): ?>
                                                     <div class="btn-group btn-group-sm">
                                                         <button type="button" class="btn btn-outline-info btn-sm p-1 px-2"
-                                                                title="Edit Realisasi"
-                                                                onclick="editRealisasi(<?= $it_id ?>, <?= htmlspecialchars(json_encode($rl)) ?>)">
+                                                                title="Edit Transaksi"
+                                                                onclick="editKasTransaction(<?= htmlspecialchars(json_encode($rl)) ?>)">
                                                             <i class="fas fa-edit fa-xs"></i>
                                                         </button>
                                                         <?php if ($st === 'Draft'): ?>
-                                                        <form action="save_realisasi.php" method="POST" style="display:inline;" onsubmit="return confirm('Hapus draft realisasi ini?');">
+                                                        <form action="save_realisasi.php" method="POST" style="display:inline;" onsubmit="return confirm('Hapus draft transaksi ini?');">
                                                             <input type="hidden" name="id_budget" value="<?= $id_budget ?>">
-                                                            <input type="hidden" name="id_detail" value="<?= $it_id ?>">
                                                             <input type="hidden" name="id_real_detail" value="<?= $rl['id_real_detail'] ?>">
                                                             <input type="hidden" name="action" value="delete">
                                                             <button type="submit" class="btn btn-outline-danger btn-sm p-1 px-2" title="Hapus Draft">
@@ -497,101 +473,327 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
     </div>
 </div>
 
+<!-- ============================================================== -->
+<!-- MODAL INPUT TRANSAKSI KAS (BKK / BKM) — PERSIS SEPERTI GAMBAR -->
+<!-- ============================================================== -->
+<div class="modal fade" id="modalInputKas" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document" style="max-width: 860px;">
+        <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+            
+            <!-- Modal Header -->
+            <div class="modal-header px-4 py-3" style="background:#fff; border-bottom: 1px solid #e2e8f0;">
+                <div>
+                    <h5 class="modal-title modal-kas-title" id="modalKasTitle">Input Transaksi Kas</h5>
+                </div>
+                <div class="text-right">
+                    <div class="modal-kas-sub">
+                        PT DUA FARMA MAHAKARSA — Cabang <?= htmlspecialchars($budget['nama_cabang'] ?? 'Jakarta') ?>
+                    </div>
+                    <small class="text-muted">Tahun anggaran <?= $budget['period_year'] ?></small>
+                </div>
+                <button type="button" class="close ml-2" data-dismiss="modal" aria-label="Close" style="outline:none;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <!-- Modal Form -->
+            <form action="save_realisasi.php" method="POST" enctype="multipart/form-data" id="formTransaksiKas">
+                <input type="hidden" name="id_budget" value="<?= $id_budget ?>">
+                <input type="hidden" name="id_real_detail" id="kasIdRealDetail" value="0">
+                <input type="hidden" name="jenis_transaksi" id="kasJenisTransaksi" value="BKK">
+
+                <div class="modal-body px-4 py-3" style="background: #ffffff;">
+
+                    <!-- 2 Big Tabs BKK / BKM -->
+                    <div class="kas-tab-group">
+                        <button type="button" class="kas-tab-btn active-bkk" id="btnTabBKK" onclick="switchKasTab('BKK')">
+                            BKK — Bukti Kas Keluar (Pengeluaran)
+                        </button>
+                        <button type="button" class="kas-tab-btn" id="btnTabBKM" onclick="switchKasTab('BKM')">
+                            BKM — Bukti Kas Masuk (Penerimaan)
+                        </button>
+                    </div>
+
+                    <!-- Row 1: Tanggal, Dibayar Kepada, Keperluan -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="small font-weight-bold text-dark mb-1">Tanggal</label>
+                            <input type="date" name="tanggal_realisasi" id="kasTanggal" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small font-weight-bold text-dark mb-1" id="lblDibayar">Dibayar Kepada</label>
+                            <input type="text" name="dibayar_kepada" id="kasDibayar" class="form-control" placeholder="Nama toko / vendor / karyawan" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="small font-weight-bold text-dark mb-1">Keperluan</label>
+                            <input type="text" name="keperluan" id="kasKeperluan" class="form-control" placeholder="Contoh: Pembelian ATK kantor" required>
+                        </div>
+                    </div>
+
+                    <!-- Section 1: Upload Nota / Kwitansi -->
+                    <div class="mb-4">
+                        <label class="font-weight-bold text-dark mb-2" style="font-size: 13.5px;">
+                            1. Upload Nota / Kwitansi
+                        </label>
+                        <div class="drop-zone" onclick="document.getElementById('kasFileInput').click()">
+                            <i class="fas fa-file-invoice text-primary fa-2x mb-2 d-block"></i>
+                            <p class="mb-1 text-muted" style="font-size: 13px;">
+                                Klik atau tarik file ke sini (foto JPG/PNG atau PDF, boleh lebih dari satu) — nota digabung ke dalam bukti transaksi
+                            </p>
+                            <input type="file" id="kasFileInput" name="bukti[]" accept=".jpg,.jpeg,.png,.pdf" multiple style="display:none;" onchange="handleKasFiles(this)">
+                            <div id="kasFilePreview" class="d-flex flex-wrap justify-content-center mt-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Rincian Biaya / Akun -->
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="font-weight-bold text-dark mb-0" style="font-size: 13.5px;">
+                                2. Rincian Biaya / Akun
+                            </label>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addKasRow()">
+                                <i class="fas fa-plus mr-1"></i> Tambah Baris
+                            </button>
+                        </div>
+
+                        <div class="table-responsive border rounded" style="overflow-x: auto;">
+                            <table class="table table-sm mb-0 rincian-table" id="tableKasRincian">
+                                <thead>
+                                    <tr>
+                                        <th width="45%">Akun (pilih rincian anggaran)</th>
+                                        <th width="32%">Keterangan</th>
+                                        <th width="18%" class="text-right">Jumlah (Rp)</th>
+                                        <th width="5%" class="text-center"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyKasRincian">
+                                    <!-- Dynamic Rows will be inserted here -->
+                                </tbody>
+                                <tfoot>
+                                    <tr class="bg-light font-weight-bold">
+                                        <td colspan="2" class="text-right">Total Transaksi:</td>
+                                        <td class="text-right text-success" id="kasTotalDisplay" style="font-size: 14px;">Rp 0</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="modal-footer d-flex justify-content-between align-items-center px-4 py-3" style="background:#f8fafc; border-top: 1px solid #e2e8f0;">
+                    <div class="small text-muted font-weight-bold" id="footerAkunKas">
+                        Akun kas: 1101-21-01 Kas Operasional <?= htmlspecialchars($budget['nama_cabang'] ?? 'Jakarta') ?>
+                    </div>
+                    <div class="d-flex" style="gap: 8px;">
+                        <button type="button" class="btn btn-light border px-3" data-dismiss="modal">Tutup</button>
+                        <button type="submit" name="action" value="draft" class="btn btn-outline-primary px-3">
+                            <i class="fas fa-save mr-1"></i> Simpan Draft
+                        </button>
+                        <button type="submit" name="action" value="submit" class="btn btn-primary px-4 font-weight-bold" id="btnSimpanKas" style="background:#1e3a8a; border-color:#1e3a8a;">
+                            Simpan Transaksi
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
 <?php
 if ($layout_dir && file_exists($layout_dir . '/footer.php'))    include $layout_dir . '/footer.php';
 if ($layout_dir && file_exists($layout_dir . '/footer_js.php')) include $layout_dir . '/footer_js.php';
 ?>
 
+<!-- Options items untuk dropdown rincian akun -->
 <script>
-function openFormRealisasi(itemId, realDetailId) {
-    document.getElementById('formBox_' + itemId).style.display = 'block';
-    document.getElementById('idRealDetail_' + itemId).value = '0';
-    document.getElementById('formTitle_' + itemId).innerHTML = '<i class="fas fa-plus-circle mr-1"></i> Tambah Realisasi Baru';
-    document.getElementById('nom_' + itemId).value = '';
-    document.getElementById('uk_' + itemId).value = '';
-    document.getElementById('cat_' + itemId).value = '';
-    document.getElementById('tgl_' + itemId).value = '<?= date('Y-m-d') ?>';
-    document.getElementById('prev_' + itemId).innerHTML = '';
-}
+const budgetItems = <?= json_encode(array_map(function($it) use ($real_by_detail) {
+    $it_id = (int)$it['id_detail'];
+    $item_reals = $real_by_detail[$it_id] ?? [];
+    $it_app = 0;
+    foreach ($item_reals as $r) {
+        if ($r['status'] === 'Disetujui' && $r['jenis_transaksi'] === 'BKK') {
+            $it_app += (float)$r['nominal_realisasi'];
+        }
+    }
+    $sisa = max(0, (float)$it['total'] - $it_app);
+    return [
+        'id' => $it['id_detail'],
+        'rincian' => $it['rincian'],
+        'kategori' => $it['category_name'],
+        'kode' => $it['category_code'],
+        'total' => (float)$it['total'],
+        'sisa' => $sisa
+    ];
+}, $items)) ?>;
 
-function closeFormRealisasi(itemId) {
-    document.getElementById('formBox_' + itemId).style.display = 'none';
-}
+let currentJenis = 'BKK';
 
-function editRealisasi(itemId, data) {
-    document.getElementById('formBox_' + itemId).style.display = 'block';
-    document.getElementById('formTitle_' + itemId).innerHTML = '<i class="fas fa-pen-to-square mr-1"></i> Edit Realisasi #' + (data.no_realisasi || '');
-    document.getElementById('idRealDetail_' + itemId).value = data.id_real_detail;
-    document.getElementById('tgl_' + itemId).value = data.tanggal_realisasi || '<?= date('Y-m-d') ?>';
-    document.getElementById('nom_' + itemId).value = formatNumber(parseInt(data.nominal_realisasi || 0));
-    document.getElementById('uk_' + itemId).value = data.uang_kembali > 0 ? formatNumber(parseInt(data.uang_kembali)) : '';
-    document.getElementById('cat_' + itemId).value = data.catatan || '';
-    
-    // Tampilkan file lama
-    let prev = document.getElementById('prev_' + itemId);
-    prev.innerHTML = '';
-    if (data.bukti_files) {
-        let files = data.bukti_files.split(',');
-        files.forEach(function(bf) {
-            bf = bf.trim();
-            if (!bf) return;
-            let el = document.createElement('a');
-            el.href = '../uploads/realisasi/' + bf;
-            el.target = '_blank';
-            el.className = 'bukti-link mr-1';
-            el.innerHTML = '<i class="fas fa-paperclip"></i> ' + bf;
-            prev.appendChild(el);
-        });
+function switchKasTab(jenis) {
+    currentJenis = jenis;
+    document.getElementById('kasJenisTransaksi').value = jenis;
+    const btnBKK = document.getElementById('btnTabBKK');
+    const btnBKM = document.getElementById('btnTabBKM');
+    const tbl = document.getElementById('tableKasRincian');
+    const lblDibayar = document.getElementById('lblDibayar');
+    const btnSimpan = document.getElementById('btnSimpanKas');
+
+    if (jenis === 'BKK') {
+        btnBKK.className = 'kas-tab-btn active-bkk';
+        btnBKM.className = 'kas-tab-btn';
+        tbl.classList.remove('table-bkm');
+        lblDibayar.textContent = 'Dibayar Kepada';
+        document.getElementById('kasDibayar').placeholder = 'Nama toko / vendor / karyawan';
+        document.getElementById('kasKeperluan').placeholder = 'Contoh: Pembelian ATK kantor';
+        btnSimpan.style.background = '#1e3a8a';
+        btnSimpan.style.borderColor = '#1e3a8a';
+    } else {
+        btnBKM.className = 'kas-tab-btn active-bkm';
+        btnBKK.className = 'kas-tab-btn';
+        tbl.classList.add('table-bkm');
+        lblDibayar.textContent = 'Diterima Dari';
+        document.getElementById('kasDibayar').placeholder = 'Nama pihak penyetor / toko pengembalian';
+        document.getElementById('kasKeperluan').placeholder = 'Contoh: Pengembalian sisa belanja ATK kantor';
+        btnSimpan.style.background = '#047857';
+        btnSimpan.style.borderColor = '#047857';
     }
 }
 
-function formatNumber(num) {
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+function openKasModal(jenis, presetItemId) {
+    document.getElementById('formTransaksiKas').reset();
+    document.getElementById('kasIdRealDetail').value = '0';
+    document.getElementById('kasFilePreview').innerHTML = '';
+    document.getElementById('tbodyKasRincian').innerHTML = '';
+    document.getElementById('kasTanggal').value = '<?= date('Y-m-d') ?>';
+
+    switchKasTab(jenis || 'BKK');
+    addKasRow(presetItemId || 0);
+
+    $('#modalInputKas').modal('show');
 }
 
-// Preview file upload
-document.querySelectorAll('.bukti-input').forEach(function(inp) {
-    inp.addEventListener('change', function() {
-        var idx = this.dataset.idx;
-        var prev = document.getElementById('prev_' + idx);
-        if (!prev) return;
-        var maxSize = 5 * 1024 * 1024;
-        if (this.files.length > 5) {
-            alert('Maksimal 5 file lampiran!');
-            this.value = '';
-            return;
-        }
-        Array.from(this.files).forEach(function(file) {
-            if (file.size > maxSize) {
-                alert(file.name + ' terlalu besar (maksimal 5MB)!');
-                return;
-            }
-            var ext = file.name.split('.').pop().toLowerCase();
-            var icon = ['jpg', 'jpeg', 'png'].includes(ext) ? 'fa-image' : 'fa-file-pdf';
-            var el = document.createElement('span');
-            el.className = 'prev-item';
-            el.innerHTML = '<i class="fas ' + icon + '"></i> ' + file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
-            prev.appendChild(el);
-        });
-    });
-});
+function addKasRow(selectedId, keteranganVal, jumlahVal) {
+    const tbody = document.getElementById('tbodyKasRincian');
+    const tr = document.createElement('tr');
 
-// Format Rupiah Input
-document.querySelectorAll('.rupiah-input').forEach(function(inp) {
-    inp.addEventListener('input', function(e) {
-        let val = this.value.replace(/[^,\d]/g, '');
-        let split = val.split(',');
-        let sisa = split[0].length % 3;
-        let rupiah = split[0].substr(0, sisa);
-        let ribuan = split[0].substr(sisa).match(/\d{3}/gi);
-        if (ribuan) {
-            let separator = sisa ? '.' : '';
-            rupiah += separator + ribuan.join('.');
-        }
-        rupiah = split[1] !== undefined ? rupiah + ',' + split[1] : rupiah;
-        this.value = rupiah;
+    let selectHtml = '<select name="item_detail_id[]" class="form-control form-control-sm select-akun" required>';
+    selectHtml += '<option value="">-- Pilih Akun / Rincian Biaya --</option>';
+
+    // Group by category
+    const categories = {};
+    budgetItems.forEach(it => {
+        const cat = it.kategori || 'Umum';
+        if (!categories[cat]) categories[cat] = [];
+        categories[cat].push(it);
     });
-});
+
+    for (const [catName, catItems] of Object.entries(categories)) {
+        selectHtml += `<optgroup label="${catName}">`;
+        catItems.forEach(it => {
+            const sel = (selectedId && it.id == selectedId) ? 'selected' : '';
+            selectHtml += `<option value="${it.id}" ${sel}>${it.rincian} (Sisa: Rp ${formatRupiah(it.sisa)})</option>`;
+        });
+        selectHtml += `</optgroup>`;
+    }
+    selectHtml += '</select>';
+
+    const ketText = keteranganVal || '';
+    const jmlText = jumlahVal ? formatRupiah(jumlahVal) : '';
+
+    tr.innerHTML = `
+        <td>${selectHtml}</td>
+        <td><input type="text" name="item_keterangan[]" class="form-control form-control-sm" placeholder="Keterangan (opsional)" value="${ketText}"></td>
+        <td><input type="text" name="item_jumlah[]" class="form-control form-control-sm rupiah-kas text-right font-weight-bold" placeholder="0" value="${jmlText}" oninput="calcKasTotal()" required></td>
+        <td class="text-center">
+            <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeKasRow(this)" title="Hapus Baris">
+                <i class="fas fa-times fa-lg"></i>
+            </button>
+        </td>
+    `;
+
+    tbody.appendChild(tr);
+    calcKasTotal();
+}
+
+function removeKasRow(btn) {
+    const tbody = document.getElementById('tbodyKasRincian');
+    if (tbody.children.length <= 1) {
+        alert('Minimal harus ada 1 baris rincian akun biaya!');
+        return;
+    }
+    btn.closest('tr').remove();
+    calcKasTotal();
+}
+
+function calcKasTotal() {
+    let total = 0;
+    document.querySelectorAll('.rupiah-kas').forEach(inp => {
+        let val = inp.value.replace(/[^0-9]/g, '');
+        inp.value = val ? formatRupiah(parseInt(val)) : '';
+        total += parseInt(val || 0);
+    });
+    document.getElementById('kasTotalDisplay').textContent = 'Rp ' + formatRupiah(total);
+}
+
+function handleKasFiles(input) {
+    const prev = document.getElementById('kasFilePreview');
+    prev.innerHTML = '';
+    if (!input.files || input.files.length === 0) return;
+
+    if (input.files.length > 10) {
+        alert('Maksimal 10 file!');
+        input.value = '';
+        return;
+    }
+
+    Array.from(input.files).forEach(file => {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const ic = ['jpg','jpeg','png'].includes(ext) ? 'fa-image' : 'fa-file-pdf';
+        const span = document.createElement('span');
+        span.className = 'prev-item';
+        span.innerHTML = `<i class="fas ${ic}"></i> ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+        prev.appendChild(span);
+    });
+}
+
+function editKasTransaction(data) {
+    document.getElementById('formTransaksiKas').reset();
+    document.getElementById('kasIdRealDetail').value = data.id_real_detail;
+    document.getElementById('kasTanggal').value = data.tanggal_realisasi || '<?= date('Y-m-d') ?>';
+    document.getElementById('kasDibayar').value = data.dibayar_kepada || '';
+    document.getElementById('kasKeperluan').value = data.keperluan || data.catatan || '';
+    document.getElementById('tbodyKasRincian').innerHTML = '';
+
+    const isBkm = (data.jenis_transaksi === 'BKM');
+    switchKasTab(isBkm ? 'BKM' : 'BKK');
+
+    const nom = isBkm ? parseInt(data.uang_kembali || 0) : parseInt(data.nominal_realisasi || 0);
+    addKasRow(data.id_detail_budget, data.catatan, nom);
+
+    // Bukti lama
+    const prev = document.getElementById('kasFilePreview');
+    prev.innerHTML = '';
+    if (data.bukti_files) {
+        data.bukti_files.split(',').forEach(bf => {
+            bf = bf.trim(); if (!bf) return;
+            const a = document.createElement('a');
+            a.href = '../uploads/realisasi/' + bf;
+            a.target = '_blank';
+            a.className = 'bukti-link mr-1';
+            a.innerHTML = `<i class="fas fa-paperclip"></i> ${bf}`;
+            prev.appendChild(a);
+        });
+    }
+
+    $('#modalInputKas').modal('show');
+}
+
+function formatRupiah(num) {
+    return (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
 </script>
 </body>
 </html>

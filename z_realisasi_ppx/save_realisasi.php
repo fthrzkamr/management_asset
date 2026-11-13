@@ -17,7 +17,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' || !isset($_POST['id_budget'])) {
 $user_id        = (int)$_SESSION['id_user'];
 $is_admin       = $auth->isSuperAdmin();
 $id_budget      = (int)$_POST['id_budget'];
-$id_detail      = (int)($_POST['id_detail'] ?? 0);
 $id_real_detail = !empty($_POST['id_real_detail']) ? (int)$_POST['id_real_detail'] : 0;
 $action         = trim($_POST['action'] ?? 'submit'); // 'draft', 'submit', 'delete'
 
@@ -43,7 +42,6 @@ if ($action === 'delete') {
         $chk_draft = mysqli_query($conn, "SELECT id_real_detail, status, bukti_files FROM ppx_realisasi_detail2 WHERE id_real_detail = $id_real_detail AND id_budget = $id_budget LIMIT 1");
         if ($chk_draft && $d = mysqli_fetch_assoc($chk_draft)) {
             if ($d['status'] === 'Draft' || $is_admin) {
-                // Hapus file jika ada
                 if (!empty($d['bukti_files'])) {
                     foreach (explode(',', $d['bukti_files']) as $bf) {
                         $bf = trim($bf);
@@ -54,7 +52,7 @@ if ($action === 'delete') {
                     }
                 }
                 mysqli_query($conn, "DELETE FROM ppx_realisasi_detail2 WHERE id_real_detail = $id_real_detail");
-                $_SESSION['success'] = 'Draft realisasi berhasil dihapus.';
+                $_SESSION['success'] = 'Draft transaksi berhasil dihapus.';
             } else {
                 $_SESSION['error'] = 'Hanya draft yang dapat dihapus.';
             }
@@ -64,38 +62,54 @@ if ($action === 'delete') {
     exit();
 }
 
-// Pastikan item detail valid untuk budget ini
-if ($id_detail <= 0) {
-    $_SESSION['error'] = 'Detail item anggaran tidak valid.';
-    header("Location: $redirect");
-    exit();
+// Parameter BKK / BKM
+$jenis_transaksi = in_array(strtoupper(trim($_POST['jenis_transaksi'] ?? 'BKK')), ['BKK', 'BKM']) ? strtoupper(trim($_POST['jenis_transaksi'] ?? 'BKK')) : 'BKK';
+$dibayar_kepada  = trim($_POST['dibayar_kepada'] ?? '');
+$keperluan       = trim($_POST['keperluan'] ?? '');
+$tanggal_real    = !empty($_POST['tanggal_realisasi']) ? trim($_POST['tanggal_realisasi']) : date('Y-m-d');
+$status_baru     = ($action === 'draft') ? 'Draft' : 'Menunggu Approval';
+
+// Upload file bukti (nota / kwitansi)
+$uploadDir   = __DIR__ . '/../uploads/realisasi/';
+if (!is_dir($uploadDir)) {
+    mkdir($uploadDir, 0777, true);
 }
-$it_q = mysqli_query($conn, "SELECT id, rincian, total FROM ppx_monthly_budget_item_detail WHERE id = $id_detail AND id_budget = $id_budget LIMIT 1");
-if (!$it_q || mysqli_num_rows($it_q) === 0) {
-    $_SESSION['error'] = 'Rincian item anggaran tidak ditemukan dalam anggaran ini.';
-    header("Location: $redirect");
-    exit();
+$allowed_ext = ['jpg', 'jpeg', 'png', 'pdf'];
+$max_size    = 5 * 1024 * 1024; // 5MB per file
+
+$new_files = [];
+if (!empty($_FILES['bukti']['name'][0])) {
+    $fcount = count($_FILES['bukti']['name']);
+    if ($fcount > 10) {
+        $_SESSION['error'] = 'Maksimal 10 file nota lampiran sekaligus.';
+        header("Location: $redirect");
+        exit();
+    }
+
+    for ($f = 0; $f < $fcount; $f++) {
+        if ($_FILES['bukti']['error'][$f] !== UPLOAD_ERR_OK) continue;
+        $orig = basename($_FILES['bukti']['name'][$f]);
+        $ext  = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
+        if (!in_array($ext, $allowed_ext)) {
+            $_SESSION['error'] = "Format file tidak didukung: $orig (gunakan JPG, PNG, atau PDF).";
+            header("Location: $redirect");
+            exit();
+        }
+        if ($_FILES['bukti']['size'][$f] > $max_size) {
+            $_SESSION['error'] = "File terlalu besar: $orig (maksimal 5MB per file).";
+            header("Location: $redirect");
+            exit();
+        }
+        $fname = strtolower($jenis_transaksi) . '_' . time() . "_{$f}." . $ext;
+        if (move_uploaded_file($_FILES['bukti']['tmp_name'][$f], $uploadDir . $fname)) {
+            $new_files[] = $fname;
+        }
+    }
 }
-$item_budget = mysqli_fetch_assoc($it_q);
 
-$nom_input    = str_replace('.', '', $_POST['nominal_realisasi'] ?? '0');
-$uk_input     = str_replace('.', '', $_POST['uang_kembali'] ?? '0');
-$nom_real     = max(0, (float)$nom_input);
-$uang_kembali = max(0, (float)$uk_input);
-$catatan      = trim($_POST['catatan'] ?? '');
-$tanggal_real = !empty($_POST['tanggal_realisasi']) ? trim($_POST['tanggal_realisasi']) : date('Y-m-d');
-
-if ($nom_real <= 0 && $uang_kembali <= 0) {
-    $_SESSION['error'] = 'Nominal realisasi harus diisi lebih dari 0.';
-    header("Location: $redirect");
-    exit();
-}
-
-$status_baru = ($action === 'draft') ? 'Draft' : 'Menunggu Approval';
-
-// Generator No Realisasi
-function generateNoRealDetail($conn) {
-    $prefix = 'REAL-' . date('Ym') . '-';
+// Generator Kode BKK / BKM
+function generateNoTransaksiKas($conn, $jenis) {
+    $prefix = $jenis . '-' . date('Ym') . '-';
     $r = mysqli_query($conn, "SELECT no_realisasi FROM ppx_realisasi_detail2 WHERE no_realisasi LIKE '{$prefix}%' ORDER BY id_real_detail DESC LIMIT 1");
     $seq = 1;
     if ($r && mysqli_num_rows($r) > 0) {
@@ -105,16 +119,9 @@ function generateNoRealDetail($conn) {
     return $prefix . str_pad($seq, 4, '0', STR_PAD_LEFT);
 }
 
-$uploadDir   = __DIR__ . '/../uploads/realisasi/';
-if (!is_dir($uploadDir)) {
-    mkdir($uploadDir, 0777, true);
-}
-$allowed_ext = ['jpg', 'jpeg', 'png', 'pdf'];
-$max_size    = 5 * 1024 * 1024; // 5MB
-
 mysqli_begin_transaction($conn);
 try {
-    // Pastikan atau buat header di ppx_realisasi_monthly
+    // Header realisasi bulanan
     $chk_h = mysqli_query($conn, "SELECT id_realisasi FROM ppx_realisasi_monthly WHERE id_budget = $id_budget AND user_id = {$budget['created_by']} LIMIT 1");
     if ($chk_h && mysqli_num_rows($chk_h) > 0) {
         $id_realisasi = (int)mysqli_fetch_assoc($chk_h)['id_realisasi'];
@@ -127,94 +134,125 @@ try {
         $id_realisasi = mysqli_insert_id($conn);
     }
 
-    // Cek record existing jika sedang edit draft / ditolak
-    $existing = null;
+    // Cek apakah ini Single Edit (edit 1 record yang sudah ada)
     if ($id_real_detail > 0) {
         $chk_ex = mysqli_query($conn, "SELECT * FROM ppx_realisasi_detail2 WHERE id_real_detail = $id_real_detail AND id_budget = $id_budget LIMIT 1");
-        if ($chk_ex && mysqli_num_rows($chk_ex) > 0) {
-            $existing = mysqli_fetch_assoc($chk_ex);
-            if (!in_array($existing['status'], ['Draft', 'Ditolak']) && !$is_admin) {
-                throw new Exception("Realisasi ini sedang diproses atau sudah disetujui, tidak dapat diedit.");
-            }
+        if (!$chk_ex || mysqli_num_rows($chk_ex) === 0) {
+            throw new Exception("Data transaksi tidak ditemukan.");
         }
-    }
-
-    // Upload file bukti baru
-    $new_files = [];
-    if (!empty($_FILES['bukti']['name'][0])) {
-        $fcount = count($_FILES['bukti']['name']);
-        if ($fcount > 5) {
-            throw new Exception("Maksimal 5 file lampiran sekaligus.");
+        $existing = mysqli_fetch_assoc($chk_ex);
+        if (!in_array($existing['status'], ['Draft', 'Ditolak']) && !$is_admin) {
+            throw new Exception("Transaksi ini sedang diproses atau sudah disetujui, tidak dapat diedit.");
         }
 
-        for ($f = 0; $f < $fcount; $f++) {
-            if ($_FILES['bukti']['error'][$f] !== UPLOAD_ERR_OK) continue;
-            $orig = basename($_FILES['bukti']['name'][$f]);
-            $ext  = strtolower(pathinfo($orig, PATHINFO_EXTENSION));
-            if (!in_array($ext, $allowed_ext)) {
-                throw new Exception("Format file tidak didukung: $orig (gunakan JPG, PNG, atau PDF).");
-            }
-            if ($_FILES['bukti']['size'][$f] > $max_size) {
-                throw new Exception("File terlalu besar: $orig (maksimal 5MB per file).");
-            }
-            $fname = 'rl_' . $id_detail . '_' . time() . "_{$f}." . $ext;
-            if (move_uploaded_file($_FILES['bukti']['tmp_name'][$f], $uploadDir . $fname)) {
-                $new_files[] = $fname;
-            }
-        }
-    }
+        $id_detail_item = !empty($_POST['id_detail']) ? (int)$_POST['id_detail'] : (int)$existing['id_detail_budget'];
+        $nom_input      = str_replace('.', '', $_POST['nominal_realisasi'] ?? '0');
+        $uk_input       = str_replace('.', '', $_POST['uang_kembali'] ?? '0');
+        $nom_val        = max(0, (float)$nom_input);
+        $uk_val         = max(0, (float)$uk_input);
 
-    $old_bukti = $existing['bukti_files'] ?? '';
-    $merged_files = array_values(array_filter(array_merge(
-        $old_bukti ? explode(',', $old_bukti) : [],
-        $new_files
-    )));
+        $old_bukti = $existing['bukti_files'] ?? '';
+        $merged_files = array_values(array_filter(array_merge(
+            $old_bukti ? explode(',', $old_bukti) : [],
+            $new_files
+        )));
+        $bukti_safe   = mysqli_real_escape_string($conn, implode(',', $merged_files));
+        $catatan_safe = mysqli_real_escape_string($conn, trim($_POST['catatan'] ?? $existing['catatan']));
+        $tgl_safe     = mysqli_real_escape_string($conn, $tanggal_real);
+        $st_safe      = mysqli_real_escape_string($conn, $status_baru);
+        $dk_safe      = mysqli_real_escape_string($conn, $dibayar_kepada ?: $existing['dibayar_kepada']);
+        $kp_safe      = mysqli_real_escape_string($conn, $keperluan ?: $existing['keperluan']);
 
-    if ($action === 'submit' && empty($merged_files) && $nom_real > 0) {
-        throw new Exception("Bukti nota / kwitansi wajib diupload saat mengirim realisasi ke Asmen.");
-    }
-
-    $bukti_safe    = mysqli_real_escape_string($conn, implode(',', $merged_files));
-    $catatan_safe  = mysqli_real_escape_string($conn, $catatan);
-    $tgl_safe      = mysqli_real_escape_string($conn, $tanggal_real);
-    $st_safe       = mysqli_real_escape_string($conn, $status_baru);
-
-    if ($existing) {
-        // Update existing record
-        $sql = "UPDATE ppx_realisasi_detail2 SET
-                    id_realisasi = $id_realisasi,
+        $sql_up = "UPDATE ppx_realisasi_detail2 SET
+                    id_realisasi      = $id_realisasi,
+                    id_detail_budget  = $id_detail_item,
                     tanggal_realisasi = '$tgl_safe',
-                    nominal_realisasi = $nom_real,
-                    uang_kembali = $uang_kembali,
-                    catatan = '$catatan_safe',
-                    bukti_files = '$bukti_safe',
-                    status = '$st_safe',
-                    catatan_approval = NULL,
-                    updated_at = NOW()
-                WHERE id_real_detail = $id_real_detail";
-        if (!mysqli_query($conn, $sql)) {
-            throw new Exception("Gagal update realisasi: " . mysqli_error($conn));
+                    dibayar_kepada    = '$dk_safe',
+                    keperluan         = '$kp_safe',
+                    nominal_realisasi = $nom_val,
+                    uang_kembali      = $uk_val,
+                    catatan           = '$catatan_safe',
+                    bukti_files       = '$bukti_safe',
+                    status            = '$st_safe',
+                    catatan_approval  = NULL,
+                    updated_at        = NOW()
+                   WHERE id_real_detail = $id_real_detail";
+        if (!mysqli_query($conn, $sql_up)) {
+            throw new Exception("Gagal update transaksi: " . mysqli_error($conn));
         }
+
     } else {
-        // Insert new realization record for this detail item
-        $no_real = mysqli_real_escape_string($conn, generateNoRealDetail($conn));
-        $sql = "INSERT INTO ppx_realisasi_detail2 
-                    (id_realisasi, id_budget, no_realisasi, id_detail_budget, tanggal_realisasi,
-                     nominal_realisasi, uang_kembali, catatan, bukti_files, status, created_by, created_at, updated_at)
-                VALUES 
-                    ($id_realisasi, $id_budget, '$no_real', $id_detail, '$tgl_safe',
-                     $nom_real, $uang_kembali, '$catatan_safe', '$bukti_safe', '$st_safe', $user_id, NOW(), NOW())";
-        if (!mysqli_query($conn, $sql)) {
-            throw new Exception("Gagal simpan realisasi: " . mysqli_error($conn));
+        // Multi-Row / Single Create Baru dari Form BKK/BKM
+        $items_detail_ids = $_POST['item_detail_id'] ?? [];
+        $items_keterangan = $_POST['item_keterangan'] ?? [];
+        $items_jumlah     = $_POST['item_jumlah'] ?? [];
+
+        // Jika form single (format lama atau inline)
+        if (empty($items_detail_ids) && !empty($_POST['id_detail'])) {
+            $items_detail_ids = [$_POST['id_detail']];
+            $items_keterangan = [$_POST['catatan'] ?? ''];
+            $items_jumlah     = [$_POST['nominal_realisasi'] ?? '0'];
+        }
+
+        if (empty($items_detail_ids)) {
+            throw new Exception("Rincian akun/item biaya harus diisi minimal 1 baris.");
+        }
+
+        $merged_files = $new_files;
+        if ($action === 'submit' && empty($merged_files)) {
+            throw new Exception("Bukti nota / kwitansi wajib diupload saat mengirim transaksi ke Asmen.");
+        }
+
+        $bukti_safe = mysqli_real_escape_string($conn, implode(',', $merged_files));
+        $no_transaksi = mysqli_real_escape_string($conn, generateNoTransaksiKas($conn, $jenis_transaksi));
+        $tgl_safe   = mysqli_real_escape_string($conn, $tanggal_real);
+        $st_safe    = mysqli_real_escape_string($conn, $status_baru);
+        $dk_safe    = mysqli_real_escape_string($conn, $dibayar_kepada);
+        $kp_safe    = mysqli_real_escape_string($conn, $keperluan);
+
+        $inserted_count = 0;
+        foreach ($items_detail_ids as $idx => $det_id) {
+            $det_id = (int)$det_id;
+            if ($det_id <= 0) continue;
+
+            $raw_amt = str_replace('.', '', $items_jumlah[$idx] ?? '0');
+            $amt_val = max(0, (float)$raw_amt);
+            if ($amt_val <= 0) continue;
+
+            $line_ket = mysqli_real_escape_string($conn, trim($items_keterangan[$idx] ?? ''));
+            if (empty($line_ket) && !empty($kp_safe)) {
+                $line_ket = $kp_safe;
+            }
+
+            // Jika BKK: masuk ke nominal_realisasi (pengeluaran)
+            // Jika BKM: masuk ke uang_kembali (penerimaan/kembalian)
+            $nom_val = ($jenis_transaksi === 'BKK') ? $amt_val : 0;
+            $uk_val  = ($jenis_transaksi === 'BKM') ? $amt_val : 0;
+
+            $sql_ins = "INSERT INTO ppx_realisasi_detail2 
+                        (id_realisasi, id_budget, no_realisasi, jenis_transaksi, dibayar_kepada, keperluan,
+                         id_detail_budget, tanggal_realisasi, nominal_realisasi, uang_kembali, catatan, bukti_files,
+                         status, created_by, created_at, updated_at)
+                        VALUES 
+                        ($id_realisasi, $id_budget, '$no_transaksi', '$jenis_transaksi', '$dk_safe', '$kp_safe',
+                         $det_id, '$tgl_safe', $nom_val, $uk_val, '$line_ket', '$bukti_safe',
+                         '$st_safe', $user_id, NOW(), NOW())";
+            if (!mysqli_query($conn, $sql_ins)) {
+                throw new Exception("Gagal menyimpan rincian transaksi: " . mysqli_error($conn));
+            }
+            $inserted_count++;
+        }
+
+        if ($inserted_count === 0) {
+            throw new Exception("Nominal transaksi harus lebih dari 0.");
         }
     }
 
     // Sync header status dan total nominal realisasi
     $q_sum = mysqli_query($conn, "SELECT 
-        SUM(CASE WHEN status = 'Disetujui' THEN nominal_realisasi ELSE 0 END) as total_approved,
+        SUM(CASE WHEN status = 'Disetujui' AND jenis_transaksi = 'BKK' THEN nominal_realisasi ELSE 0 END) as total_approved,
         COUNT(CASE WHEN status = 'Menunggu Approval' THEN 1 END) as pending_cnt,
-        COUNT(CASE WHEN status = 'Ditolak' THEN 1 END) as rejected_cnt,
-        COUNT(*) as total_cnt
+        COUNT(CASE WHEN status = 'Ditolak' THEN 1 END) as rejected_cnt
     FROM ppx_realisasi_detail2 WHERE id_budget = $id_budget");
     $sum_data = mysqli_fetch_assoc($q_sum);
     $tot_app = (float)($sum_data['total_approved'] ?? 0);
@@ -239,9 +277,9 @@ try {
     mysqli_commit($conn);
 
     if ($action === 'submit') {
-        $_SESSION['success'] = 'Realisasi untuk item "' . htmlspecialchars($item_budget['rincian']) . '" berhasil dikirim ke Asmen!';
+        $_SESSION['success'] = "Transaksi $jenis_transaksi berhasil dikirim ke Asmen Finance!";
     } else {
-        $_SESSION['success'] = 'Draft realisasi untuk item "' . htmlspecialchars($item_budget['rincian']) . '" berhasil disimpan.';
+        $_SESSION['success'] = "Draft transaksi $jenis_transaksi berhasil disimpan.";
     }
 
 } catch (Exception $e) {
