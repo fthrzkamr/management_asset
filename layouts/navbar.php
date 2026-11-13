@@ -88,7 +88,7 @@ if (isset($_SESSION['id_user'])) {
     // Approval Realisasi Asmen - hanya yang masih menunggu
     if ($auth->hasPermission('approval_realisasi_asmen', 'approve')) {
         $badge_counts['approval_realisasi_asmen'] = getCount($conn,
-            "SELECT COUNT(*) FROM ppx_realisasi_monthly WHERE status = 'Menunggu Approval'");
+            "SELECT COUNT(*) FROM ppx_realisasi_detail2 WHERE status = 'Menunggu Approval'");
     }
 
     // PPX - hanya yang menunggu approval di tahap role masing-masing

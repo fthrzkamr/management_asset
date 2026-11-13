@@ -52,7 +52,9 @@ $query = "SELECT
     mc.nama_cabang as creator_cabang,
     COUNT(mbi.id_budget_item) as total_items,
     SUM(mbi.used_amount) as total_used,
-    (SUM(mbi.used_amount) / mb.total_allocation * 100) as usage_percentage
+    (SUM(mbi.used_amount) / mb.total_allocation * 100) as usage_percentage,
+    (SELECT COUNT(DISTINCT id_detail_budget) FROM ppx_realisasi_detail2 WHERE id_budget = mb.id_budget AND status = 'Disetujui') as items_realized,
+    (SELECT COUNT(*) FROM ppx_realisasi_detail2 WHERE id_budget = mb.id_budget AND status = 'Menunggu Approval') as pending_realisasi_items
 FROM ppx_monthly_budget mb
 LEFT JOIN user_dfm u ON mb.created_by = u.id_user
 LEFT JOIN divisi creator_div_name ON u.divisi = creator_div_name.id_divisi
@@ -362,7 +364,15 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                                                         <td><small class="font-weight-bold"><?= $month_names[$row['period_month']] ?> <?= $row['period_year'] ?></small></td>
                                                         <td><small><?= htmlspecialchars($row['budget_name']) ?></small></td>
                                                         <td><small class="font-weight-bold">Rp <?= number_format($row['total_allocation'], 0, ',', '.') ?></small></td>
-                                                        <td><small class="font-weight-bold"><?= $row['total_items'] ?> item</small></td>
+                                                        <td>
+                                                            <small class="font-weight-bold"><?= $row['total_items'] ?> item</small>
+                                                            <?php if (!empty($row['items_realized']) && $row['items_realized'] > 0): ?>
+                                                                <br><small class="text-success font-weight-bold"><i class="fas fa-check-circle"></i> <?= $row['items_realized'] ?> terealisasi</small>
+                                                            <?php endif; ?>
+                                                            <?php if (!empty($row['pending_realisasi_items']) && $row['pending_realisasi_items'] > 0): ?>
+                                                                <br><small class="text-warning font-weight-bold"><i class="fas fa-clock"></i> <?= $row['pending_realisasi_items'] ?> menunggu</small>
+                                                            <?php endif; ?>
+                                                        </td>
                                                         <td><small><?= htmlspecialchars($row['creator_name'] ?? '-') ?></small></td>
                                                         <td><small><?= htmlspecialchars($row['creator_cabang'] ?? '-') ?></small></td>
                                                         <td><small><?= date('d/m/Y', strtotime($row['created_at'])) ?></small></td>
@@ -387,6 +397,12 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                                                                 <a href="detail.php?id=<?= $row['id_budget'] ?>"
                                                                     class="btn btn-outline-info btn-action" title="Detail">
                                                                     <i class="fas fa-eye fa-xs"></i>
+                                                                </a>
+
+                                                                <!-- Realisasi Detail Link -->
+                                                                <a href="../z_realisasi_ppx/detail.php?id_budget=<?= $row['id_budget'] ?>"
+                                                                    class="btn btn-outline-success btn-action" title="Input / Lihat Realisasi Per Detail Item">
+                                                                    <i class="fas fa-list-check fa-xs"></i>
                                                                 </a>
 
                                                                 <!-- Upload Bukti TF Button - hanya muncul jika Pending -->

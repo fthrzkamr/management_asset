@@ -45,7 +45,7 @@ if (!empty($id_list)) {
                bd.rincian, bd.qty, bd.satuan, bd.harga_satuan, bd.total AS total_ajuan,
                bc.category_name
         FROM ppx_realisasi_detail2 rd
-        LEFT JOIN ppx_monthly_budget_item_detail bd ON rd.id_detail_budget = bd.id_detail
+        LEFT JOIN ppx_monthly_budget_item_detail bd ON rd.id_detail_budget = bd.id
         LEFT JOIN ppx_budget_category bc ON bd.id_category = bc.id_category
         WHERE rd.id_realisasi IN ($ids_str)
         ORDER BY bc.category_name, rd.id_real_detail ASC

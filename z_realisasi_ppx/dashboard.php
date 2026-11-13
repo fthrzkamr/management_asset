@@ -15,7 +15,7 @@ $filter_user = $is_admin ? "" : "AND mb.created_by = $user_id";
 $bulan_names = ['','Januari','Februari','Maret','April','Mei','Juni',
                 'Juli','Agustus','September','Oktober','November','Desember'];
 
-// Ambil semua monthly_budget user, gabung dengan status realisasi jika sudah ada
+// Ambil semua monthly_budget user dengan ringkasan realisasi detail per item
 $query = "
 SELECT
     mb.id_budget,
@@ -28,50 +28,34 @@ SELECT
     mb.status AS status_budget,
     mb.tipe_anggaran,
     u.nama_user AS nama_pembuat,
+    mc.nama_cabang,
 
-    -- Info realisasi (Aggregated via Subquery)
-    rel.id_realisasi,
-    rel.no_realisasi,
-    rel.status_realisasi,
-    rel.total_nominal_realisasi
+    -- Info realisasi teragregasi per detail
+    COALESCE(rd_stats.total_approved, 0) AS total_approved,
+    COALESCE(rd_stats.count_pending, 0)  AS count_pending,
+    COALESCE(rd_stats.count_draft, 0)    AS count_draft,
+    COALESCE(rd_stats.items_realized, 0) AS items_realized,
+    (SELECT COUNT(*) FROM ppx_monthly_budget_item_detail WHERE id_budget = mb.id_budget) AS total_items
 
 FROM ppx_monthly_budget mb
 LEFT JOIN user_dfm u ON mb.created_by = u.id_user
+LEFT JOIN master_cabang mc ON u.id_cabang = mc.id_cabang
 LEFT JOIN (
     SELECT 
-        r.id_budget, 
-        r.user_id,
-        MAX(r.id_realisasi) AS id_realisasi,
-        MAX(r.no_realisasi) AS no_realisasi,
-        -- Status: Ambil status 'tertinggi' (Approved > Waiting > Draft) atau sekadar MAX
-        MAX(r.status) AS status_realisasi,
-        -- Nominal: Sum dari semua detail yang terkait dengan budget & user ini
-        (SELECT SUM(nominal_realisasi) FROM ppx_realisasi_detail2 WHERE id_budget = r.id_budget) AS total_nominal_realisasi
-    FROM ppx_realisasi_monthly r
-    GROUP BY r.id_budget, r.user_id
-) rel ON rel.id_budget = mb.id_budget AND rel.user_id = mb.created_by
+        id_budget,
+        SUM(CASE WHEN status = 'Disetujui' THEN nominal_realisasi ELSE 0 END) AS total_approved,
+        COUNT(CASE WHEN status = 'Menunggu Approval' THEN 1 END) AS count_pending,
+        COUNT(CASE WHEN status = 'Draft' THEN 1 END) AS count_draft,
+        COUNT(DISTINCT CASE WHEN status = 'Disetujui' THEN id_detail_budget END) AS items_realized
+    FROM ppx_realisasi_detail2
+    GROUP BY id_budget
+) rd_stats ON rd_stats.id_budget = mb.id_budget
 
 WHERE mb.status NOT IN ('Draft')
   $filter_user
-ORDER BY mb.period_year DESC, mb.period_month DESC";
+ORDER BY mb.period_year DESC, mb.period_month DESC, mb.id_budget DESC";
 
 $result = mysqli_query($conn, $query);
-
-// Fallback jika query gagal
-if (!$result) {
-    $query2 = "
-    SELECT
-        mb.id_budget, mb.period_year AS tahun, mb.period_month AS bulan,
-        mb.budget_name, mb.total_allocation, mb.total_used, mb.total_remaining,
-        mb.status AS status_budget, mb.tipe_anggaran, u.nama_user AS nama_pembuat,
-        NULL AS id_realisasi, NULL AS no_realisasi,
-        NULL AS status_realisasi, NULL AS total_nominal_realisasi
-    FROM ppx_monthly_budget mb
-    LEFT JOIN user_dfm u ON mb.created_by = u.id_user
-    WHERE mb.status NOT IN ('Draft') $filter_user
-    ORDER BY mb.period_year DESC, mb.period_month DESC";
-    $result = mysqli_query($conn, $query2);
-}
 
 $budgets = [];
 if ($result) while ($r = mysqli_fetch_assoc($result)) $budgets[] = $r;
@@ -170,57 +154,62 @@ if ($result) while ($r = mysqli_fetch_assoc($result)) $budgets[] = $r;
             <?php else: ?>
                 <div class="row">
                     <?php foreach ($budgets as $mb):
-                        $status_rl  = $mb['status_realisasi'] ?? null;
+                        $tot_alloc   = (float)$mb['total_allocation'];
+                        $tot_app     = (float)$mb['total_approved'];
+                        $cnt_pend    = (int)$mb['count_pending'];
+                        $cnt_draft   = (int)$mb['count_draft'];
+                        $tot_items   = (int)$mb['total_items'];
+                        $it_realized = (int)$mb['items_realized'];
 
-                        // Tentukan tampilan berdasarkan status realisasi
-                        $head_cls = 'head-new';
-                        $pill_cls = 'pill-new';
-                        $pill_ico = 'fas fa-plus-circle';
-                        $pill_txt = 'Buat Realisasi';
-                        $hint     = 'Klik untuk mulai input realisasi';
-
-                        if ($status_rl === 'Draft') {
-                            $head_cls = 'head-draft'; $pill_cls = 'pill-draft';
-                            $pill_ico = 'fas fa-edit'; $pill_txt = 'Draft tersimpan';
-                            $hint = 'Klik untuk lanjut input & kirim';
-                        } elseif ($status_rl === 'Menunggu Approval') {
-                            $head_cls = 'head-waiting'; $pill_cls = 'pill-waiting';
-                            $pill_ico = 'fas fa-clock'; $pill_txt = 'Menunggu Asmen';
-                            $hint = 'Menunggu persetujuan Asmen Finance';
-                        } elseif ($status_rl === 'Disetujui') {
-                            $head_cls = 'head-approved'; $pill_cls = 'pill-approved';
-                            $pill_ico = 'fas fa-check-double'; $pill_txt = 'Disetujui';
-                            $hint = 'Realisasi selesai dan disetujui';
-                        } elseif ($status_rl === 'Ditolak') {
-                            $head_cls = 'head-rejected'; $pill_cls = 'pill-rejected';
-                            $pill_ico = 'fas fa-exclamation-circle'; $pill_txt = 'Ditolak — Revisi';
-                            $hint = 'Klik untuk revisi dan kirim ulang';
+                        // Tentukan tampilan berdasarkan status realisasi detail
+                        if ($cnt_pend > 0) {
+                            $head_cls = 'head-waiting';
+                            $pill_cls = 'pill-waiting';
+                            $pill_ico = 'fas fa-clock';
+                            $pill_txt = "$cnt_pend Menunggu Asmen";
+                            $hint     = 'Ada realisasi item menunggu persetujuan';
+                        } elseif ($it_realized >= $tot_items && $tot_items > 0) {
+                            $head_cls = 'head-approved';
+                            $pill_cls = 'pill-approved';
+                            $pill_ico = 'fas fa-check-double';
+                            $pill_txt = 'Semua Terealisasi';
+                            $hint     = 'Seluruh item rincian sudah direalisasikan';
+                        } elseif ($tot_app > 0) {
+                            $head_cls = 'head-approved';
+                            $pill_cls = 'pill-approved';
+                            $pill_ico = 'fas fa-pie-chart';
+                            $pill_txt = "$it_realized/$tot_items Item Terealisasi";
+                            $hint     = 'Klik untuk lanjut realisasi item lainnya';
+                        } elseif ($cnt_draft > 0) {
+                            $head_cls = 'head-draft';
+                            $pill_cls = 'pill-draft';
+                            $pill_ico = 'fas fa-edit';
+                            $pill_txt = "$cnt_draft Draft Tersimpan";
+                            $hint     = 'Klik untuk lanjut input & kirim draft';
+                        } else {
+                            $head_cls = 'head-new';
+                            $pill_cls = 'pill-new';
+                            $pill_ico = 'fas fa-plus-circle';
+                            $pill_txt = 'Belum Realisasi';
+                            $hint     = 'Klik untuk mulai input realisasi per item';
                         }
 
                         $url = "detail.php?id_budget={$mb['id_budget']}";
-                        if ($mb['id_realisasi']) $url .= "&id_realisasi={$mb['id_realisasi']}";
 
                         // Progress penggunaan anggaran
-                        $pct = $mb['total_allocation'] > 0
-                            ? min(100, round($mb['total_used'] / $mb['total_allocation'] * 100))
-                            : 0;
+                        $pct = $tot_alloc > 0 ? min(100, round(($tot_app / $tot_alloc) * 100)) : 0;
                         $prog_danger = $pct >= 80;
-                        
-                        // Handler klik
-                        $can_click = ($mb['status_budget'] === 'Active' || !empty($mb['id_realisasi']));
                     ?>
                     <div class="col-sm-6 col-md-4 col-xl-3 mb-4">
-                        <div class="rl-card card h-100" 
-                             style="<?= !$can_click ? 'cursor:not-allowed; opacity:0.6;' : '' ?>"
-                             <?= $can_click ? "onclick=\"window.location='$url'\"" : "onclick=\"alert('Anggaran ini sudah tidak aktif / tertutup.');\"" ?>>
+                        <div class="rl-card card h-100" onclick="window.location='<?= $url ?>'">
 
                             <div class="<?= $head_cls ?> card-head-inner">
                                 <div class="bulan-label">
                                     <i class="far fa-calendar-alt mr-1"></i>
                                     <?= $bulan_names[$mb['bulan']] ?> <?= $mb['tahun'] ?>
                                 </div>
-                                <small style="opacity:.8; font-size:11px;">
-                                    <?= htmlspecialchars($mb['tipe_anggaran'] ?? '') ?>
+                                <small style="opacity:.85; font-size:11px;">
+                                    <?= htmlspecialchars($mb['nama_cabang'] ?? ($mb['tipe_anggaran'] ?? '')) ?>
                                 </small>
                             </div>
 
@@ -233,7 +222,7 @@ if ($result) while ($r = mysqli_fetch_assoc($result)) $budgets[] = $r;
                                 </div>
 
                                 <!-- Nama budget -->
-                                <p class="small text-muted mb-2" style="font-size:11.5px; line-height:1.3;">
+                                <p class="small text-muted mb-2 font-weight-bold" style="font-size:12px; line-height:1.3;">
                                     <?= htmlspecialchars($mb['budget_name']) ?>
                                 </p>
 
@@ -241,15 +230,15 @@ if ($result) while ($r = mysqli_fetch_assoc($result)) $budgets[] = $r;
 
                                 <div class="stat-row">
                                     <span class="lbl"><i class="fas fa-coins mr-1"></i>Total Alokasi</span>
-                                    <span class="val text-primary">Rp <?= number_format($mb['total_allocation'], 0, ',', '.') ?></span>
+                                    <span class="val text-primary">Rp <?= number_format($tot_alloc, 0, ',', '.') ?></span>
                                 </div>
                                 <div class="stat-row">
-                                    <span class="lbl"><i class="fas fa-shopping-cart mr-1"></i>Terpakai</span>
-                                    <span class="val text-danger">Rp <?= number_format($mb['total_used'], 0, ',', '.') ?></span>
+                                    <span class="lbl"><i class="fas fa-shopping-cart mr-1"></i>Terealisasi</span>
+                                    <span class="val text-success">Rp <?= number_format($tot_app, 0, ',', '.') ?></span>
                                 </div>
                                 <div class="stat-row">
                                     <span class="lbl"><i class="fas fa-wallet mr-1"></i>Sisa</span>
-                                    <span class="val text-success">Rp <?= number_format($mb['total_remaining'], 0, ',', '.') ?></span>
+                                    <span class="val text-info">Rp <?= number_format(max(0, $tot_alloc - $tot_app), 0, ',', '.') ?></span>
                                 </div>
 
                                 <!-- Progress bar utilisasi -->
@@ -257,19 +246,15 @@ if ($result) while ($r = mysqli_fetch_assoc($result)) $budgets[] = $r;
                                     <div class="prog-bar <?= $prog_danger ? 'danger' : '' ?>"
                                          style="width:<?= $pct ?>%"></div>
                                 </div>
-                                <div class="text-right" style="font-size:10.5px; color:#9ca3af;"><?= $pct ?>% terpakai</div>
-
-                                <?php if ($mb['id_realisasi']): ?>
-                                <div class="stat-row mt-1">
-                                    <span class="lbl"><i class="fas fa-file-invoice mr-1"></i>Nominal Realisasi</span>
-                                    <span class="val">Rp <?= number_format($mb['total_nominal_realisasi'], 0, ',', '.') ?></span>
+                                <div class="d-flex justify-content-between mt-1" style="font-size:10.5px; color:#9ca3af;">
+                                    <span><?= $tot_items ?> item total</span>
+                                    <span><?= $pct ?>% terealisasi</span>
                                 </div>
-                                <?php endif; ?>
 
                                 <hr style="margin:8px 0;">
                                 <div class="text-center">
                                     <small class="text-muted">
-                                        <i class="fas fa-hand-pointer"></i> <?= $hint ?>
+                                        <i class="fas fa-hand-pointer mr-1"></i> <?= $hint ?>
                                     </small>
                                 </div>
                             </div>
