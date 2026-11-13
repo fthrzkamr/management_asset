@@ -29,7 +29,8 @@ $kategoriOptions = [
     'Percetakan', 
     'Pest Control', 
     'Teknisi',
-    'Internet'
+    'Internet',
+    'Perlengkapan'
 ];
 $q_kat = mysqli_query($conn, "SELECT DISTINCT kategori_vendor FROM master_vendor WHERE kategori_vendor IS NOT NULL AND kategori_vendor != ''");
 if ($q_kat) {
@@ -166,8 +167,8 @@ sort($kategoriOptions);
                                         </div>
                                         <div class="col-12 col-md-4">
                                             <div class="form-group">
-                                                <label>Email Vendor <small class="text-muted">(Opsional)</small></label>
-                                                <input type="email" name="email" class="form-control" placeholder="Contoh: info@vendor.com" />
+                                                <label>Email Vendor</label>
+                                                <input type="text" name="email" class="form-control" placeholder="Contoh: info@vendor.com" />
                                             </div>
                                         </div>
                                         <div class="col-12">

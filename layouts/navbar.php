@@ -439,7 +439,7 @@ function is_active($patterns) {
                     <li class="<?= is_active('z_pengajuan_renovasi') ? 'active' : '' ?>">
                         <a href="<?= BASE_URL ?>/z_pengajuan_renovasi/dashboard.php">
                             <i class="fa-solid fa-house-circle-exclamation"></i>
-                            <span>Pengajuan Renovasi Kantor</span>
+                            <span>Pengajuan Renovasi</span>
                             <?= navBadge('pengajuan_renovasi', $badge_counts) ?>
                         </a>
                     </li>

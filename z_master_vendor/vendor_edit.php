@@ -168,8 +168,8 @@ sort($kategoriOptions);
                                         </div>
                                         <div class="col-12 col-md-4">
                                             <div class="form-group">
-                                                <label>Email Vendor <small class="text-muted">(Opsional)</small></label>
-                                                <input type="email" name="email" class="form-control" value="<?= htmlspecialchars($vendor['email'] ?? '') ?>" />
+                                                <label>Email Vendor</label>
+                                                <input type="text" name="email" class="form-control" value="<?= htmlspecialchars($vendor['email'] ?? '') ?>" />
                                             </div>
                                         </div>
                                         <div class="col-12">
