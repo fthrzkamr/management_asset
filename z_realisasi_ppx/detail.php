@@ -119,6 +119,7 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Realisasi Kas (BKK/BKM) – <?= htmlspecialchars($budget['budget_name']) ?></title>
     <link rel="icon" href="../assets/img/dua.png" type="image/png">
+    <link rel="stylesheet" href="../assets/plugins/select2/css/select2.min.css">
     <?php
     $layout_dir = realpath(__DIR__ . '/../layouts');
     if ($layout_dir && file_exists($layout_dir . '/header_css.php')) include $layout_dir . '/header_css.php';
@@ -172,6 +173,68 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
         .rincian-table th { background: #1e3a8a; color: #fff; padding: 9px 12px; font-size: 12px; font-weight: 600; border: none; }
         .rincian-table td { padding: 8px 10px; vertical-align: middle; background: #fff; }
         .rincian-table.table-bkm th { background: #047857; }
+
+        /* ── Select2 Custom Styling for Table Cell ── */
+        .select2-container { width: 100% !important; min-width: 0 !important; }
+        .select2-container--default .select2-selection--single {
+            height: 31px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: #1e293b;
+            font-size: 12px;
+            line-height: 29px;
+            padding-left: 8px;
+            padding-right: 24px;
+            width: 100%;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 29px;
+            right: 6px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__clear {
+            margin-right: 18px;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+        .select2-dropdown {
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            font-size: 12px;
+            z-index: 1065 !important; /* higher than modal (1050) */
+        }
+        .select2-container--default .select2-search--dropdown {
+            padding: 6px 8px;
+        }
+        .select2-container--default .select2-search--dropdown .select2-search__field {
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            padding: 5px 8px;
+            font-size: 12px;
+            outline: none;
+        }
+        .select2-container--default .select2-search--dropdown .select2-search__field:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+        }
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: #1e3a8a;
+            color: #fff;
+        }
+        .select2-container--default .select2-results__group {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            background: #f8fafc;
+            padding: 4px 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
     </style>
 </head>
 <body style="background: #f4f6f9;">
@@ -560,7 +623,7 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                             <table class="table table-sm mb-0 rincian-table" id="tableKasRincian">
                                 <thead>
                                     <tr>
-                                        <th width="45%">Akun (pilih rincian anggaran)</th>
+                                        <th width="45%">Akun (ketik kode / nama untuk mencari)</th>
                                         <th width="32%">Keterangan</th>
                                         <th width="18%" class="text-right">Jumlah (Rp)</th>
                                         <th width="5%" class="text-center"></th>
@@ -666,6 +729,13 @@ function openKasModal(jenis, presetItemId) {
     document.getElementById('formTransaksiKas').reset();
     document.getElementById('kasIdRealDetail').value = '0';
     document.getElementById('kasFilePreview').innerHTML = '';
+
+    // Destroy instance Select2 lama jika ada
+    $('#tbodyKasRincian .select-akun').each(function() {
+        if ($(this).data('select2')) {
+            $(this).select2('destroy');
+        }
+    });
     document.getElementById('tbodyKasRincian').innerHTML = '';
     document.getElementById('kasTanggal').value = '<?= date('Y-m-d') ?>';
 
@@ -679,8 +749,8 @@ function addKasRow(selectedId, keteranganVal, jumlahVal) {
     const tbody = document.getElementById('tbodyKasRincian');
     const tr = document.createElement('tr');
 
-    let selectHtml = '<select name="item_detail_id[]" class="form-control form-control-sm select-akun" required>';
-    selectHtml += '<option value="">-- Pilih Akun / Rincian Biaya --</option>';
+    let selectHtml = '<select name="item_detail_id[]" class="form-control form-control-sm select-akun" required style="width:100%;">';
+    selectHtml += '<option value="">-- Ketik kode / nama untuk mencari --</option>';
 
     // Group by category
     const categories = {};
@@ -694,7 +764,8 @@ function addKasRow(selectedId, keteranganVal, jumlahVal) {
         selectHtml += `<optgroup label="${catName}">`;
         catItems.forEach(it => {
             const sel = (selectedId && it.id == selectedId) ? 'selected' : '';
-            selectHtml += `<option value="${it.id}" ${sel}>${it.rincian} (Sisa: Rp ${formatRupiah(it.sisa)})</option>`;
+            const prefix = it.kode ? `[${it.kode}] ` : '';
+            selectHtml += `<option value="${it.id}" ${sel}>${prefix}${it.rincian} (Sisa: Rp ${formatRupiah(it.sisa)})</option>`;
         });
         selectHtml += `</optgroup>`;
     }
@@ -704,7 +775,7 @@ function addKasRow(selectedId, keteranganVal, jumlahVal) {
     const jmlText = jumlahVal ? formatRupiah(jumlahVal) : '';
 
     tr.innerHTML = `
-        <td>${selectHtml}</td>
+        <td style="min-width: 260px;">${selectHtml}</td>
         <td><input type="text" name="item_keterangan[]" class="form-control form-control-sm" placeholder="Keterangan (opsional)" value="${ketText}"></td>
         <td><input type="text" name="item_jumlah[]" class="form-control form-control-sm rupiah-kas text-right font-weight-bold" placeholder="0" value="${jmlText}" oninput="calcKasTotal()" required></td>
         <td class="text-center">
@@ -715,6 +786,18 @@ function addKasRow(selectedId, keteranganVal, jumlahVal) {
     `;
 
     tbody.appendChild(tr);
+
+    // Inisialisasi Select2 pencarian pada elemen select yang baru dibuat
+    const $sel = $(tr).find('.select-akun');
+    if ($.fn.select2) {
+        $sel.select2({
+            dropdownParent: $('#modalInputKas'),
+            width: '100%',
+            placeholder: 'mis. 5313 / BBM / Listrik',
+            allowClear: true
+        });
+    }
+
     calcKasTotal();
 }
 
@@ -724,7 +807,12 @@ function removeKasRow(btn) {
         alert('Minimal harus ada 1 baris rincian akun biaya!');
         return;
     }
-    btn.closest('tr').remove();
+    const tr = btn.closest('tr');
+    const $sel = $(tr).find('.select-akun');
+    if ($sel.length && $sel.data('select2')) {
+        $sel.select2('destroy');
+    }
+    tr.remove();
     calcKasTotal();
 }
 
@@ -765,6 +853,12 @@ function editKasTransaction(data) {
     document.getElementById('kasTanggal').value = data.tanggal_realisasi || '<?= date('Y-m-d') ?>';
     document.getElementById('kasDibayar').value = data.dibayar_kepada || '';
     document.getElementById('kasKeperluan').value = data.keperluan || data.catatan || '';
+    
+    $('#tbodyKasRincian .select-akun').each(function() {
+        if ($(this).data('select2')) {
+            $(this).select2('destroy');
+        }
+    });
     document.getElementById('tbodyKasRincian').innerHTML = '';
 
     const isBkm = (data.jenis_transaksi === 'BKM');
@@ -794,6 +888,16 @@ function editKasTransaction(data) {
 function formatRupiah(num) {
     return (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
+
+// Auto-focus kotak pencarian saat Select2 dibuka
+$(document).on('select2:open', () => {
+    setTimeout(() => {
+        const searchField = document.querySelector('.select2-container--open .select2-search__field');
+        if (searchField) {
+            searchField.focus();
+        }
+    }, 50);
+});
 </script>
 </body>
 </html>
