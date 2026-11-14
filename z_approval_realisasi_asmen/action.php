@@ -23,7 +23,7 @@ $catatan        = mysqli_real_escape_string($conn, trim($_POST['catatan_approval
 $redirect_back  = trim($_POST['redirect_to'] ?? 'dashboard.php');
 
 // Whitelist redirect
-if (!preg_match('/^(dashboard|detail_user|detail)\.php/', $redirect_back)) {
+if (!preg_match('/^dashboard\.php/', $redirect_back)) {
     $redirect_back = 'dashboard.php';
 }
 

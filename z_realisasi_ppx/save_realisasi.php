@@ -145,11 +145,19 @@ try {
             throw new Exception("Transaksi ini sedang diproses atau sudah disetujui, tidak dapat diedit.");
         }
 
-        $id_detail_item = !empty($_POST['id_detail']) ? (int)$_POST['id_detail'] : (int)$existing['id_detail_budget'];
-        $nom_input      = str_replace('.', '', $_POST['nominal_realisasi'] ?? '0');
-        $uk_input       = str_replace('.', '', $_POST['uang_kembali'] ?? '0');
-        $nom_val        = max(0, (float)$nom_input);
-        $uk_val         = max(0, (float)$uk_input);
+        $items_detail_ids = $_POST['item_detail_id'] ?? [];
+        $items_keterangan = $_POST['item_keterangan'] ?? [];
+        $items_jumlah     = $_POST['item_jumlah'] ?? [];
+
+        $id_detail_item = !empty($items_detail_ids[0]) ? (int)$items_detail_ids[0] : (int)$existing['id_detail_budget'];
+        $raw_amt        = str_replace('.', '', $items_jumlah[0] ?? '0');
+        $amt_val        = max(0, (float)$raw_amt);
+        if ($amt_val <= 0) {
+            throw new Exception("Nominal transaksi harus lebih dari 0.");
+        }
+
+        $nom_val = ($jenis_transaksi === 'BKK') ? $amt_val : 0;
+        $uk_val  = ($jenis_transaksi === 'BKM') ? $amt_val : 0;
 
         $old_bukti = $existing['bukti_files'] ?? '';
         $merged_files = array_values(array_filter(array_merge(
@@ -157,7 +165,8 @@ try {
             $new_files
         )));
         $bukti_safe   = mysqli_real_escape_string($conn, implode(',', $merged_files));
-        $catatan_safe = mysqli_real_escape_string($conn, trim($_POST['catatan'] ?? $existing['catatan']));
+        $ket_input    = trim($items_keterangan[0] ?? '');
+        $catatan_safe = mysqli_real_escape_string($conn, $ket_input !== '' ? $ket_input : ($keperluan ?: $existing['catatan']));
         $tgl_safe     = mysqli_real_escape_string($conn, $tanggal_real);
         $st_safe      = mysqli_real_escape_string($conn, $status_baru);
         $dk_safe      = mysqli_real_escape_string($conn, $dibayar_kepada ?: $existing['dibayar_kepada']);
@@ -166,6 +175,7 @@ try {
         $sql_up = "UPDATE ppx_realisasi_detail2 SET
                     id_realisasi      = $id_realisasi,
                     id_detail_budget  = $id_detail_item,
+                    jenis_transaksi   = '$jenis_transaksi',
                     tanggal_realisasi = '$tgl_safe',
                     dibayar_kepada    = '$dk_safe',
                     keperluan         = '$kp_safe',
@@ -186,13 +196,6 @@ try {
         $items_detail_ids = $_POST['item_detail_id'] ?? [];
         $items_keterangan = $_POST['item_keterangan'] ?? [];
         $items_jumlah     = $_POST['item_jumlah'] ?? [];
-
-        // Jika form single (format lama atau inline)
-        if (empty($items_detail_ids) && !empty($_POST['id_detail'])) {
-            $items_detail_ids = [$_POST['id_detail']];
-            $items_keterangan = [$_POST['catatan'] ?? ''];
-            $items_jumlah     = [$_POST['nominal_realisasi'] ?? '0'];
-        }
 
         if (empty($items_detail_ids)) {
             throw new Exception("Rincian akun/item biaya harus diisi minimal 1 baris.");

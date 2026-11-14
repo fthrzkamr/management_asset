@@ -64,7 +64,6 @@ foreach ($items as $it) {
 
 // ── Ambil SEMUA riwayat realisasi untuk anggaran ini ────────────────────
 $real_by_detail = []; // [id_detail_budget => [ list of realizations ]]
-$all_real_list  = [];
 
 $all_real_q = mysqli_query($conn, "
     SELECT rd.*, u.nama_user as approver_name, mbd.rincian as nama_item, bc.category_name
@@ -78,7 +77,6 @@ $all_real_q = mysqli_query($conn, "
 if ($all_real_q) {
     while ($rl = mysqli_fetch_assoc($all_real_q)) {
         $real_by_detail[$rl['id_detail_budget']][] = $rl;
-        $all_real_list[] = $rl;
     }
 }
 
