@@ -1,370 +1,329 @@
 <?php
 // filepath: c:\xampp\htdocs\asset_dfm\z_pengajuan_ppx\realisasi_submit.php
-include('../dist/config/config.php');
-include('../dist/config/auth_helper.php');
+require_once __DIR__ . '/../dist/config/config.php';
+require_once __DIR__ . '/../dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
 
 // Cek login
 if (!$auth->isLoggedIn()) {
     $_SESSION['error'] = 'Silakan login terlebih dahulu!';
-    header("Location: ../z_auth/login.php");
+    header("Location: ../login.php");
     exit();
 }
 
-// Pastikan form di-submit
-if (!isset($_POST['submit_realisasi'])) {
-    $_SESSION['error'] = 'Akses tidak valid!';
-    header("Location: dashboard.php");
-    exit();
-}
-
-$user_id = $_SESSION['id_user'] ?? 0;
+$user_id   = (int)($_SESSION['id_user'] ?? 0);
 $nama_user = $_SESSION['nama_user'] ?? '';
-$no_ppx = mysqli_real_escape_string($conn, $_POST['no_ppx'] ?? '');
-$total_realisasi = (float)($_POST['total_realisasi'] ?? 0);
-$uang_kembali = (float)($_POST['uang_kembali'] ?? 0);
-$status_selisih = mysqli_real_escape_string($conn, $_POST['status_selisih'] ?? 'pas'); // kembali/kurang/pas
-$keterangan_realisasi = mysqli_real_escape_string($conn, $_POST['keterangan_realisasi'] ?? '');
-$confirm_pakai_uang_pribadi = isset($_POST['confirm_pakai_uang_pribadi']) ? 1 : 0;
-// Jika form mengirimkan finalize_ppx=1 artinya user ingin menandai PPX selesai
-$finalize_ppx = isset($_POST['finalize_ppx']) && $_POST['finalize_ppx'] == '1' ? 1 : 0;
+$action    = trim($_POST['action'] ?? (isset($_POST['submit_realisasi']) ? 'submit_legacy' : 'save_kas'));
+$no_ppx    = mysqli_real_escape_string($conn, trim($_POST['no_ppx'] ?? ''));
 
-// Ambil data detail realisasi (array barang yang dibeli)
-$detail_realisasi = $_POST['realisasi'] ?? [];
-
-// Validasi input
 if (empty($no_ppx)) {
     $_SESSION['error'] = 'Nomor PPX tidak ditemukan!';
     header("Location: dashboard.php");
     exit();
 }
 
-if ($total_realisasi <= 0) {
-    $_SESSION['error'] = 'Total realisasi harus lebih dari 0!';
-    header("Location: realisasi.php?no_ppx=" . urlencode($no_ppx));
-    exit();
-}
-
-// Validasi detail realisasi
-if (empty($detail_realisasi)) {
-    $_SESSION['error'] = 'Detail barang realisasi harus diisi minimal 1 item!';
-    header("Location: realisasi.php?no_ppx=" . urlencode($no_ppx));
-    exit();
-}
-
-// Cek apakah user adalah pemilik PPX ini dan status = Uang Muka
-$check_query = "SELECT no_ppx, user_id, status, request_type, nominal_ppx, uang_muka 
+// Cek apakah user adalah pemilik PPX ini atau punya akses (admin / finance)
+$check_query = "SELECT no_ppx, user_id, status, request_type, nominal_ppx, uang_muka, cabang 
                 FROM ppx_request 
-                WHERE no_ppx = ? AND user_id = ? AND status = 'Uang Muka'";
-$stmt = mysqli_prepare($conn, $check_query);
-mysqli_stmt_bind_param($stmt, 'si', $no_ppx, $user_id);
-mysqli_stmt_execute($stmt);
-$check_result = mysqli_stmt_get_result($stmt);
+                WHERE no_ppx = '$no_ppx' LIMIT 1";
+$check_result = mysqli_query($conn, $check_query);
 
-if (mysqli_num_rows($check_result) == 0) {
-    $_SESSION['error'] = 'PPX tidak ditemukan atau Anda tidak memiliki akses, atau status bukan Uang Muka!';
+if (!$check_result || mysqli_num_rows($check_result) == 0) {
+    $_SESSION['error'] = 'Data PPX tidak ditemukan!';
     header("Location: dashboard.php");
     exit();
 }
 
 $ppx_data = mysqli_fetch_assoc($check_result);
-mysqli_stmt_close($stmt);
+$is_owner = ($ppx_data['user_id'] == $user_id);
+$is_admin = ($auth->hasRole('admin') || $auth->hasRole('finance'));
 
-// HAPUS validasi total realisasi tidak boleh melebihi uang muka
-// Karena sekarang user bisa pakai uang pribadi
-// if ($total_realisasi > $ppx_data['uang_muka']) {
-//     $_SESSION['error'] = 'Total realisasi tidak boleh melebihi uang muka yang diterima!';
-//     header("Location: realisasi.php?no_ppx=" . urlencode($no_ppx));
-//     exit();
-// }
-
-// Validasi jika ada kekurangan, user harus konfirmasi
-if ($status_selisih === 'kurang' && !$confirm_pakai_uang_pribadi) {
-    $_SESSION['error'] = 'Anda harus mengkonfirmasi bahwa telah menggunakan uang pribadi untuk menutupi kekurangan!';
-    header("Location: realisasi.php?no_ppx=" . urlencode($no_ppx));
+if (!$is_owner && !$is_admin) {
+    $_SESSION['error'] = 'Anda tidak memiliki hak akses untuk PPX ini!';
+    header("Location: dashboard.php");
     exit();
 }
 
-// REMOVED: Pengecekan realisasi sudah pernah disubmit
-// Sekarang kita mengizinkan multiple realisasi untuk satu PPX (realisasi bertahap)
-
-// --- UPLOAD MULTIPLE FILES ---
-$upload_path = '../uploads/ppx_realisasi/';
+// Upload directory
+$upload_path = __DIR__ . '/../uploads/ppx_realisasi/';
 if (!is_dir($upload_path)) {
-    mkdir($upload_path, 0755, true);
+    @mkdir($upload_path, 0755, true);
 }
 
-$allowed_ext = ['jpg', 'jpeg', 'png', 'pdf'];
-$max_size = 5 * 1024 * 1024; // 5MB
-$max_files = 5;
-
-// Function untuk handle multiple upload
-function uploadMultipleFiles($files, $field_name, $no_ppx, $upload_path, $allowed_ext, $max_size, $max_files)
-{
-    $uploaded_files = [];
-
-    if (!isset($files[$field_name]) || empty($files[$field_name]['name'])) {
-        throw new Exception("Bukti realisasi harus diupload!");
+// Helper generate No. Transaksi Kas
+function generateNoTransaksiKasPPX($conn, $jenis) {
+    $prefix = ($jenis === 'BKM') ? 'BKM' : 'BKK';
+    $yearmonth = date('Ym');
+    $pattern = $prefix . '-' . $yearmonth . '-%';
+    
+    $q = mysqli_query($conn, "SELECT no_transaksi FROM ppx_realisasi WHERE no_transaksi LIKE '$pattern' ORDER BY no_transaksi DESC LIMIT 1");
+    $next_seq = 1;
+    if ($q && mysqli_num_rows($q) > 0) {
+        $last_no = mysqli_fetch_assoc($q)['no_transaksi'];
+        $parts = explode('-', $last_no);
+        $last_seq = (int)end($parts);
+        $next_seq = $last_seq + 1;
     }
-
-    // Handle jika single file atau multiple files
-    if (is_array($files[$field_name]['name'])) {
-        // Multiple files
-        $file_count = count($files[$field_name]['name']);
-
-        if ($file_count > $max_files) {
-            throw new Exception("Maksimal $max_files file untuk bukti realisasi!");
-        }
-
-        for ($i = 0; $i < $file_count; $i++) {
-            if ($files[$field_name]['error'][$i] !== UPLOAD_ERR_OK) {
-                continue; // Skip file yang error
-            }
-
-            $file_name = $files[$field_name]['name'][$i];
-            $file_tmp = $files[$field_name]['tmp_name'][$i];
-            $file_size = $files[$field_name]['size'][$i];
-            $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-
-            // Validasi extension
-            if (!in_array($file_ext, $allowed_ext)) {
-                throw new Exception("Format file '$file_name' tidak valid! Hanya JPG, PNG, PDF yang diperbolehkan.");
-            }
-
-            // Validasi size
-            if ($file_size > $max_size) {
-                throw new Exception("File '$file_name' terlalu besar! Maksimal 5MB per file.");
-            }
-
-            // Generate nama file unik
-            $new_filename = 'realisasi_' . $no_ppx . '_' . ($i + 1) . '_' . time() . '.' . $file_ext;
-            $target_file = $upload_path . $new_filename;
-
-            if (!move_uploaded_file($file_tmp, $target_file)) {
-                throw new Exception("Gagal mengupload file '$file_name'!");
-            }
-
-            $uploaded_files[] = $new_filename;
-        }
-    } else {
-        // Single file
-        if ($files[$field_name]['error'] !== UPLOAD_ERR_OK) {
-            throw new Exception("Error upload file bukti realisasi!");
-        }
-
-        $file_name = $files[$field_name]['name'];
-        $file_tmp = $files[$field_name]['tmp_name'];
-        $file_size = $files[$field_name]['size'];
-        $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-
-        // Validasi extension
-        if (!in_array($file_ext, $allowed_ext)) {
-            throw new Exception("Format file tidak valid! Hanya JPG, PNG, PDF yang diperbolehkan.");
-        }
-
-        // Validasi size
-        if ($file_size > $max_size) {
-            throw new Exception("File terlalu besar! Maksimal 5MB per file.");
-        }
-
-        // Generate nama file unik
-        $new_filename = 'realisasi_' . $no_ppx . '_' . time() . '.' . $file_ext;
-        $target_file = $upload_path . $new_filename;
-
-        if (!move_uploaded_file($file_tmp, $target_file)) {
-            throw new Exception("Gagal mengupload file bukti realisasi!");
-        }
-
-        $uploaded_files[] = $new_filename;
-    }
-
-    if (empty($uploaded_files)) {
-        throw new Exception("Minimal 1 file bukti realisasi harus diupload!");
-    }
-
-    return $uploaded_files;
+    return $prefix . '-' . $yearmonth . '-' . str_pad($next_seq, 4, '0', STR_PAD_LEFT);
 }
 
-// Function untuk parse rupiah dari format "Rp 1.000.000"
-function parseRupiah($rupiah)
-{
-    return (float) preg_replace('/[^0-9]/', '', $rupiah);
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. ACTION: DELETE KAS TRANSACTION
+// ─────────────────────────────────────────────────────────────────────────────
+if ($action === 'delete_kas') {
+    $id_del = (int)($_POST['id_realisasi'] ?? 0);
+    if ($id_del <= 0) {
+        $_SESSION['error'] = 'ID transaksi tidak valid.';
+        header("Location: realisasi.php?no_ppx=" . urlencode($no_ppx));
+        exit();
+    }
 
-// --- BEGIN TRANSACTION ---
-mysqli_begin_transaction($conn);
+    $chk_r = mysqli_query($conn, "SELECT * FROM ppx_realisasi WHERE id_realisasi = $id_del AND no_ppx = '$no_ppx' LIMIT 1");
+    if (!$chk_r || mysqli_num_rows($chk_r) === 0) {
+        $_SESSION['error'] = 'Transaksi realisasi tidak ditemukan.';
+        header("Location: realisasi.php?no_ppx=" . urlencode($no_ppx));
+        exit();
+    }
+    $row_del = mysqli_fetch_assoc($chk_r);
 
-try {
-    // Upload bukti realisasi
-    $files_bukti = uploadMultipleFiles($_FILES, 'bukti_realisasi', $no_ppx, $upload_path, $allowed_ext, $max_size, $max_files);
-
-    // Convert array ke JSON
-    $json_bukti = json_encode($files_bukti, JSON_UNESCAPED_SLASHES);
-
-    // Convert detail barang ke JSON
-    $detail_barang_array = [];
-    $total_item = 0;
-
-    foreach ($detail_realisasi as $item) {
-        $nama_barang = trim($item['nama_barang'] ?? '');
-        $no_akun = trim($item['no_akun'] ?? '');
-        $jumlah = (int)($item['jumlah'] ?? 0);
-        $satuan = trim($item['satuan'] ?? '');
-        $harga_satuan = parseRupiah($item['harga_satuan'] ?? '0');
-        $total_harga = parseRupiah($item['total_harga'] ?? '0');
-        $no_ppx_detail = $item['no_ppx_detail'] ?? null; // ID dari tabel ppx_request_detail
-
-        // Validasi item
-        if (empty($nama_barang) || $jumlah <= 0 || empty($satuan) || $harga_satuan <= 0) {
-            throw new Exception('Data item realisasi tidak lengkap atau tidak valid!');
+    // Hapus file fisik bukti
+    if (!empty($row_del['bukti_realisasi'])) {
+        $arr_f = json_decode($row_del['bukti_realisasi'], true);
+        if (!is_array($arr_f)) {
+            $arr_f = explode(',', $row_del['bukti_realisasi']);
         }
-
-        $detail_barang_array[] = [
-            'no_ppx_detail' => $no_ppx_detail, // Simpan referensi ke item asli
-            'nama_barang' => $nama_barang,
-            'no_akun' => $no_akun,
-            'jumlah' => $jumlah,
-            'satuan' => $satuan,
-            'harga_satuan' => $harga_satuan,
-            'total_harga' => $total_harga
-        ];
-
-        $total_item++;
-    }
-
-    if ($total_item == 0) {
-        throw new Exception('Tidak ada item realisasi yang valid!');
-    }
-
-    // Convert detail barang ke JSON
-    $json_detail_barang = json_encode($detail_barang_array, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-
-    // Hitung urutan realisasi (ke berapa kalinya untuk PPX ini)
-    $count_query = "SELECT COUNT(*) as jumlah FROM ppx_realisasi WHERE no_ppx = ?";
-    $stmt_count = mysqli_prepare($conn, $count_query);
-    mysqli_stmt_bind_param($stmt_count, 's', $no_ppx);
-    mysqli_stmt_execute($stmt_count);
-    $count_result = mysqli_stmt_get_result($stmt_count);
-    $count_row = mysqli_fetch_assoc($count_result);
-    $urutan_realisasi = ($count_row['jumlah'] ?? 0) + 1;
-    mysqli_stmt_close($stmt_count);
-
-    // INSERT ke tabel ppx_realisasi (dengan status_selisih, confirm_pakai_uang_pribadi, dan urutan_realisasi)
-    $insert_query = "INSERT INTO ppx_realisasi 
-        (no_ppx, urutan_realisasi, tanggal_realisasi, total_realisasi, uang_kembali, status_selisih, keterangan_realisasi, bukti_realisasi, detail_barang, confirm_pakai_uang_pribadi, created_at) 
-        VALUES 
-        (?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, NOW())";
-
-    $stmt_insert = mysqli_prepare($conn, $insert_query);
-    mysqli_stmt_bind_param($stmt_insert, 'siddssssi', 
-        $no_ppx,
-        $urutan_realisasi,
-        $total_realisasi, 
-        $uang_kembali, 
-        $status_selisih,
-        $keterangan_realisasi, 
-        $json_bukti, 
-        $json_detail_barang,
-        $confirm_pakai_uang_pribadi
-    );
-
-    if (!mysqli_stmt_execute($stmt_insert)) {
-        throw new Exception('Gagal menyimpan data realisasi: ' . mysqli_stmt_error($stmt_insert));
-    }
-    mysqli_stmt_close($stmt_insert);
-
-    // Cek apakah SEMUA item dari ppx_request_detail sudah direalisasikan
-    // Hitung total item di ppx_request_detail
-    $query_total = "SELECT COUNT(*) as total FROM ppx_request_detail WHERE no_ppx = ?";
-    $stmt_total = mysqli_prepare($conn, $query_total);
-    mysqli_stmt_bind_param($stmt_total, 's', $no_ppx);
-    mysqli_stmt_execute($stmt_total);
-    $result_total = mysqli_stmt_get_result($stmt_total);
-    $row_total = mysqli_fetch_assoc($result_total);
-    $total_items = $row_total['total'];
-    mysqli_stmt_close($stmt_total);
-
-    // Hitung berapa item yang sudah direalisasikan (dari JSON)
-    $query_realisasi = "SELECT detail_barang FROM ppx_realisasi WHERE no_ppx = ?";
-    $stmt_real = mysqli_prepare($conn, $query_realisasi);
-    mysqli_stmt_bind_param($stmt_real, 's', $no_ppx);
-    mysqli_stmt_execute($stmt_real);
-    $result_real = mysqli_stmt_get_result($stmt_real);
-    
-    $paid_detail_ids = [];
-    while ($row_real = mysqli_fetch_assoc($result_real)) {
-        if (!empty($row_real['detail_barang'])) {
-            $detail_items = json_decode($row_real['detail_barang'], true);
-            if (is_array($detail_items)) {
-                foreach ($detail_items as $item) {
-                    if (!empty($item['no_ppx_detail'])) {
-                        $paid_detail_ids[$item['no_ppx_detail']] = true;
-                    }
-                }
-            }
-        }
-    }
-    mysqli_stmt_close($stmt_real);
-    
-    $paid_items_count = count($paid_detail_ids);
-    $all_items_paid = ($total_items > 0 && $paid_items_count >= $total_items);
-
-    // UPDATE status ppx_request:
-    // - PPX Regular → 'Realisasi' (menunggu verifikasi opsional oleh GA atau Finance)
-    // - PPX Monthly_Budget → 'Selesai' langsung (tidak berubah)
-    $new_status = 'Selesai'; // default
-    if (($ppx_data['request_type'] ?? 'Regular') === 'Regular') {
-        $new_status = 'Realisasi';
-    }
-
-    $update_status = "UPDATE ppx_request 
-                     SET status = ?,
-                         updated_at = NOW()
-                     WHERE no_ppx = ?";
-
-    $stmt_update = mysqli_prepare($conn, $update_status);
-    mysqli_stmt_bind_param($stmt_update, 'ss', $new_status, $no_ppx);
-
-    if (!mysqli_stmt_execute($stmt_update)) {
-        throw new Exception('Gagal mengupdate status PPX: ' . mysqli_stmt_error($stmt_update));
-    }
-    mysqli_stmt_close($stmt_update);
-
-    // Commit transaction
-    mysqli_commit($conn);
-
-    // Success message berdasarkan status selisih
-    $_SESSION['success'] = 'Realisasi berhasil disubmit!';
-
-    // Cek status selisih dari form
-    $uang_kembali_abs = abs($uang_kembali);
-    
-    if ($status_selisih === 'kembali' && $uang_kembali_abs > 0) {
-        // Ada uang kembali ke Finance
-        $_SESSION['success'] .= 'Realisasi berhasil disubmit!';
-
-    }
-
-} catch (Exception $e) {
-    // Rollback jika ada error
-    mysqli_rollback($conn);
-
-    // Hapus file yang sudah diupload (jika ada)
-    if (isset($files_bukti)) {
-        foreach ($files_bukti as $file) {
-            $file_path = $upload_path . $file;
-            if (file_exists($file_path)) {
-                unlink($file_path);
+        foreach ($arr_f as $f) {
+            $f = trim($f);
+            if ($f && file_exists($upload_path . $f)) {
+                @unlink($upload_path . $f);
             }
         }
     }
 
-    $_SESSION['error'] = $e->getMessage();
+    mysqli_query($conn, "DELETE FROM ppx_realisasi WHERE id_realisasi = $id_del");
+    $_SESSION['success'] = 'Transaksi kas berhasil dihapus.';
     header("Location: realisasi.php?no_ppx=" . urlencode($no_ppx));
     exit();
 }
 
-header("Location: dashboard.php");
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. ACTION: FINALIZE PPX (Tandai Realisasi Selesai)
+// ─────────────────────────────────────────────────────────────────────────────
+if ($action === 'finalize_ppx') {
+    $q_cnt = mysqli_query($conn, "SELECT COUNT(*) as cnt FROM ppx_realisasi WHERE no_ppx = '$no_ppx'");
+    $cnt_real = (int)(mysqli_fetch_assoc($q_cnt)['cnt'] ?? 0);
+    if ($cnt_real === 0) {
+        $_SESSION['error'] = 'Belum ada transaksi realisasi kas yang diinput untuk PPX ini.';
+        header("Location: realisasi.php?no_ppx=" . urlencode($no_ppx));
+        exit();
+    }
+
+    // PPX Regular → 'Realisasi' (menunggu verifikasi oleh GA / Finance)
+    // PPX Monthly_Budget → 'Selesai'
+    $new_status = (($ppx_data['request_type'] ?? 'Regular') === 'Regular') ? 'Realisasi' : 'Selesai';
+    mysqli_query($conn, "UPDATE ppx_request SET status = '$new_status', updated_at = NOW() WHERE no_ppx = '$no_ppx'");
+
+    $_SESSION['success'] = "Realisasi untuk PPX #$no_ppx berhasil diselesaikan dan diteruskan ke Finance!";
+    header("Location: dashboard.php");
+    exit();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3. ACTION: SAVE TRANSAKSI KAS (BKK / BKM)
+// ─────────────────────────────────────────────────────────────────────────────
+if ($action === 'save_kas' || $action === 'submit_realisasi' || !empty($_POST['jenis_transaksi'])) {
+    mysqli_begin_transaction($conn);
+    try {
+        $jenis_transaksi = in_array($_POST['jenis_transaksi'] ?? '', ['BKK', 'BKM']) ? $_POST['jenis_transaksi'] : 'BKK';
+        $tanggal_real    = !empty($_POST['tanggal_realisasi']) ? $_POST['tanggal_realisasi'] : date('Y-m-d');
+        $dibayar_kepada  = trim($_POST['dibayar_kepada'] ?? '');
+        $keperluan       = trim($_POST['keperluan'] ?? '');
+
+        if (empty($dibayar_kepada)) {
+            throw new Exception(($jenis_transaksi === 'BKM' ? 'Diterima dari' : 'Dibayar kepada') . ' wajib diisi.');
+        }
+
+        // Ambil item-item rincian dari form dynamic table
+        $items_ids  = $_POST['item_detail_id'] ?? [];
+        $items_kets = $_POST['item_keterangan'] ?? [];
+        $items_amts = $_POST['item_jumlah'] ?? [];
+
+        // Fallback jika form legacy
+        if (empty($items_ids) && !empty($_POST['realisasi'])) {
+            foreach ($_POST['realisasi'] as $legacy_it) {
+                $items_ids[]  = $legacy_it['no_ppx_detail'] ?? '0';
+                $items_kets[] = $legacy_it['nama_barang'] ?? '';
+                $items_amts[] = $legacy_it['total_harga'] ?? '0';
+            }
+        }
+
+        if (empty($items_ids)) {
+            throw new Exception("Rincian akun/item biaya harus diisi minimal 1 baris.");
+        }
+
+        // Proses Upload File Bukti
+        $uploaded_files = [];
+        $allowed_ext = ['jpg', 'jpeg', 'png', 'pdf'];
+        $max_size = 5 * 1024 * 1024; // 5MB
+
+        // Cek $_FILES['bukti'] atau $_FILES['bukti_realisasi']
+        $files_arr = $_FILES['bukti'] ?? ($_FILES['bukti_realisasi'] ?? null);
+        if ($files_arr && !empty($files_arr['name'])) {
+            $is_multi = is_array($files_arr['name']);
+            $count = $is_multi ? count($files_arr['name']) : 1;
+
+            if ($count > 10) {
+                throw new Exception("Maksimal 10 file bukti nota!");
+            }
+
+            for ($i = 0; $i < $count; $i++) {
+                $err  = $is_multi ? $files_arr['error'][$i] : $files_arr['error'];
+                if ($err !== UPLOAD_ERR_OK) continue;
+
+                $name = $is_multi ? $files_arr['name'][$i] : $files_arr['name'];
+                $tmp  = $is_multi ? $files_arr['tmp_name'][$i] : $files_arr['tmp_name'];
+                $sz   = $is_multi ? $files_arr['size'][$i] : $files_arr['size'];
+                $ext  = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+
+                if (!in_array($ext, $allowed_ext)) {
+                    throw new Exception("Format file '$name' tidak valid! Hanya JPG, PNG, PDF yang diperbolehkan.");
+                }
+                if ($sz > $max_size) {
+                    throw new Exception("Ukuran file '$name' melebihi 5MB.");
+                }
+
+                $clean_no = preg_replace('/[^a-zA-Z0-9_-]/', '_', $no_ppx);
+                $new_fname = 'real_' . $clean_no . '_' . time() . '_' . rand(100, 999) . '.' . $ext;
+                if (!move_uploaded_file($tmp, $upload_path . $new_fname)) {
+                    throw new Exception("Gagal menyimpan file upload '$name'.");
+                }
+                $uploaded_files[] = $new_fname;
+            }
+        }
+
+        if (empty($uploaded_files) && empty($_POST['id_realisasi'])) {
+            throw new Exception("Bukti nota / kwitansi wajib diupload!");
+        }
+
+        // Hitung total transaksi & bangun detail barang JSON
+        $detail_barang_array = [];
+        $total_transaksi = 0;
+
+        foreach ($items_ids as $idx => $id_val) {
+            $raw_amt = str_replace('.', '', $items_amts[$idx] ?? '0');
+            $amt_val = max(0, (float)$raw_amt);
+            if ($amt_val <= 0) continue;
+
+            $line_ket = trim($items_kets[$idx] ?? '');
+            if (empty($line_ket)) $line_ket = $keperluan;
+
+            $nama_item = '';
+            $no_akun = '';
+            $id_detail_db = 0;
+
+            if (str_starts_with($id_val, 'ppx_')) {
+                $id_detail_db = (int)substr($id_val, 4);
+            } elseif (is_numeric($id_val)) {
+                $id_detail_db = (int)$id_val;
+            }
+
+            if ($id_detail_db > 0) {
+                $q_it = mysqli_query($conn, "SELECT rincian, no_akun FROM ppx_request_detail WHERE no_ppx_detail = $id_detail_db LIMIT 1");
+                if ($q_it && $r_it = mysqli_fetch_assoc($q_it)) {
+                    $nama_item = $r_it['rincian'];
+                    $no_akun   = $r_it['no_akun'];
+                }
+            } elseif (str_starts_with($id_val, 'akun_')) {
+                $no_akun = substr($id_val, 5);
+                $nama_item = $line_ket;
+            }
+
+            if (empty($nama_item)) {
+                $nama_item = $line_ket ?: 'Biaya Operasional';
+            }
+
+            $detail_barang_array[] = [
+                'no_ppx_detail' => $id_detail_db,
+                'nama_barang'   => $nama_item,
+                'no_akun'       => $no_akun,
+                'keterangan'    => $line_ket,
+                'jumlah'        => 1,
+                'satuan'        => 'Unit',
+                'harga_satuan'  => $amt_val,
+                'total_harga'   => $amt_val
+            ];
+
+            $total_transaksi += $amt_val;
+        }
+
+        if ($total_transaksi <= 0) {
+            throw new Exception("Total nominal transaksi kas harus lebih dari Rp 0.");
+        }
+
+        // Generate No Transaksi & Urutan Realisasi
+        $no_transaksi = generateNoTransaksiKasPPX($conn, $jenis_transaksi);
+        $q_cnt = mysqli_query($conn, "SELECT COUNT(*) as jumlah FROM ppx_realisasi WHERE no_ppx = '$no_ppx'");
+        $urutan = (int)(mysqli_fetch_assoc($q_cnt)['jumlah'] ?? 0) + 1;
+
+        // Tentukan total_realisasi vs uang_kembali
+        $nom_realisasi = ($jenis_transaksi === 'BKK') ? $total_transaksi : 0;
+        $nom_kembali   = ($jenis_transaksi === 'BKM') ? $total_transaksi : 0;
+        $status_selisih = ($jenis_transaksi === 'BKM') ? 'kembali' : 'pas';
+
+        // Hitung komparasi akumulatif terhadap uang muka
+        $uang_muka = (float)$ppx_data['uang_muka'];
+        $q_prev = mysqli_query($conn, "SELECT 
+            SUM(CASE WHEN jenis_transaksi = 'BKM' THEN 0 ELSE total_realisasi END) as sum_bkk,
+            SUM(CASE WHEN jenis_transaksi = 'BKM' THEN uang_kembali ELSE 0 END) as sum_bkm
+        FROM ppx_realisasi WHERE no_ppx = '$no_ppx'");
+        $prev_data = mysqli_fetch_assoc($q_prev);
+        $tot_bkk_all = (float)($prev_data['sum_bkk'] ?? 0) + $nom_realisasi;
+        $tot_bkm_all = (float)($prev_data['sum_bkm'] ?? 0) + $nom_kembali;
+        $net_spent = $tot_bkk_all - $tot_bkm_all;
+
+        $confirm_pakai_uang_pribadi = 0;
+        if ($net_spent > $uang_muka) {
+            $status_selisih = 'kurang';
+            $confirm_pakai_uang_pribadi = 1;
+        } elseif ($net_spent < $uang_muka && $tot_bkm_all > 0) {
+            $status_selisih = 'kembali';
+        }
+
+        $json_bukti  = mysqli_real_escape_string($conn, json_encode($uploaded_files));
+        $json_detail = mysqli_real_escape_string($conn, json_encode($detail_barang_array));
+        $dk_safe     = mysqli_real_escape_string($conn, $dibayar_kepada);
+        $kp_safe     = mysqli_real_escape_string($conn, $keperluan);
+        $ket_safe    = mysqli_real_escape_string($conn, $keperluan ?: ($jenis_transaksi === 'BKM' ? 'Pengembalian Uang Muka' : 'Realisasi Kas Keluar'));
+
+        $sql_insert = "INSERT INTO ppx_realisasi 
+            (no_ppx, no_transaksi, jenis_transaksi, urutan_realisasi, tanggal_realisasi, dibayar_kepada, keperluan, total_realisasi, uang_kembali, status_selisih, keterangan_realisasi, bukti_realisasi, detail_barang, confirm_pakai_uang_pribadi, created_at, status)
+            VALUES 
+            ('$no_ppx', '$no_transaksi', '$jenis_transaksi', $urutan, '$tanggal_real', '$dk_safe', '$kp_safe', $nom_realisasi, $nom_kembali, '$status_selisih', '$ket_safe', '$json_bukti', '$json_detail', $confirm_pakai_uang_pribadi, NOW(), 'Approved')";
+
+        if (!mysqli_query($conn, $sql_insert)) {
+            throw new Exception("Gagal menyimpan transaksi realisasi: " . mysqli_error($conn));
+        }
+
+        mysqli_commit($conn);
+        $_SESSION['success'] = "Transaksi Kas #$no_transaksi ($jenis_transaksi) sebesar Rp " . number_format($total_transaksi, 0, ',', '.') . " berhasil disimpan!";
+        header("Location: realisasi.php?no_ppx=" . urlencode($no_ppx));
+        exit();
+
+    } catch (Exception $e) {
+        mysqli_rollback($conn);
+        // Hapus file yang sempat terupload jika gagal
+        if (!empty($uploaded_files)) {
+            foreach ($uploaded_files as $uf) {
+                if (file_exists($upload_path . $uf)) @unlink($upload_path . $uf);
+            }
+        }
+        $_SESSION['error'] = $e->getMessage();
+        header("Location: realisasi.php?no_ppx=" . urlencode($no_ppx));
+        exit();
+    }
+}
+
+// Fallback
+header("Location: realisasi.php?no_ppx=" . urlencode($no_ppx));
 exit();
-?>

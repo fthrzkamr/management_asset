@@ -535,10 +535,14 @@ unset($_SESSION['success'], $_SESSION['error']);
                                 $detail_barang_real = json_decode($real['detail_barang'], true) ?: [];
                             ?>
                             <div class="card mb-3 shadow-sm">
-                                <div class="card-header bg-light">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center flex-wrap" style="gap:8px;">
                                     <h6 class="mb-0">
-                                        <i class="fas fa-file-invoice"></i> Realisasi #<?= $idx + 1 ?>
-                                        <small class="text-muted">- <?= date('d/m/Y H:i', strtotime($real['tanggal_realisasi'])) ?></small>
+                                        <?php $j = $real['jenis_transaksi'] ?? 'BKK'; ?>
+                                        <span class="badge px-2 py-1 mr-1 font-weight-bold" style="background:<?= $j === 'BKM' ? '#047857' : '#1e3a8a' ?>; color:#fff;">
+                                            <?= $j ?>
+                                        </span>
+                                        <strong><?= htmlspecialchars($real['no_transaksi'] ?: ('REAL-' . ($idx + 1))) ?></strong>
+                                        <small class="text-muted ml-2"><i class="far fa-calendar-alt mr-1"></i><?= date('d/m/Y', strtotime($real['tanggal_realisasi'])) ?></small>
                                         <?php if ($real['status_selisih'] === 'kurang' && $real['confirm_pakai_uang_pribadi'] == 1): ?>
                                             <?php if (isset($real['is_reimbursed']) && $real['is_reimbursed'] == 1): ?>
                                                 <span class="badge badge-success ml-2">
@@ -555,6 +559,12 @@ unset($_SESSION['success'], $_SESSION['error']);
                                             </span>
                                         <?php endif; ?>
                                     </h6>
+                                    <?php if (!empty($real['dibayar_kepada'])): ?>
+                                        <div class="small">
+                                            <span class="text-muted"><?= ($j === 'BKM') ? 'Diterima dari:' : 'Dibayar kepada:' ?></span>
+                                            <strong><?= htmlspecialchars($real['dibayar_kepada']) ?></strong>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="card-body">
                                     <div class="row mb-3">

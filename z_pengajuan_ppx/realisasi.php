@@ -1,8 +1,10 @@
 <?php
+/**
+ * Realisasi Pengajuan PPX (Non Budget) – Standar Transaksi Kas BKK & BKM
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
 require_once __DIR__ . '/../dist/config/config.php';
 require_once __DIR__ . '/../dist/config/auth_helper.php';
-
-
 
 $auth = new AuthHelper($conn);
 
@@ -12,16 +14,17 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
-// Ambil no_ppx dari parameter
-$no_ppx = $_GET['no_ppx'] ?? '';
-
+$no_ppx = trim($_GET['no_ppx'] ?? '');
 if (empty($no_ppx)) {
     $_SESSION['error'] = 'Nomor PPX tidak ditemukan!';
     header("Location: dashboard.php");
     exit();
 }
 
-// Ambil data PPX header
+$user_id  = (int)$_SESSION['id_user'];
+$is_admin = ($auth->hasRole('admin') || $auth->hasRole('finance'));
+
+// Ambil header data PPX
 $query_header = "SELECT 
     pr.no_ppx,
     pr.tanggal_pengajuan,
@@ -44,42 +47,26 @@ FROM ppx_request pr
 LEFT JOIN user_dfm u ON pr.user_id = u.id_user
 LEFT JOIN divisi d ON pr.divisi = d.id_divisi
 LEFT JOIN departemen dep ON pr.departemen = dep.id_departemen
-WHERE pr.no_ppx = ? AND pr.user_id = ?";
+WHERE pr.no_ppx = ? " . ($is_admin ? "" : "AND pr.user_id = ?");
 
 $stmt = mysqli_prepare($conn, $query_header);
-mysqli_stmt_bind_param($stmt, 'si', $no_ppx, $_SESSION['id_user']);
+if ($is_admin) {
+    mysqli_stmt_bind_param($stmt, 's', $no_ppx);
+} else {
+    mysqli_stmt_bind_param($stmt, 'si', $no_ppx, $user_id);
+}
 mysqli_stmt_execute($stmt);
 $result = mysqli_stmt_get_result($stmt);
 
-if (mysqli_num_rows($result) === 0) {
+if (!$result || mysqli_num_rows($result) === 0) {
     $_SESSION['error'] = 'Data PPX tidak ditemukan atau Anda tidak memiliki akses!';
     header("Location: dashboard.php");
     exit();
 }
-
 $ppx_data = mysqli_fetch_assoc($result);
 mysqli_stmt_close($stmt);
 
-// Cek status harus Uang Muka
-if ($ppx_data['status'] !== 'Uang Muka') {
-    $_SESSION['error'] = 'PPX ini tidak dalam status Uang Muka!';
-    header("Location: dashboard.php");
-    exit();
-}
-
-// Ambil daftar akun untuk select No. Akun pada realisasi
-$akun_options_html = '';
-$qAkun = "SELECT no_akun, nama_akun FROM master_akun ORDER BY no_akun";
-$rAkun = mysqli_query($conn, $qAkun);
-if ($rAkun) {
-    while ($rowA = mysqli_fetch_assoc($rAkun)) {
-        $no = htmlspecialchars($rowA['no_akun']);
-        $nama = htmlspecialchars($rowA['nama_akun']);
-        $akun_options_html .= "<option value=\"{$no}\">{$no} - {$nama}</option>";
-    }
-}
-
-// Ambil detail items
+// Ambil daftar detail items rencana PPX
 $query_detail = "SELECT 
     no_ppx_detail,
     no_akun,
@@ -91,7 +78,7 @@ $query_detail = "SELECT
     deskripsi
 FROM ppx_request_detail 
 WHERE no_ppx = ? 
-ORDER BY no_ppx_detail";
+ORDER BY no_ppx_detail ASC";
 
 $stmt_detail = mysqli_prepare($conn, $query_detail);
 mysqli_stmt_bind_param($stmt_detail, 's', $no_ppx);
@@ -99,1096 +86,892 @@ mysqli_stmt_execute($stmt_detail);
 $result_detail = mysqli_stmt_get_result($stmt_detail);
 
 $items = [];
-$total_nominal = 0;
-$items_map = []; // Map no_ppx_detail => item data
+$total_nominal_rencana = 0;
 while ($row = mysqli_fetch_assoc($result_detail)) {
     $items[] = $row;
-    $total_nominal += $row['total_harga'];
-    $items_map[$row['no_ppx_detail']] = $row;
+    $total_nominal_rencana += (float)$row['total_harga'];
 }
 mysqli_stmt_close($stmt_detail);
 
-// Query untuk mendapatkan item yang SUDAH direalisasikan sebelumnya
-$query_realisasi = "SELECT detail_barang, total_realisasi FROM ppx_realisasi WHERE no_ppx = ? ORDER BY created_at";
-$stmt_realisasi = mysqli_prepare($conn, $query_realisasi);
-mysqli_stmt_bind_param($stmt_realisasi, 's', $no_ppx);
-mysqli_stmt_execute($stmt_realisasi);
-$result_realisasi = mysqli_stmt_get_result($stmt_realisasi);
+// Ambil riwayat transaksi kas realisasi untuk PPX ini
+$q_reals = mysqli_query($conn, "SELECT * FROM ppx_realisasi WHERE no_ppx = '" . mysqli_real_escape_string($conn, $no_ppx) . "' ORDER BY tanggal_realisasi DESC, id_realisasi DESC");
+$realisasi_list = [];
+$total_bkk = 0;
+$total_bkm = 0;
+$item_realized_counts = [];
 
-// Kumpulkan semua item yang sudah direalisasikan berdasarkan no_ppx_detail
-$paid_items = []; // Array of no_ppx_detail yang sudah dibayar
-$total_sudah_direalisasi = 0;
+if ($q_reals) {
+    while ($r = mysqli_fetch_assoc($q_reals)) {
+        $realisasi_list[] = $r;
+        $j = $r['jenis_transaksi'] ?? 'BKK';
+        if ($j === 'BKM') {
+            $total_bkm += (float)($r['uang_kembali'] ?: $r['total_realisasi']);
+        } else {
+            $total_bkk += (float)$r['total_realisasi'];
+        }
 
-while ($row_real = mysqli_fetch_assoc($result_realisasi)) {
-    $total_sudah_direalisasi += floatval($row_real['total_realisasi']);
-
-    if (!empty($row_real['detail_barang'])) {
-        $detail_barang = json_decode($row_real['detail_barang'], true);
-        if (is_array($detail_barang)) {
-            foreach ($detail_barang as $item) {
-                $detail_id = $item['no_ppx_detail'] ?? null;
-                if ($detail_id) {
-                    // Tandai item ini sudah dibayar
-                    $paid_items[$detail_id] = true;
+        // Hitung pemakaian item rencana dari JSON detail_barang
+        if (!empty($r['detail_barang'])) {
+            $dt = json_decode($r['detail_barang'], true);
+            if (is_array($dt)) {
+                foreach ($dt as $d_it) {
+                    $pid = (int)($d_it['no_ppx_detail'] ?? 0);
+                    if ($pid > 0) {
+                        $item_realized_counts[$pid] = ($item_realized_counts[$pid] ?? 0) + (float)($d_it['total_harga'] ?? 0);
+                    }
                 }
             }
         }
     }
 }
-mysqli_stmt_close($stmt_realisasi);
 
-// Hitung sisa yang belum direalisasi
-$sisa_belum_direalisasi = $total_nominal - $total_sudah_direalisasi;
+$uang_muka = (float)$ppx_data['uang_muka'];
+// Sisa uang muka = Uang Muka - Pengeluaran (BKK) + Pengembalian (BKM)
+$sisa_uang_muka = $uang_muka - $total_bkk + $total_bkm;
 
-$success_message = $_SESSION['success'] ?? '';
-$error_message = $_SESSION['error'] ?? '';
-unset($_SESSION['success'], $_SESSION['error']);
+// Ambil daftar master akun untuk dropdown
+$q_akun = mysqli_query($conn, "SELECT no_akun, nama_akun FROM master_akun ORDER BY no_akun ASC");
+$master_akun_list = [];
+if ($q_akun) {
+    while ($ra = mysqli_fetch_assoc($q_akun)) {
+        $master_akun_list[] = $ra;
+    }
+}
+
+// Data items untuk JavaScript dropdown
+$js_ppx_items = array_map(function($it) use ($item_realized_counts) {
+    $real_amt = $item_realized_counts[$it['no_ppx_detail']] ?? 0;
+    $sisa_item = max(0, (float)$it['total_harga'] - $real_amt);
+    return [
+        'id'       => 'ppx_' . $it['no_ppx_detail'],
+        'rincian'  => $it['rincian'],
+        'no_akun'  => $it['no_akun'],
+        'total'    => (float)$it['total_harga'],
+        'sisa'     => $sisa_item,
+        'group'    => 'Rencana Item PPX'
+    ];
+}, $items);
+
+$js_master_akun = array_map(function($a) {
+    return [
+        'id'       => 'akun_' . $a['no_akun'],
+        'rincian'  => $a['no_akun'] . ' - ' . $a['nama_akun'],
+        'no_akun'  => $a['no_akun'],
+        'total'    => 0,
+        'sisa'     => 0,
+        'group'    => 'Akun Biaya Lainnya'
+    ];
+}, $master_akun_list);
+
+$all_select_items = array_merge($js_ppx_items, $js_master_akun);
 ?>
-
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="id">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Realisasi Uang Muka - <?= htmlspecialchars($no_ppx) ?></title>
+    <title>Realisasi Transaksi Kas — <?= htmlspecialchars($no_ppx) ?></title>
     <link rel="icon" href="../assets/img/dua.png" type="image/png">
-
-    <?php
-    $layout_dir = realpath(__DIR__ . '/../layouts');
-    if ($layout_dir && file_exists($layout_dir . '/header_css.php')) {
-        include $layout_dir . '/header_css.php';
-    }
-    ?>
-
-    <!-- <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet"> -->
-
+    <link rel="stylesheet" href="../assets/plugins/select2/css/select2.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        .info-box {
-            background: #f8f9fa;
-            border-left: 4px solid #007bff;
-            padding: 15px;
-            margin-bottom: 20px;
+        /* ── 4 Summary Cards Bersih & Kontras Tinggi ── */
+        .sc-card {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            border-left: 4px solid #cbd5e1 !important;
+            border-radius: 10px;
+            padding: 14px 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            height: 100%;
+            transition: transform .2s, box-shadow .2s;
         }
-
-        .file-preview {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 10px;
+        .sc-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
+        .sc-card.card-alokasi   { border-left-color: #2563eb !important; background: #f8faff !important; }
+        .sc-card.card-realisasi { border-left-color: #059669 !important; background: #f6fdf9 !important; }
+        .sc-card.card-menunggu  { border-left-color: #d97706 !important; background: #fffdf5 !important; }
+        .sc-card.card-sisa      { border-left-color: #0284c7 !important; background: #f6fbfe !important; }
 
-        .file-preview-item {
-            position: relative;
-            padding: 8px 12px;
-            background: #e7f3ff;
-            border: 1px solid #b3d9ff;
-            border-radius: 4px;
-            font-size: 12px;
-        }
-
-        .required-field::after {
-            content: " *";
-            color: red;
-        }
-
-        .detail-item {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 6px;
-            padding: 12px 15px;
-            margin-bottom: 10px;
-            position: relative;
-        }
-
-        .btn-remove-item {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            right: 8px;
-            z-index: 10;
-            border-radius: 50%;
-            width: 26px;
-            height: 26px;
-            padding: 0;
+        .sc-label {
             font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b !important;
+            margin-bottom: 4px;
+        }
+        .sc-value {
+            font-size: 19px;
+            font-weight: 800;
+            line-height: 1.25;
+            margin-bottom: 4px;
+        }
+        .card-alokasi   .sc-value { color: #1e3a8a !important; }
+        .card-realisasi .sc-value { color: #047857 !important; }
+        .card-menunggu  .sc-value { color: #b45309 !important; }
+        .card-sisa      .sc-value { color: #0369a1 !important; }
+
+        .sc-sub {
+            font-size: 11.5px;
+            color: #64748b;
+        }
+        .sc-icon {
+            opacity: 0.8;
+            padding-left: 8px;
         }
 
-        .detail-item .form-control-sm {
-            font-size: 0.875rem;
-            padding: 0.25rem 0.5rem;
+        .info-box {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 18px 20px;
+            margin-bottom: 22px;
         }
 
-        .detail-item label.small {
-            margin-bottom: 0.25rem;
-            font-size: 0.8rem;
-        }
-
-        .form-section {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
+        .section-card {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
             margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
         }
+        .section-head {
+            background: #f8fafc;
+            padding: 12px 18px;
+            font-weight: 700;
+            font-size: 14px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* ── Modal BKK/BKM Styling (Persis sesuai gambar standar) ── */
+        .modal-kas-title { font-weight: 700; font-size: 18px; color: #0f172a; }
+        .modal-kas-sub   { font-size: 12px; color: #64748b; font-weight: 600; }
+        
+        .kas-tab-group   { display: flex; gap: 12px; margin-bottom: 18px; }
+        .kas-tab-btn     { flex: 1; padding: 12px 16px; border-radius: 8px; font-weight: 700; font-size: 13.5px;
+                           border: 2px solid #cbd5e1; background: #fff; color: #334155; text-align: center; cursor: pointer; transition: all .2s; }
+        .kas-tab-btn.active-bkk { background: #1e3a8a; border-color: #1e3a8a; color: #fff; box-shadow: 0 2px 6px rgba(30,58,138,0.25); }
+        .kas-tab-btn.active-bkm { background: #047857; border-color: #047857; color: #fff; box-shadow: 0 2px 6px rgba(4,120,87,0.25); }
+
+        .drop-zone {
+            border: 2px dashed #94a3b8; border-radius: 8px; padding: 22px 16px; text-align: center;
+            background: #f8fafc; cursor: pointer; transition: background .2s, border-color .2s;
+        }
+        .drop-zone:hover { background: #f1f5f9; border-color: #3b82f6; }
+        
+        .rincian-table th { background: #1e3a8a; color: #fff; padding: 9px 12px; font-size: 12px; font-weight: 600; border: none; }
+        .rincian-table td { padding: 8px 10px; vertical-align: middle; background: #fff; }
+        .rincian-table.table-bkm th { background: #047857; }
+
+        /* ── Select2 Custom Styling for Table Cell ── */
+        .select2-container { width: 100% !important; min-width: 0 !important; }
+        .select2-container--default .select2-selection--single {
+            height: 31px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: #1e293b;
+            font-size: 12px;
+            line-height: 29px;
+            padding-left: 8px;
+            padding-right: 24px;
+            width: 100%;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 29px;
+            right: 6px;
+        }
+        .select2-container--default .select2-selection--single .select2-selection__clear {
+            margin-right: 18px;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+        .select2-dropdown {
+            border: 1px solid #cbd5e1;
+            border-radius: 7px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            font-size: 12px;
+            z-index: 1065 !important;
+        }
+        .select2-container--default .select2-search--dropdown {
+            padding: 6px 8px;
+        }
+        .select2-container--default .select2-search--dropdown .select2-search__field {
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            padding: 5px 8px;
+            font-size: 12px;
+            outline: none;
+        }
+        .select2-container--default .select2-search--dropdown .select2-search__field:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59,130,246,0.15);
+        }
+        .select2-container--default .select2-results__option--highlighted[aria-selected] {
+            background-color: #1e3a8a;
+            color: #fff;
+        }
+        .select2-container--default .select2-results__group {
+            font-size: 11px;
+            font-weight: 700;
+            color: #64748b;
+            background: #f8fafc;
+            padding: 4px 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .prev-item { background: #e0f2fe; border-radius: 5px; padding: 4px 10px; font-size: 11.5px; color: #0369a1; display: inline-block; margin: 3px; }
+        .bukti-thumb { width: 44px; height: 38px; object-fit: cover; border-radius: 4px; border: 1px solid #cbd5e1; cursor: pointer; }
     </style>
 </head>
+<body style="background: #f4f6f9;">
+<div class="main-wrapper">
+    <?php include __DIR__ . '/../layouts/navbar.php'; ?>
+    <div class="page-wrapper">
+        <div class="content container-fluid">
 
-<body>
-    <div class="main-wrapper">
-        <?php
-        if ($layout_dir && file_exists($layout_dir . '/navbar.php')) {
-            include $layout_dir . '/navbar.php';
-        }
-        ?>
+            <!-- Page Header -->
+            <div class="page-header">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h3 class="page-title mb-1">
+                            <i class="fa-solid fa-receipt text-primary mr-1"></i> Realisasi Transaksi Kas (BKK / BKM)
+                        </h3>
+                        <ul class="breadcrumb mb-0">
+                            <li class="breadcrumb-item"><a href="../dashboard.php">Dashboard</a></li>
+                            <li class="breadcrumb-item"><a href="dashboard.php">Pengajuan Non Budget</a></li>
+                            <li class="breadcrumb-item active"><?= htmlspecialchars($no_ppx) ?></li>
+                        </ul>
+                    </div>
+                    <div class="col-auto d-flex" style="gap:8px;">
+                        <button type="button" class="btn btn-primary font-weight-bold" onclick="openKasModal('BKK')">
+                            <i class="fas fa-plus-circle mr-1"></i> Input Transaksi Kas (BKK / BKM)
+                        </button>
+                        
+                        <?php if (count($realisasi_list) > 0 && $ppx_data['status'] === 'Uang Muka'): ?>
+                        <form action="realisasi_submit.php" method="POST" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menyelesaikan realisasi PPX ini dan meneruskannya ke Finance?');">
+                            <input type="hidden" name="no_ppx" value="<?= htmlspecialchars($no_ppx) ?>">
+                            <input type="hidden" name="action" value="finalize_ppx">
+                            <button type="submit" class="btn btn-success font-weight-bold">
+                                <i class="fas fa-check-double mr-1"></i> Selesaikan Realisasi PPX
+                            </button>
+                        </form>
+                        <?php endif; ?>
 
-        <div class="page-wrapper">
-            <div class="content container-fluid">
-                <!-- Page Header -->
-                <div class="page-header">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h3 class="page-title">
-                                <i class="fas fa-file-invoice-dollar"></i> Realisasi Uang Muka
-                            </h3>
-                            <ul class="breadcrumb">
-                                <li class="breadcrumb-item"><a href="../dashboard.php">Dashboard</a></li>
-                                <li class="breadcrumb-item"><a href="dashboard.php">Pengajuan PPX</a></li>
-                                <li class="breadcrumb-item active">Realisasi</li>
-                            </ul>
-                        </div>
-                        <div class="col-md-4 text-right">
-                            <a href="dashboard.php" class="btn btn-secondary btn-sm">
-                                <i class="fas fa-arrow-left"></i> Kembali
-                            </a>
-                        </div>
+                        <a href="dashboard.php" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Kembali
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Flash Alert -->
+            <?php foreach (['success', 'error'] as $t): if (isset($_SESSION[$t])): ?>
+            <div class="alert alert-<?= $t === 'success' ? 'success' : 'danger' ?> alert-dismissible fade show">
+                <i class="fas fa-<?= $t === 'success' ? 'check' : 'exclamation' ?>-circle mr-1"></i>
+                <?= htmlspecialchars($_SESSION[$t]) ?>
+                <button class="close" data-dismiss="alert"><span>&times;</span></button>
+            </div>
+            <?php unset($_SESSION[$t]); endif; endforeach; ?>
+
+            <!-- Info PPX Header -->
+            <div class="info-box">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap" style="gap:10px;">
+                    <div>
+                        <h5 class="mb-1 font-weight-bold text-dark">
+                            <?= htmlspecialchars($no_ppx) ?>
+                        </h5>
+                        <span class="text-muted small">
+                            <i class="far fa-calendar-alt mr-1"></i> Tgl Pengajuan: <strong><?= date('d/m/Y', strtotime($ppx_data['tanggal_pengajuan'])) ?></strong>
+                            &nbsp;·&nbsp; Cabang: <strong><?= htmlspecialchars($ppx_data['cabang'] ?? '-') ?></strong>
+                            &nbsp;·&nbsp; PIC: <strong><?= htmlspecialchars($ppx_data['nama_pic'] ?? '-') ?> (<?= htmlspecialchars($ppx_data['jabatan'] ?? '-') ?>)</strong>
+                            &nbsp;·&nbsp; Divisi: <strong><?= htmlspecialchars($ppx_data['nama_divisi'] ?? '-') ?></strong>
+                        </span>
+                    </div>
+                    <div>
+                        <span class="badge p-2 px-3 font-weight-bold" style="font-size:12px; <?= $ppx_data['status'] === 'Uang Muka' ? 'background:#dbeafe; color:#1e40af; border:1px solid #bfdbfe;' : 'background:#dcfce7; color:#15803d; border:1px solid #86efac;' ?>">
+                            <i class="fas fa-hand-holding-dollar mr-1"></i> Status PPX: <?= htmlspecialchars($ppx_data['status']) ?>
+                        </span>
                     </div>
                 </div>
 
-                <!-- Alert Messages -->
-                <?php if ($success_message): ?>
-                    <div class="alert alert-success alert-dismissible fade show">
-                        <i class="fas fa-check-circle"></i> <?= $success_message ?>
-                        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-                    </div>
-                <?php endif; ?>
-
-                <?php if ($error_message): ?>
-                    <div class="alert alert-danger alert-dismissible fade show">
-                        <i class="fas fa-exclamation-circle"></i> <?= $error_message ?>
-                        <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-                    </div>
-                <?php endif; ?>
-
-                <form action="realisasi_submit.php" method="POST" enctype="multipart/form-data" id="realisasiForm">
-                    <input type="hidden" name="no_ppx" value="<?= htmlspecialchars($no_ppx) ?>">
-
-                    <!-- Info PPX -->
-                    <div class="form-section">
-                        <h5 class="mb-3">
-                            <i class="fas fa-info-circle"></i> Informasi PPX
-                        </h5>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <dl class="row mb-2">
-                                    <dt class="col-sm-5">No. PPX:</dt>
-                                    <dd class="col-sm-7 font-weight-bold"><?= htmlspecialchars($ppx_data['no_ppx']) ?></dd>
-
-                                    <dt class="col-sm-5">Tanggal Pengajuan:</dt>
-                                    <dd class="col-sm-7"><?= date('d/m/Y', strtotime($ppx_data['tanggal_pengajuan'])) ?></dd>
-
-                                    <dt class="col-sm-5">Nama PIC:</dt>
-                                    <dd class="col-sm-7"><?= htmlspecialchars($ppx_data['nama_pic']) ?></dd>
-
-                                    <dt class="col-sm-5">Jabatan:</dt>
-                                    <dd class="col-sm-7"><?= htmlspecialchars($ppx_data['jabatan']) ?></dd>
-                                </dl>
-                            </div>
-                            <div class="col-md-6">
-                                <dl class="row mb-2">
-                                    <dt class="col-sm-5">Divisi:</dt>
-                                    <dd class="col-sm-7"><?= htmlspecialchars($ppx_data['nama_divisi'] ?? $ppx_data['divisi']) ?></dd>
-
-                                    <dt class="col-sm-5">Cabang:</dt>
-                                    <dd class="col-sm-7"><?= htmlspecialchars($ppx_data['cabang']) ?></dd>
-
-                                    <dt class="col-sm-5">Total Pengajuan:</dt>
-                                    <dd class="col-sm-7 font-weight-bold text-primary">
-                                        Rp <?= number_format($total_nominal, 0, ',', '.') ?>
-                                    </dd>
-
-                                    <dt class="col-sm-5">Uang Muka Diterima:</dt>
-                                    <dd class="col-sm-7 font-weight-bold text-success">
-                                        Rp <?= number_format($ppx_data['uang_muka'], 0, ',', '.') ?>
-                                    </dd>
-
-                                    <?php if ($total_sudah_direalisasi > 0):
-                                        $sisa_uang_muka = $ppx_data['uang_muka'] - $total_sudah_direalisasi;
-                                    ?>
-                                        <dt class="col-sm-5">Sudah Direalisasi:</dt>
-                                        <dd class="col-sm-7 font-weight-bold text-warning">
-                                            Rp <?= number_format($total_sudah_direalisasi, 0, ',', '.') ?>
-                                        </dd>
-
-                                        <dt class="col-sm-5">Sisa Uang Muka:</dt>
-                                        <dd class="col-sm-7 font-weight-bold <?= $sisa_uang_muka >= 0 ? 'text-info' : 'text-danger' ?>">
-                                            Rp <?= number_format($sisa_uang_muka, 0, ',', '.') ?>
-                                        </dd>
-                                    <?php endif; ?>
-                                </dl>
+                <!-- 4 Summary Cards Bersih & Kontras Tinggi -->
+                <div class="row mt-3">
+                    <div class="col-6 col-md-3 mb-2">
+                        <div class="sc-card card-alokasi">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="sc-label">Total Pengajuan PPX</div>
+                                    <div class="sc-value">Rp <?= number_format($total_nominal_rencana, 0, ',', '.') ?></div>
+                                    <div class="sc-sub"><i class="fa-solid fa-layer-group mr-1"></i><?= count($items) ?> Item Rencana</div>
+                                </div>
+                                <div class="sc-icon" style="color:#2563eb;">
+                                    <i class="fa-solid fa-file-invoice fa-xl"></i>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    <div class="col-6 col-md-3 mb-2">
+                        <div class="sc-card card-sisa">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="sc-label">Uang Muka Diterima</div>
+                                    <div class="sc-value">Rp <?= number_format($uang_muka, 0, ',', '.') ?></div>
+                                    <div class="sc-sub"><i class="fa-solid fa-building-columns mr-1"></i>Dana dari Finance</div>
+                                </div>
+                                <div class="sc-icon" style="color:#0284c7;">
+                                    <i class="fa-solid fa-hand-holding-dollar fa-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3 mb-2">
+                        <div class="sc-card card-realisasi">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="sc-label">Realisasi Belanja (BKK)</div>
+                                    <div class="sc-value">Rp <?= number_format($total_bkk, 0, ',', '.') ?></div>
+                                    <div class="sc-sub font-weight-bold" style="color:#059669;"><i class="fa-solid fa-receipt mr-1"></i><?= count($realisasi_list) ?> Bukti Kas</div>
+                                </div>
+                                <div class="sc-icon" style="color:#059669;">
+                                    <i class="fa-solid fa-receipt fa-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3 mb-2">
+                        <div class="sc-card card-menunggu">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="sc-label">Sisa Uang Muka</div>
+                                    <div class="sc-value <?= $sisa_uang_muka < 0 ? 'text-danger' : '' ?>">
+                                        <?= $sisa_uang_muka < 0 ? '− Rp ' . number_format(abs($sisa_uang_muka), 0, ',', '.') : 'Rp ' . number_format($sisa_uang_muka, 0, ',', '.') ?>
+                                    </div>
+                                    <div class="sc-sub" style="color:<?= $sisa_uang_muka < 0 ? '#dc2626' : '#b45309' ?>;">
+                                        <i class="fa-solid fa-<?= $sisa_uang_muka < 0 ? 'triangle-exclamation' : 'check-circle' ?> mr-1"></i>
+                                        <?= $sisa_uang_muka < 0 ? 'Kurang (Uang Pribadi)' : ($sisa_uang_muka == 0 ? 'Pas / Tuntas' : 'Ada Sisa Uang') ?>
+                                    </div>
+                                </div>
+                                <div class="sc-icon" style="color:<?= $sisa_uang_muka < 0 ? '#dc2626' : '#d97706' ?>;">
+                                    <i class="fa-solid fa-scale-balanced fa-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                    <!-- Detail Items Pengajuan Awal (Read Only) -->
-                    <div class="form-section">
-                        <h5 class="mb-3">
-                            <i class="fas fa-list"></i> Detail Item Pengajuan Awal (Rencana)
-                        </h5>
+            <!-- TABEL 1: DAFTAR RENCANA ITEM PENGAJUAN PPX -->
+            <div class="section-card">
+                <div class="section-head">
+                    <span style="color:#1e293b; font-weight:700;">
+                        <i class="fas fa-list-check mr-2" style="color:#2563eb;"></i> 1. Rencana Item Barang / Biaya yang Diajukan
+                    </span>
+                    <span class="text-muted small"><?= count($items) ?> Item Rencana</span>
+                </div>
+                <div class="p-3">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th width="4%">No</th>
+                                    <th width="14%">No. Akun</th>
+                                    <th>Rincian Barang / Kebutuhan</th>
+                                    <th width="12%">Volume</th>
+                                    <th width="15%" class="text-right">Harga Satuan</th>
+                                    <th width="16%" class="text-right">Total Rencana</th>
+                                    <th width="14%" class="text-center">Status Belanja</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($items as $idx => $it): 
+                                    $it_spent = $item_realized_counts[$it['no_ppx_detail']] ?? 0;
+                                    $is_done  = ($it_spent >= (float)$it['total_harga'] && (float)$it['total_harga'] > 0);
+                                ?>
+                                <tr>
+                                    <td class="text-center"><?= $idx + 1 ?></td>
+                                    <td><span class="badge badge-light border"><?= htmlspecialchars($it['no_akun']) ?></span></td>
+                                    <td>
+                                        <strong style="color:#1e293b;"><?= htmlspecialchars($it['rincian']) ?></strong>
+                                        <?php if (!empty($it['deskripsi'])): ?>
+                                            <small class="text-muted d-block"><?= htmlspecialchars($it['deskripsi']) ?></small>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td><?= $it['jumlah'] ?> <?= htmlspecialchars($it['satuan']) ?></td>
+                                    <td class="text-right">Rp <?= number_format($it['harga_satuan'], 0, ',', '.') ?></td>
+                                    <td class="text-right font-weight-bold" style="color:#1e3a8a;">Rp <?= number_format($it['total_harga'], 0, ',', '.') ?></td>
+                                    <td class="text-center">
+                                        <?php if ($is_done): ?>
+                                            <span class="badge badge-success px-2 py-1"><i class="fas fa-check-circle mr-1"></i> Terealisasi</span>
+                                        <?php elseif ($it_spent > 0): ?>
+                                            <span class="badge badge-info px-2 py-1"><i class="fas fa-pie-chart mr-1"></i> Sebagian (Rp <?= number_format($it_spent, 0, ',', '.') ?>)</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-secondary px-2 py-1"><i class="fas fa-clock mr-1"></i> Belum Belanja</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABEL 2: RIWAYAT TRANSAKSI KAS REALISASI (BKK / BKM) -->
+            <div class="section-card">
+                <div class="section-head">
+                    <span style="color:#1e293b; font-weight:700;">
+                        <i class="fas fa-receipt mr-2" style="color:#059669;"></i> 2. Riwayat Transaksi Kas Masuk & Keluar (BKK / BKM)
+                    </span>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="openKasModal('BKK')">
+                        <i class="fas fa-plus mr-1"></i> Tambah Transaksi Kas
+                    </button>
+                </div>
+                <div class="p-3">
+                    <?php if (empty($realisasi_list)): ?>
+                        <div class="text-center py-4 text-muted">
+                            <i class="fas fa-file-invoice-dollar fa-3x mb-2" style="color:#cbd5e1;"></i>
+                            <p class="mb-2">Belum ada transaksi kas yang dicatat untuk PPX ini.</p>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="openKasModal('BKK')">
+                                <i class="fas fa-plus mr-1"></i> Input Transaksi Kas Sekarang
+                            </button>
+                        </div>
+                    <?php else: ?>
                         <div class="table-responsive">
-                            <table class="table table-sm table-bordered">
+                            <table class="table table-sm table-hover mb-0">
                                 <thead class="thead-light">
                                     <tr>
-                                        <th width="3%">
-                                            <input type="checkbox" id="selectAllRencana" onchange="toggleAllRencana(this)" title="Pilih Semua">
-                                        </th>
                                         <th width="4%">No</th>
-                                        <th width="14%">No. Akun</th>
-                                        <th>Rincian</th>
-                                        <th width="11%">Jumlah</th>
-                                        <th width="14%">Harga Satuan</th>
-                                        <th width="14%">Total</th>
+                                        <th width="8%">Jenis</th>
+                                        <th width="14%">No. Transaksi</th>
+                                        <th width="10%">Tanggal</th>
+                                        <th width="18%">Penerima / Vendor</th>
+                                        <th width="18%">Keperluan & Rincian</th>
+                                        <th width="13%" class="text-right">Nominal (Rp)</th>
+                                        <th width="9%">Bukti Nota</th>
+                                        <th width="6%" class="text-center">Aksi</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($items as $index => $item):
-                                        // Cek apakah item ini sudah pernah direalisasikan berdasarkan no_ppx_detail
-                                        $is_paid = isset($paid_items[$item['no_ppx_detail']]);
+                                    <?php foreach ($realisasi_list as $i => $rl): 
+                                        $j = $rl['jenis_transaksi'] ?? 'BKK';
+                                        $amt = ($j === 'BKM') ? (float)($rl['uang_kembali'] ?: $rl['total_realisasi']) : (float)$rl['total_realisasi'];
+                                        $files = json_decode($rl['bukti_realisasi'] ?? '[]', true);
+                                        if (!is_array($files)) {
+                                            $files = explode(',', $rl['bukti_realisasi'] ?? '');
+                                        }
+                                        $files = array_filter(array_map('trim', $files));
                                     ?>
-                                        <tr class="<?= $is_paid ? 'table-success' : '' ?>">
-                                            <td class="text-center">
-                                                <?php if ($is_paid): ?>
-                                                    <i class="fas fa-check-circle text-success" title="Sudah direalisasikan"></i>
-                                                <?php else: ?>
-                                                    <input type="checkbox" class="checkbox-rencana"
-                                                        data-index="<?= $index ?>"
-                                                        data-detail-id="<?= $item['no_ppx_detail'] ?>"
-                                                        data-no-akun="<?= htmlspecialchars($item['no_akun']) ?>"
-                                                        data-rincian="<?= htmlspecialchars($item['rincian']) ?>"
-                                                        data-jumlah="<?= $item['jumlah'] ?>"
-                                                        data-satuan="<?= htmlspecialchars($item['satuan']) ?>"
-                                                        data-harga="<?= $item['harga_satuan'] ?>"
-                                                        data-total="<?= $item['total_harga'] ?>">
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="text-center"><?= $index + 1 ?></td>
-                                            <td><?= htmlspecialchars($item['no_akun']) ?></td>
-                                            <td>
-                                                <?= htmlspecialchars($item['rincian']) ?>
-                                                <?php if ($item['deskripsi']): ?>
-                                                    <br><small class="text-muted"><?= htmlspecialchars($item['deskripsi']) ?></small>
-                                                <?php endif; ?>
-                                                <?php if ($is_paid): ?>
-                                                    <br><small class="badge badge-success">Sudah Dibayar</small>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td class="text-center"><?= $item['jumlah'] ?> <?= htmlspecialchars($item['satuan']) ?></td>
-                                            <td class="text-right">Rp <?= number_format($item['harga_satuan'], 0, ',', '.') ?></td>
-                                            <td class="text-right font-weight-bold">Rp <?= number_format($item['total_harga'], 0, ',', '.') ?></td>
-                                        </tr>
+                                    <tr>
+                                        <td class="text-center"><?= $i + 1 ?></td>
+                                        <td>
+                                            <?php if ($j === 'BKM'): ?>
+                                                <span class="badge badge-success px-2 py-1 font-weight-bold" style="background:#047857; color:#fff;">
+                                                    <i class="fas fa-arrow-down mr-1"></i> BKM
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="badge badge-primary px-2 py-1 font-weight-bold" style="background:#1e3a8a; color:#fff;">
+                                                    <i class="fas fa-arrow-up mr-1"></i> BKK
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td><strong class="text-dark"><?= htmlspecialchars($rl['no_transaksi'] ?: ('REAL-' . $rl['id_realisasi'])) ?></strong></td>
+                                        <td><?= $rl['tanggal_realisasi'] ? date('d/m/Y', strtotime($rl['tanggal_realisasi'])) : '-' ?></td>
+                                        <td>
+                                            <strong style="color:#1e293b;"><?= htmlspecialchars($rl['dibayar_kepada'] ?: '-') ?></strong>
+                                        </td>
+                                        <td>
+                                            <div style="font-size:12px; color:#334155;"><?= htmlspecialchars($rl['keperluan'] ?: $rl['keterangan_realisasi'] ?: '-') ?></div>
+                                            <?php 
+                                            // Tampilkan nama-nama item jika ada di detail_barang
+                                            if (!empty($rl['detail_barang'])):
+                                                $d_arr = json_decode($rl['detail_barang'], true);
+                                                if (is_array($d_arr)):
+                                            ?>
+                                                <div class="mt-1">
+                                                    <?php foreach ($d_arr as $d_sub): ?>
+                                                        <span class="badge badge-light border text-muted" style="font-size:10.5px;">
+                                                            <?= htmlspecialchars($d_sub['nama_barang'] ?? '') ?>: Rp <?= number_format($d_sub['total_harga'] ?? 0, 0, ',', '.') ?>
+                                                        </span>
+                                                    <?php endforeach; ?>
+                                                </div>
+                                            <?php endif; endif; ?>
+                                        </td>
+                                        <td class="text-right font-weight-bold" style="color:<?= $j === 'BKM' ? '#047857' : '#1e3a8a' ?>;">
+                                            <?= $j === 'BKM' ? '+' : '' ?>Rp <?= number_format($amt, 0, ',', '.') ?>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($files)): ?>
+                                                <?php foreach ($files as $f): 
+                                                    $ext = strtolower(pathinfo($f, PATHINFO_EXTENSION));
+                                                    $is_img = in_array($ext, ['jpg', 'jpeg', 'png']);
+                                                    $url = '../uploads/ppx_realisasi/' . htmlspecialchars($f);
+                                                ?>
+                                                    <?php if ($is_img): ?>
+                                                        <img src="<?= $url ?>" class="bukti-thumb mr-1 mb-1" onclick="previewImg('<?= $url ?>', '<?= htmlspecialchars($f) ?>')" title="<?= htmlspecialchars($f) ?>">
+                                                    <?php else: ?>
+                                                        <a href="<?= $url ?>" target="_blank" class="btn btn-xs btn-outline-danger mr-1 mb-1" style="font-size:11px; padding:2px 6px;">
+                                                            <i class="fas fa-file-pdf"></i> PDF
+                                                        </a>
+                                                    <?php endif; ?>
+                                                <?php endforeach; ?>
+                                            <?php else: ?>
+                                                <span class="text-muted small">—</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="text-center">
+                                            <form action="realisasi_submit.php" method="POST" style="display:inline;" onsubmit="return confirm('Hapus transaksi ini?');">
+                                                <input type="hidden" name="no_ppx" value="<?= htmlspecialchars($no_ppx) ?>">
+                                                <input type="hidden" name="id_realisasi" value="<?= $rl['id_realisasi'] ?>">
+                                                <input type="hidden" name="action" value="delete_kas">
+                                                <button type="submit" class="btn btn-sm btn-link text-danger p-0" title="Hapus Transaksi">
+                                                    <i class="fas fa-trash-can"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
                                     <?php endforeach; ?>
                                 </tbody>
-                                <tfoot class="thead-light">
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================== -->
+<!-- MODAL INPUT TRANSAKSI KAS (BKK / BKM) — STANDAR IDENTIK        -->
+<!-- ============================================================== -->
+<div class="modal fade" id="modalInputKas" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document" style="max-width: 860px;">
+        <div class="modal-content" style="border-radius: 12px; overflow: hidden; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+            
+            <!-- Modal Header -->
+            <div class="modal-header px-4 py-3" style="background:#fff; border-bottom: 1px solid #e2e8f0;">
+                <div>
+                    <h5 class="modal-title modal-kas-title" id="modalKasTitle">Input Transaksi Kas</h5>
+                </div>
+                <div class="text-right">
+                    <div class="modal-kas-sub">
+                        PT DUA FARMA MAHAKARSA — Cabang <?= htmlspecialchars($ppx_data['cabang'] ?? 'Jakarta') ?>
+                    </div>
+                    <small class="text-muted font-weight-bold">No. PPX: <?= htmlspecialchars($no_ppx) ?></small>
+                </div>
+                <button type="button" class="close ml-2" data-dismiss="modal" aria-label="Close" style="outline:none;">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+            <!-- Modal Form -->
+            <form action="realisasi_submit.php" method="POST" enctype="multipart/form-data" id="formTransaksiKas">
+                <input type="hidden" name="no_ppx" value="<?= htmlspecialchars($no_ppx) ?>">
+                <input type="hidden" name="action" value="save_kas">
+                <input type="hidden" name="jenis_transaksi" id="kasJenisTransaksi" value="BKK">
+
+                <div class="modal-body px-4 py-3" style="background: #ffffff;">
+
+                    <!-- 2 Big Tabs BKK / BKM -->
+                    <div class="kas-tab-group">
+                        <button type="button" class="kas-tab-btn active-bkk" id="btnTabBKK" onclick="switchKasTab('BKK')">
+                            BKK — Bukti Kas Keluar (Pengeluaran)
+                        </button>
+                        <button type="button" class="kas-tab-btn" id="btnTabBKM" onclick="switchKasTab('BKM')">
+                            BKM — Bukti Kas Masuk (Pengembalian Uang Muka)
+                        </button>
+                    </div>
+
+                    <!-- Row 1: Tanggal, Dibayar Kepada / Diterima Dari, Keperluan -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <label class="small font-weight-bold text-dark mb-1">Tanggal</label>
+                            <input type="date" name="tanggal_realisasi" id="kasTanggal" class="form-control" value="<?= date('Y-m-d') ?>" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="small font-weight-bold text-dark mb-1" id="lblDibayar">Dibayar Kepada</label>
+                            <input type="text" name="dibayar_kepada" id="kasDibayar" class="form-control" placeholder="Nama toko / vendor / karyawan" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="small font-weight-bold text-dark mb-1">Keperluan</label>
+                            <input type="text" name="keperluan" id="kasKeperluan" class="form-control" placeholder="Contoh: Pembelian barang operasional PPX" required>
+                        </div>
+                    </div>
+
+                    <!-- Section 1: Upload Nota / Kwitansi -->
+                    <div class="mb-4">
+                        <label class="font-weight-bold text-dark mb-2" style="font-size: 13.5px;">
+                            1. Upload Nota / Kwitansi
+                        </label>
+                        <div class="drop-zone" onclick="document.getElementById('kasFileInput').click()">
+                            <i class="fas fa-file-invoice text-primary fa-2x mb-2 d-block"></i>
+                            <p class="mb-1 text-muted" style="font-size: 13px;">
+                                Klik atau tarik file ke sini (foto JPG/PNG atau PDF, boleh lebih dari satu) — nota digabung ke dalam bukti transaksi
+                            </p>
+                            <input type="file" id="kasFileInput" name="bukti[]" accept=".jpg,.jpeg,.png,.pdf" multiple style="display:none;" onchange="handleKasFiles(this)">
+                            <div id="kasFilePreview" class="d-flex flex-wrap justify-content-center mt-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Rincian Biaya / Akun -->
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label class="font-weight-bold text-dark mb-0" style="font-size: 13.5px;">
+                                2. Rincian Biaya / Akun
+                            </label>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="addKasRow()">
+                                <i class="fas fa-plus mr-1"></i> Tambah Baris
+                            </button>
+                        </div>
+
+                        <div class="table-responsive border rounded" style="overflow-x: auto;">
+                            <table class="table table-sm mb-0 rincian-table" id="tableKasRincian">
+                                <thead>
                                     <tr>
-                                        <th colspan="6" class="text-right">Total Rencana:</th>
-                                        <th class="text-right">Rp <?= number_format($total_nominal, 0, ',', '.') ?></th>
+                                        <th width="45%">Akun (ketik kode / nama untuk mencari)</th>
+                                        <th width="32%">Keterangan</th>
+                                        <th width="18%" class="text-right">Jumlah (Rp)</th>
+                                        <th width="5%" class="text-center"></th>
                                     </tr>
-                                    <?php if ($total_sudah_direalisasi > 0): ?>
-                                        <tr class="table-success">
-                                            <th colspan="6" class="text-right">Sudah Direalisasi:</th>
-                                            <th class="text-right">Rp <?= number_format($total_sudah_direalisasi, 0, ',', '.') ?></th>
-                                        </tr>
-                                        <tr class="table-warning">
-                                            <th colspan="6" class="text-right"><strong>Sisa Belum Direalisasi:</strong></th>
-                                            <th class="text-right"><strong>Rp <?= number_format($sisa_belum_direalisasi, 0, ',', '.') ?></strong></th>
-                                        </tr>
-                                    <?php endif; ?>
+                                </thead>
+                                <tbody id="tbodyKasRincian">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                                <tfoot>
+                                    <tr class="bg-light font-weight-bold">
+                                        <td colspan="2" class="text-right">Total Transaksi:</td>
+                                        <td class="text-right text-success" id="kasTotalDisplay" style="font-size: 14px;">Rp 0</td>
+                                        <td></td>
+                                    </tr>
                                 </tfoot>
                             </table>
                         </div>
                     </div>
 
-                    <!-- Detail Barang yang Dibeli (Realisasi) -->
-                    <div class="form-section">
-                        <h5 class="mb-3">
-                            <i class="fas fa-shopping-cart"></i> Detail Barang yang Dibeli (Realisasi)
-                        </h5>
+                </div>
 
-                        <div class="info-box">
-                            <i class="fas fa-lightbulb"></i> <strong>Petunjuk:</strong>
-                            <ul class="mb-0 mt-2">
-                                <li>Jika pembelian <strong>sesuai rencana</strong>, klik tombol "Copy dari Rencana" di bawah untuk auto-fill.</li>
-                                <li>Jika ada perbedaan harga/jumlah/barang, Anda bisa <strong>edit manual</strong> atau <strong>tambah/hapus item</strong>.</li>
-                                <li>Form ini wajib diisi untuk transparansi penggunaan dana.</li>
-                            </ul>
-                        </div>
-
-                        <!-- Button Copy dari Rencana -->
-                        <div class="row mb-3">
-                            <div class="col-12">
-                                <button type="button" class="btn btn-info btn-sm" onclick="copySelectedFromRencana()">
-                                    <i class="fas fa-copy"></i> Copy Item Terpilih dari Rencana
-                                </button>
-                                <small class="text-muted ml-2">
-                                    <i class="fas fa-info-circle"></i> Centang item pada tabel Rencana di atas, kemudian klik tombol ini untuk copy item yang dipilih.
-                                </small>
-                            </div>
-                        </div>
-
-                        <div id="detailRealisasiContainer">
-                            <!-- Item pertama -->
-                            <div class="detail-item" data-index="0">
-                                <button type="button" class="btn btn-sm btn-danger btn-remove-item" onclick="removeRealisasiItem(0)" title="Hapus item">
-                                    <i class="fas fa-times"></i>
-                                </button>
-
-                                <div class="row">
-                                    <!-- Nama Barang -->
-                                    <div class="col-md-3 mb-2">
-                                        <label class="small font-weight-bold">Nama Barang/Item <span class="text-danger">*</span></label>
-                                        <input type="text" name="realisasi[0][nama_barang]" class="form-control form-control-sm"
-                                            placeholder="Contoh: Laptop" required>
-                                    </div>
-
-                                    <!-- No. Akun -->
-                                    <div class="col-md-2 mb-2">
-                                        <label class="small font-weight-bold">No. Akun</label>
-                                        <select name="realisasi[0][no_akun]" class="form-control form-control-sm">
-                                            <option value="">-- Pilih No. Akun --</option>
-                                            <?= $akun_options_html ?>
-                                        </select>
-                                    </div>
-
-                                    <!-- Jumlah -->
-                                    <div class="col-md-1 mb-2">
-                                        <label class="small font-weight-bold">Qty <span class="text-danger">*</span></label>
-                                        <input type="number" name="realisasi[0][jumlah]" class="form-control form-control-sm jumlah-realisasi"
-                                            min="1" value="1" required onchange="calculateRealisasiTotal(0)">
-                                    </div>
-
-                                    <!-- Satuan -->
-                                    <div class="col-md-1 mb-2">
-                                        <label class="small font-weight-bold">Satuan <span class="text-danger">*</span></label>
-                                        <select name="realisasi[0][satuan]" class="form-control form-control-sm" required>
-                                            <option value="Pcs">Pcs</option>
-                                            <option value="Unit">Unit</option>
-                                            <option value="Set">Set</option>
-                                            <option value="Buah">Buah</option>
-                                            <option value="Paket">Paket</option>
-                                            <option value="Kg">Kg</option>
-                                            <option value="Meter">Meter</option>
-                                            <option value="Liter">Liter</option>
-                                            <option value="Box">Box</option>
-                                            <option value="Roll">Roll</option>
-                                            <option value="Lembar">Lembar</option>
-                                            <option value="Dus">Dus</option>
-                                        </select>
-                                    </div>
-
-                                    <!-- Harga Satuan -->
-                                    <div class="col-md-2 mb-2">
-                                        <label class="small font-weight-bold">Harga Satuan <span class="text-danger">*</span></label>
-                                        <input type="text" name="realisasi[0][harga_satuan]" class="form-control form-control-sm harga-realisasi"
-                                            placeholder="Rp 0" required onkeyup="formatRupiahRealisasi(this, 0)">
-                                    </div>
-
-                                    <!-- Total Harga -->
-                                    <div class="col-md-2 mb-2">
-                                        <label class="small font-weight-bold">Total Harga</label>
-                                        <input type="text" name="realisasi[0][total_harga]" class="form-control form-control-sm total-harga-realisasi"
-                                            placeholder="Rp 0" readonly style="background-color: #e9ecef;">
-                                    </div>
-
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Tombol Tambah Item Realisasi -->
-                        <div class="row mt-2">
-                            <div class="col-12">
-                                <button type="button" class="btn btn-sm btn-success" onclick="addRealisasiItem()">
-                                    <i class="fas fa-plus"></i> Tambah Barang
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Total Realisasi -->
-                        <div class="row mt-3">
-                            <div class="col-12">
-                                <div class="alert alert-info">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <strong>Total Realisasi:</strong>
-                                        </div>
-                                        <div class="col-md-6 text-right">
-                                            <h5 id="grandTotalRealisasi" class="mb-0 text-primary">Rp 0</h5>
-                                            <input type="hidden" name="total_realisasi" id="total_realisasi" value="0">
-                                            <input type="hidden" name="status_selisih" id="status_selisih" value="pas">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                <!-- Modal Footer -->
+                <div class="modal-footer d-flex justify-content-between align-items-center px-4 py-3" style="background:#f8fafc; border-top: 1px solid #e2e8f0;">
+                    <div class="small text-muted font-weight-bold" id="footerAkunKas">
+                        Akun kas: Kas Operasional <?= htmlspecialchars($ppx_data['cabang'] ?? 'Jakarta') ?>
                     </div>
-
-                    <!-- Upload Bukti -->
-                    <div class="form-section">
-                        <h5 class="mb-3">
-                            <i class="fas fa-paperclip"></i> Upload Bukti Realisasi
-                        </h5>
-
-                        <div class="row">
-                            <!-- Upload Bukti Nota -->
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="required-field">
-                                        <i class="fas fa-receipt"></i> Upload Bukti Nota/Struk
-                                    </label>
-                                    <input type="file"
-                                        class="form-control"
-                                        id="bukti_realisasi"
-                                        name="bukti_realisasi[]"
-                                        accept=".pdf,.jpg,.jpeg,.png"
-                                        multiple
-                                        required>
-                                    <small class="form-text text-muted">
-                                        Format: JPG, PNG, PDF. Maksimal 5 file @ 5MB
-                                    </small>
-                                    <div id="preview_realisasi" class="file-preview"></div>
-                                </div>
-                            </div>
-
-                            <!-- Uang Kembali / Kekurangan -->
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>
-                                        <i class="fas fa-hand-holding-usd"></i> <span id="label_selisih">Uang Kembali ke Finance (Rp)</span>
-                                    </label>
-                                    <input type="hidden" id="uang_kembali_raw" name="uang_kembali" value="0">
-                                    <input type="text" class="form-control" id="uang_kembali_display" value="Rp 0" readonly>
-                                    <small class="form-text text-muted" id="help_selisih">
-                                        Otomatis terhitung: Uang Muka - Total Realisasi
-                                    </small>
-                                </div>
-                            </div>
-
-                            <!-- Keterangan Realisasi -->
-                            <div class="col-md-12">
-                                <div class="form-group">
-                                    <label>
-                                        <i class="fas fa-comment-dots"></i> Keterangan Umum Realisasi
-                                    </label>
-                                    <textarea class="form-control"
-                                        id="keterangan_realisasi"
-                                        name="keterangan_realisasi"
-                                        rows="3"
-                                        placeholder="Catatan umum tentang realisasi ini (opsional)"></textarea>
-                                </div>
-                            </div>
-
-                            <!-- Alert Kekurangan Dana (Hidden by default) -->
-                            <div class="col-md-12" id="alert_kekurangan" style="display: none;">
-                                <div class="alert alert-warning">
-                                    <h6><i class="fas fa-exclamation-triangle"></i> Perhatian: Uang Muka Tidak Cukup</h6>
-                                    <p class="mb-2">
-                                        Total realisasi melebihi uang muka yang diterima sebesar <strong id="nilai_kekurangan">Rp 0</strong>.
-                                    </p>
-                                    <hr>
-                                    <div class="custom-control custom-checkbox">
-                                        <input type="checkbox" class="custom-control-input" id="confirm_pakai_uang_pribadi" name="confirm_pakai_uang_pribadi">
-                                        <label class="custom-control-label" for="confirm_pakai_uang_pribadi">
-                                            <strong>Saya sudah menggunakan uang pribadi untuk menutupi kekurangan dan akan mengajukan penggantian/reimbursement kepada Finance.</strong>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Summary Box -->
-                    <div class="form-section">
-                        <h5 class="mb-3">
-                            <i class="fas fa-calculator"></i> Ringkasan
-                        </h5>
-                        <div class="alert alert-light border">
-                            <div class="row text-center">
-                                <div class="col-md-3">
-                                    <strong>Uang Muka Total:</strong><br>
-                                    <span class="text-success h6">Rp <?= number_format($ppx_data['uang_muka'], 0, ',', '.') ?></span>
-                                    <?php if ($total_sudah_direalisasi > 0): ?>
-                                        <br><small class="text-muted">Sudah: Rp <?= number_format($total_sudah_direalisasi, 0, ',', '.') ?></small>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="col-md-3">
-                                    <strong>Total Realisasi (Semua):</strong><br>
-                                    <span class="text-primary h5">Rp <span id="display_total_realisasi_semua"><?= number_format($total_sudah_direalisasi, 0, ',', '.') ?></span></span>
-                                    <?php if ($total_sudah_direalisasi > 0): ?>
-                                        <br><small class="text-muted">Sekarang: Rp <span id="display_realisasi_sekarang">0</span></small>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="col-md-3">
-                                    <strong>Sisa Uang Muka:</strong><br>
-                                    <span class="<?= $total_sudah_direalisasi > 0 ? 'text-info' : 'text-success' ?> h5">Rp <span id="display_uang_muka"><?= number_format($ppx_data['uang_muka'] - $total_sudah_direalisasi, 0, ',', '.') ?></span></span>
-                                </div>
-                                <div class="col-md-3">
-                                    <strong><span id="label_summary_selisih">Sisa/Kembali:</span></strong><br>
-                                    <span class="h5" id="display_sisa_wrapper">
-                                        <span class="text-info">Rp <span id="display_sisa">0</span></span>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Info Kekurangan di Summary -->
-                        <div id="summary_kekurangan_info" style="display: none;">
-                            <div class="alert alert-danger">
-                                <div class="row text-center">
-                                    <div class="col-12">
-                                        <h6 class="mb-3"><i class="fas fa-exclamation-circle"></i> Terdapat Kekurangan Dana</h6>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <small class="text-muted d-block">Uang Muka</small>
-                                        <strong class="h6">Rp <span id="summary_uang_muka">0</span></strong>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <small class="text-muted d-block">Total Realisasi</small>
-                                        <strong class="h6 text-danger">Rp <span id="summary_total_realisasi">0</span></strong>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <small class="text-muted d-block">Kekurangan (Uang Pribadi)</small>
-                                        <strong class="h5 text-danger">Rp <span id="summary_kekurangan">0</span></strong>
-                                    </div>
-                                </div>
-                                <hr>
-                                <p class="mb-0 text-center">
-                                    <i class="fas fa-info-circle"></i>
-                                    Finance akan memproses penggantian/reimbursement sejumlah <strong>Rp <span id="summary_reimbursement">0</span></strong> ke rekening Anda.
-                                </p>
-                            </div>
-                            </div>
-                        </div>
-
-                    <!-- Action Buttons -->
-                    <div class="form-section">
-                        <div class="text-right">
-                            <a href="dashboard.php" class="btn btn-secondary">
-                                <i class="fas fa-times"></i> Batal
-                            </a>
-                            <button type="submit" name="submit_realisasi" class="btn btn-success" id="btnSubmit">
-                                <i class="fas fa-paper-plane"></i> Submit Realisasi
-                            </button>
-                        </div>
-                    </div>
-                    </form>
-                    <?php include $layout_dir . '/footer.php'; ?>
-            </div>
-        </div>
-        
-    </div>
-
-
-    <script>
-        // Data rencana dari PHP
-        const dataRencana = <?= json_encode($items) ?>;
-        // Akun options for JS templates
-        const akunOptions = <?= json_encode($akun_options_html) ?>;
-
-        // Deklarasikan variable global di luar document.ready
-        const uangMukaPenuh = <?= $ppx_data['uang_muka'] ?>;
-        const totalSudahDirealisasi = <?= $total_sudah_direalisasi ?>;
-        const uangMuka = uangMukaPenuh - totalSudahDirealisasi; // Sisa uang muka yang tersedia
-        let realisasiItemIndex = 1;
-
-        // Format Rupiah functions - Global scope
-        function formatNumber(num) {
-            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        }
-
-        function parseRupiah(rupiah) {
-            if (typeof rupiah === 'number') return rupiah;
-            return parseInt(String(rupiah).replace(/[^0-9]/g, '')) || 0;
-        }
-
-        // Set formatted and raw uang_kembali
-        function setUangKembali(amount) {
-            const v = Math.abs(parseInt(amount) || 0);
-            // raw numeric for form submission
-            document.getElementById('uang_kembali_raw').value = v;
-            // formatted display
-            document.getElementById('uang_kembali_display').value = 'Rp ' + formatNumber(v);
-        }
-
-        // Format input rupiah untuk realisasi - Global scope
-        function formatRupiahRealisasi(input, index) {
-            let value = parseRupiah(input.value);
-            input.value = 'Rp ' + formatNumber(value);
-            calculateRealisasiTotal(index);
-        }
-
-        // Calculate total per item realisasi - Global scope
-        function calculateRealisasiTotal(index) {
-            if (typeof jQuery === 'undefined') return;
-            const jumlah = parseInt(jQuery(`input[name="realisasi[${index}][jumlah]"]`).val()) || 0;
-            const hargaSatuan = parseRupiah(jQuery(`input[name="realisasi[${index}][harga_satuan]"]`).val());
-            const total = jumlah * hargaSatuan;
-
-            jQuery(`input[name="realisasi[${index}][total_harga]"]`).val('Rp ' + formatNumber(total));
-
-            calculateGrandTotalRealisasi();
-        }
-
-        // Calculate grand total realisasi - Global scope
-        function calculateGrandTotalRealisasi() {
-            if (typeof jQuery === 'undefined') return;
-            let grandTotal = 0;
-
-            jQuery('.total-harga-realisasi').each(function() {
-                grandTotal += parseRupiah(jQuery(this).val());
-            });
-
-            jQuery('#grandTotalRealisasi').text('Rp ' + formatNumber(grandTotal));
-            jQuery('#total_realisasi').val(grandTotal);
-
-            // Update Total Realisasi Semua = Sudah Direalisasi + Realisasi Sekarang
-            const totalRealisasiSemua = totalSudahDirealisasi + grandTotal;
-            jQuery('#display_total_realisasi_semua').text(formatNumber(totalRealisasiSemua));
-            jQuery('#display_realisasi_sekarang').text(formatNumber(grandTotal));
-
-            // Calculate selisih berdasarkan sisa uang muka (bukan uang muka penuh)
-            const selisih = uangMuka - grandTotal;
-
-            // Update display
-            jQuery('#display_sisa').text(formatNumber(Math.abs(selisih)));
-
-            // Change UI berdasarkan kondisi
-            const wrapper = jQuery('#display_sisa_wrapper');
-            wrapper.find('span').first().removeClass('text-success text-danger text-warning text-info');
-
-            if (selisih > 0) {
-                // KELEBIHAN - Uang Kembali ke Finance
-                wrapper.find('span').first().addClass('text-success');
-                setUangKembali(selisih);
-                jQuery('#status_selisih').val('kembali');
-                jQuery('#status_selisih').val('kembali');
-
-                // Update labels
-                jQuery('#label_selisih').html('<i class="fas fa-hand-holding-usd"></i> Uang Kembali ke Finance (Rp)');
-                jQuery('#help_selisih').text('Sisa uang muka yang harus dikembalikan ke Finance');
-                jQuery('#label_summary_selisih').text('Sisa/Kembali:');
-
-                // Hide alert kekurangan
-                jQuery('#alert_kekurangan').hide();
-                jQuery('#summary_kekurangan_info').hide();
-                jQuery('#confirm_pakai_uang_pribadi').prop('checked', false);
-
-            } else if (selisih < 0) {
-                // KEKURANGAN - User pakai uang pribadi
-                wrapper.find('span').first().addClass('text-danger');
-                setUangKembali(Math.abs(selisih)); // Simpan nilai positif
-                jQuery('#status_selisih').val('kurang');
-                jQuery('#status_selisih').val('kurang');
-
-                // Update labels
-                jQuery('#label_selisih').html('<i class="fas fa-exclamation-triangle"></i> Kekurangan Dana (Rp)');
-                jQuery('#help_selisih').html('<strong class="text-danger">Total realisasi melebihi uang muka. Anda perlu konfirmasi penggunaan uang pribadi.</strong>');
-                jQuery('#label_summary_selisih').text('Kekurangan:');
-
-                // Show alert kekurangan
-                jQuery('#alert_kekurangan').show();
-                jQuery('#nilai_kekurangan').text('Rp ' + formatNumber(Math.abs(selisih)));
-
-                // Update summary kekurangan
-                jQuery('#summary_uang_muka').text(formatNumber(uangMuka));
-                jQuery('#summary_total_realisasi').text(formatNumber(grandTotal));
-                jQuery('#summary_kekurangan').text(formatNumber(Math.abs(selisih)));
-                jQuery('#summary_reimbursement').text(formatNumber(Math.abs(selisih)));
-                jQuery('#summary_kekurangan_info').show();
-
-            } else {
-                // PAS - Tidak ada kelebihan/kekurangan
-                wrapper.find('span').first().addClass('text-info');
-                setUangKembali(0);
-                jQuery('#status_selisih').val('pas');
-                jQuery('#status_selisih').val('pas');
-
-                // Update labels
-                jQuery('#label_selisih').html('<i class="fas fa-check-circle"></i> Status Dana');
-                jQuery('#help_selisih').text('Total realisasi PAS dengan uang muka yang diterima');
-                jQuery('#label_summary_selisih').text('Status:');
-
-                // Hide alert kekurangan
-                jQuery('#alert_kekurangan').hide();
-                jQuery('#summary_kekurangan_info').hide();
-                jQuery('#confirm_pakai_uang_pribadi').prop('checked', false);
-            }
-        }
-
-        // Toggle all checkboxes
-        function toggleAllRencana(checkbox) {
-            if (typeof jQuery === 'undefined') return;
-            jQuery('.checkbox-rencana').prop('checked', checkbox.checked);
-        }
-
-        // FUNGSI BARU: Copy item terpilih dari Rencana
-        function copySelectedFromRencana() {
-            // Wait for jQuery to be ready
-            if (typeof jQuery === 'undefined') {
-                setTimeout(copySelectedFromRencana, 50);
-                return;
-            }
-            const selectedCheckboxes = jQuery('.checkbox-rencana:checked');
-
-            if (selectedCheckboxes.length === 0) {
-                alert('Pilih minimal 1 item dari Rencana!\n\nCentang checkbox pada item yang ingin direalisasikan.');
-                return;
-            }
-
-            // Cek apakah ada item kosong (item dengan nama barang kosong)
-            const existingItems = jQuery('#detailRealisasiContainer .detail-item');
-            let hasEmptyItems = false;
-
-            existingItems.each(function() {
-                const namaBarang = jQuery(this).find('input[name*="[nama_barang]"]').val();
-                if (!namaBarang || namaBarang.trim() === '') {
-                    hasEmptyItems = true;
-                    return false; // break loop
-                }
-            });
-
-            // Jika ada item kosong, hapus semua dan reset index
-            if (hasEmptyItems) {
-                jQuery('#detailRealisasiContainer').empty();
-                realisasiItemIndex = 0;
-            }
-
-            const copyMessage = `Copy ${selectedCheckboxes.length} item terpilih dari Rencana?<br><br>${hasEmptyItems ? 'Item kosong akan diganti.' : 'Item akan ditambahkan ke daftar realisasi.'}`;
-            showConfirm('Konfirmasi Copy', copyMessage, function() {
-                // Confirmed - execute copy
-                executeCopyItems(selectedCheckboxes, hasEmptyItems);
-            }, null, 'confirm');
-        }
-
-        function executeCopyItems(selectedCheckboxes, hasEmptyItems) {
-            if (typeof jQuery === 'undefined') return;
-
-            // Loop setiap checkbox yang terpilih
-            selectedCheckboxes.each(function() {
-                const checkbox = jQuery(this);
-                const rencanaIndex = checkbox.data('index');
-                const detailId = checkbox.data('detail-id'); // no_ppx_detail
-                const item = {
-                    no_ppx_detail: detailId,
-                    no_akun: checkbox.data('no-akun'),
-                    rincian: checkbox.data('rincian'),
-                    jumlah: checkbox.data('jumlah'),
-                    satuan: checkbox.data('satuan'),
-                    harga_satuan: checkbox.data('harga'),
-                    total_harga: checkbox.data('total')
-                };
-                const index = realisasiItemIndex;
-                const newItem = `
-                    <div class="detail-item" data-index="${index}" data-rencana-index="${rencanaIndex}">
-                        <button type="button" class="btn btn-sm btn-danger btn-remove-item" onclick="removeRealisasiItem(${index})" title="Hapus item">
-                            <i class="fas fa-times"></i>
+                    <div class="d-flex" style="gap: 8px;">
+                        <button type="button" class="btn btn-light border px-3" data-dismiss="modal">Tutup</button>
+                        <button type="submit" class="btn btn-primary px-4 font-weight-bold" id="btnSimpanKas" style="background:#1e3a8a; border-color:#1e3a8a;">
+                            Simpan Transaksi
                         </button>
-
-                        <div class="row">
-                            <div class="col-md-3 mb-2">
-                                <label class="small font-weight-bold">Nama Barang/Item <span class="text-danger">*</span></label>
-                                <input type="text" name="realisasi[${index}][nama_barang]" class="form-control form-control-sm"
-                                    value="${item.rincian}" required>
-                            </div>
-
-                            <div class="col-md-2 mb-2">
-                                <label class="small font-weight-bold">No. Akun</label>
-                                <select name="realisasi[${index}][no_akun]" class="form-control form-control-sm">
-                                    <option value="">-- Pilih No. Akun --</option>
-                                    ${akunOptions}
-                                </select>
-                            </div>
-
-                            <div class="col-md-1 mb-2">
-                                <label class="small font-weight-bold">Qty <span class="text-danger">*</span></label>
-                                <input type="number" name="realisasi[${index}][jumlah]" class="form-control form-control-sm jumlah-realisasi"
-                                    min="1" value="${item.jumlah}" required onchange="calculateRealisasiTotal(${index})">
-                            </div>
-
-                            <div class="col-md-1 mb-2">
-                                <label class="small font-weight-bold">Satuan <span class="text-danger">*</span></label>
-                                <select name="realisasi[${index}][satuan]" class="form-control form-control-sm" required>
-                                    <option value="Pcs" ${item.satuan === 'Pcs' ? 'selected' : ''}>Pcs</option>
-                                    <option value="Unit" ${item.satuan === 'Unit' ? 'selected' : ''}>Unit</option>
-                                    <option value="Set" ${item.satuan === 'Set' ? 'selected' : ''}>Set</option>
-                                    <option value="Buah" ${item.satuan === 'Buah' ? 'selected' : ''}>Buah</option>
-                                    <option value="Paket" ${item.satuan === 'Paket' ? 'selected' : ''}>Paket</option>
-                                    <option value="Kg" ${item.satuan === 'Kg' ? 'selected' : ''}>Kg</option>
-                                    <option value="Meter" ${item.satuan === 'Meter' ? 'selected' : ''}>Meter</option>
-                                    <option value="Liter" ${item.satuan === 'Liter' ? 'selected' : ''}>Liter</option>
-                                    <option value="Box" ${item.satuan === 'Box' ? 'selected' : ''}>Box</option>
-                                    <option value="Roll" ${item.satuan === 'Roll' ? 'selected' : ''}>Roll</option>
-                                    <option value="Lembar" ${item.satuan === 'Lembar' ? 'selected' : ''}>Lembar</option>
-                                    <option value="Dus" ${item.satuan === 'Dus' ? 'selected' : ''}>Dus</option>
-                                </select>
-                            </div>
-
-                            <div class="col-md-2 mb-2">
-                                <label class="small font-weight-bold">Harga Satuan <span class="text-danger">*</span></label>
-                                <input type="text" name="realisasi[${index}][harga_satuan]" class="form-control form-control-sm harga-realisasi"
-                                    value="Rp ${formatNumber(item.harga_satuan)}" required onkeyup="formatRupiahRealisasi(this, ${index})">
-                            </div>
-
-                            <div class="col-md-2 mb-2">
-                                <label class="small font-weight-bold">Total Harga</label>
-                                <input type="text" name="realisasi[${index}][total_harga]" class="form-control form-control-sm total-harga-realisasi"
-                                    value="Rp ${formatNumber(item.total_harga)}" readonly style="background-color: #e9ecef;">
-                            </div>
-                            
-                            <!-- Hidden field untuk no_ppx_detail -->
-                            <input type="hidden" name="realisasi[${index}][no_ppx_detail]" value="${item.no_ppx_detail || ''}">
-                        </div>
-                    </div>
-                `;
-
-                jQuery('#detailRealisasiContainer').append(newItem);
-                // set selected no_akun if available in source item
-                if (item.no_akun) {
-                    jQuery(`select[name="realisasi[${index}][no_akun]"]`).val(item.no_akun);
-                }
-                realisasiItemIndex++;
-            });
-
-            // Recalculate grand total
-            calculateGrandTotalRealisasi();
-
-            // Disable and uncheck selected items to prevent duplicate selection
-            selectedCheckboxes.prop('checked', false).prop('disabled', true).css('opacity', '0.4');
-            jQuery('#selectAllRencana').prop('checked', false);
-
-            // Show success message
-            alert(`Berhasil copy ${selectedCheckboxes.length} item terpilih dari Rencana!\n\nAnda bisa edit jika ada perbedaan harga/jumlah.`);
-        }
-
-        // Add realisasi item - Global scope
-        function addRealisasiItem() {
-            if (typeof jQuery === 'undefined') return;
-            const index = realisasiItemIndex++;
-            const newItem = `
-                <div class="detail-item" data-index="${index}">
-                    <button type="button" class="btn btn-sm btn-danger btn-remove-item" onclick="removeRealisasiItem(${index})" title="Hapus item">
-                        <i class="fas fa-times"></i>
-                    </button>
-
-                    <div class="row">
-                        <div class="col-md-3 mb-2">
-                            <label class="small font-weight-bold">Nama Barang/Item <span class="text-danger">*</span></label>
-                            <input type="text" name="realisasi[${index}][nama_barang]" class="form-control form-control-sm"
-                                placeholder="Contoh: Laptop" required>
-                        </div>
-
-                        <div class="col-md-2 mb-2">
-                            <label class="small font-weight-bold">No. Akun</label>
-                            <select name="realisasi[${index}][no_akun]" class="form-control form-control-sm">
-                                <option value="">-- Pilih No. Akun --</option>
-                                ${akunOptions}
-                            </select>
-                        </div>
-
-                        <div class="col-md-1 mb-2">
-                            <label class="small font-weight-bold">Qty <span class="text-danger">*</span></label>
-                            <input type="number" name="realisasi[${index}][jumlah]" class="form-control form-control-sm jumlah-realisasi"
-                                min="1" value="1" required onchange="calculateRealisasiTotal(${index})">
-                        </div>
-
-                        <div class="col-md-1 mb-2">
-                            <label class="small font-weight-bold">Satuan <span class="text-danger">*</span></label>
-                            <select name="realisasi[${index}][satuan]" class="form-control form-control-sm" required>
-                                <option value="Pcs">Pcs</option>
-                                <option value="Unit">Unit</option>
-                                <option value="Set">Set</option>
-                                <option value="Buah">Buah</option>
-                                <option value="Paket">Paket</option>
-                                <option value="Kg">Kg</option>
-                                <option value="Meter">Meter</option>
-                                <option value="Liter">Liter</option>
-                                <option value="Box">Box</option>
-                                <option value="Roll">Roll</option>
-                                <option value="Lembar">Lembar</option>
-                                <option value="Dus">Dus</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-2 mb-2">
-                            <label class="small font-weight-bold">Harga Satuan <span class="text-danger">*</span></label>
-                            <input type="text" name="realisasi[${index}][harga_satuan]" class="form-control form-control-sm harga-realisasi"
-                                placeholder="Rp 0" required onkeyup="formatRupiahRealisasi(this, ${index})">
-                        </div>
-
-                        <div class="col-md-2 mb-2">
-                            <label class="small font-weight-bold">Total Harga</label>
-                            <input type="text" name="realisasi[${index}][total_harga]" class="form-control form-control-sm total-harga-realisasi"
-                                placeholder="Rp 0" readonly style="background-color: #e9ecef;">
-                        </div>
-
                     </div>
                 </div>
-            `;
 
-            jQuery('#detailRealisasiContainer').append(newItem);
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Image Preview Lightbox -->
+<div class="modal fade" id="modalPreviewImg" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content border-0">
+            <div class="modal-header py-2 px-3 border-0">
+                <span class="small text-muted" id="previewImgTitle"></span>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body p-2 text-center bg-dark">
+                <img src="" id="previewImgSrc" style="max-width:100%; max-height:80vh; object-fit:contain; border-radius:4px;">
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php include __DIR__ . '/../layouts/footer.php'; ?>
+
+<!-- Data Items untuk Dropdown Select2 -->
+<script>
+const selectItems = <?= json_encode($all_select_items) ?>;
+
+let currentJenis = 'BKK';
+
+function switchKasTab(jenis) {
+    currentJenis = jenis;
+    document.getElementById('kasJenisTransaksi').value = jenis;
+    const btnBKK = document.getElementById('btnTabBKK');
+    const btnBKM = document.getElementById('btnTabBKM');
+    const tbl = document.getElementById('tableKasRincian');
+    const lblDibayar = document.getElementById('lblDibayar');
+    const btnSimpan = document.getElementById('btnSimpanKas');
+
+    if (jenis === 'BKK') {
+        btnBKK.className = 'kas-tab-btn active-bkk';
+        btnBKM.className = 'kas-tab-btn';
+        tbl.classList.remove('table-bkm');
+        lblDibayar.textContent = 'Dibayar Kepada';
+        document.getElementById('kasDibayar').placeholder = 'Nama toko / vendor / karyawan';
+        document.getElementById('kasKeperluan').placeholder = 'Contoh: Pembelian barang operasional PPX';
+        btnSimpan.style.background = '#1e3a8a';
+        btnSimpan.style.borderColor = '#1e3a8a';
+    } else {
+        btnBKM.className = 'kas-tab-btn active-bkm';
+        btnBKK.className = 'kas-tab-btn';
+        tbl.classList.add('table-bkm');
+        lblDibayar.textContent = 'Diterima Dari';
+        document.getElementById('kasDibayar').placeholder = 'Nama penyetor sisa uang muka';
+        document.getElementById('kasKeperluan').placeholder = 'Contoh: Pengembalian sisa uang muka PPX';
+        btnSimpan.style.background = '#047857';
+        btnSimpan.style.borderColor = '#047857';
+    }
+}
+
+function openKasModal(jenis) {
+    document.getElementById('formTransaksiKas').reset();
+    document.getElementById('kasFilePreview').innerHTML = '';
+
+    $('#tbodyKasRincian .select-akun').each(function() {
+        if ($(this).data('select2')) {
+            $(this).select2('destroy');
         }
+    });
+    document.getElementById('tbodyKasRincian').innerHTML = '';
+    document.getElementById('kasTanggal').value = '<?= date('Y-m-d') ?>';
 
-        // Remove realisasi item - Global scope
-        function removeRealisasiItem(index) {
-            if (typeof jQuery === 'undefined') return;
-            const items = jQuery('.detail-item');
-            const itemToRemove = jQuery(`.detail-item[data-index="${index}"]`);
-            const rencanaIndex = itemToRemove.data('rencana-index');
+    switchKasTab(jenis || 'BKK');
+    addKasRow();
 
-            function reenableRencana(idx) {
-                if (idx !== undefined && typeof jQuery !== 'undefined') {
-                    jQuery(`.checkbox-rencana[data-index="${idx}"]`).prop('disabled', false).css('opacity', '1');
-                }
-            }
+    $('#modalInputKas').modal('show');
+}
 
-            // If there's only one item, clear its fields but keep the container
-            if (items.length <= 1) {
-                showConfirm('Konfirmasi Hapus', 'Hapus item realisasi ini?', function() {
-                    // Clear fields but keep the container so form still has one blank item
-                    itemToRemove.find('input[name$="[nama_barang]"]').val('');
-                    itemToRemove.find('select[name$="[no_akun]"]').val('');
-                    itemToRemove.find('input[name$="[jumlah]"]').val(1);
-                    itemToRemove.find('select[name$="[satuan]"]').val('Pcs');
-                    itemToRemove.find('input[name$="[harga_satuan]"]').val('Rp 0');
-                    itemToRemove.find('input[name$="[total_harga]"]').val('Rp 0');
+function addKasRow(selectedId, keteranganVal, jumlahVal) {
+    const tbody = document.getElementById('tbodyKasRincian');
+    const tr = document.createElement('tr');
 
-                    itemToRemove.removeAttr('data-rencana-index');
-                    reenableRencana(rencanaIndex);
-                    calculateGrandTotalRealisasi();
-                }, null, 'delete');
+    let selectHtml = '<select name="item_detail_id[]" class="form-control form-control-sm select-akun" required style="width:100%;">';
+    selectHtml += '<option value="">-- Ketik kode / nama untuk mencari --</option>';
 
-                return;
-            }
+    // Group items by group
+    const groups = {};
+    selectItems.forEach(it => {
+        const grp = it.group || 'Umum';
+        if (!groups[grp]) groups[grp] = [];
+        groups[grp].push(it);
+    });
 
-            // Multiple items exist: remove the selected one
-            showConfirm('Konfirmasi Hapus', 'Hapus item realisasi ini?', function() {
-                reenableRencana(rencanaIndex);
-                itemToRemove.remove();
-                calculateGrandTotalRealisasi();
-            }, null, 'delete');
+    for (const [grpName, grpItems] of Object.entries(groups)) {
+        selectHtml += `<optgroup label="${grpName}">`;
+        grpItems.forEach(it => {
+            const sel = (selectedId && it.id == selectedId) ? 'selected' : '';
+            const sisaTxt = it.sisa > 0 ? ` (Sisa Rencana: Rp ${formatRupiah(it.sisa)})` : '';
+            selectHtml += `<option value="${it.id}" ${sel}>${it.rincian}${sisaTxt}</option>`;
+        });
+        selectHtml += `</optgroup>`;
+    }
+    selectHtml += '</select>';
+
+    const ketText = keteranganVal || '';
+    const jmlText = jumlahVal ? formatRupiah(jumlahVal) : '';
+
+    tr.innerHTML = `
+        <td style="min-width: 260px;">${selectHtml}</td>
+        <td><input type="text" name="item_keterangan[]" class="form-control form-control-sm" placeholder="Keterangan (opsional)" value="${ketText}"></td>
+        <td><input type="text" name="item_jumlah[]" class="form-control form-control-sm rupiah-kas text-right font-weight-bold" placeholder="0" value="${jmlText}" oninput="calcKasTotal()" required></td>
+        <td class="text-center">
+            <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="removeKasRow(this)" title="Hapus Baris">
+                <i class="fas fa-times fa-lg"></i>
+            </button>
+        </td>
+    `;
+
+    tbody.appendChild(tr);
+
+    // Inisialisasi Select2
+    const $sel = $(tr).find('.select-akun');
+    if ($.fn.select2) {
+        $sel.select2({
+            dropdownParent: $('#modalInputKas'),
+            width: '100%',
+            placeholder: 'mis. ATK / BBM / Laptop',
+            allowClear: true
+        });
+    }
+
+    calcKasTotal();
+}
+
+function removeKasRow(btn) {
+    const tbody = document.getElementById('tbodyKasRincian');
+    if (tbody.children.length <= 1) {
+        alert('Minimal harus ada 1 baris rincian akun biaya!');
+        return;
+    }
+    const tr = btn.closest('tr');
+    const $sel = $(tr).find('.select-akun');
+    if ($sel.length && $sel.data('select2')) {
+        $sel.select2('destroy');
+    }
+    tr.remove();
+    calcKasTotal();
+}
+
+function calcKasTotal() {
+    let total = 0;
+    document.querySelectorAll('.rupiah-kas').forEach(inp => {
+        let val = inp.value.replace(/[^0-9]/g, '');
+        inp.value = val ? formatRupiah(parseInt(val)) : '';
+        total += parseInt(val || 0);
+    });
+    document.getElementById('kasTotalDisplay').textContent = 'Rp ' + formatRupiah(total);
+}
+
+function handleKasFiles(input) {
+    const prev = document.getElementById('kasFilePreview');
+    prev.innerHTML = '';
+    if (!input.files || input.files.length === 0) return;
+
+    if (input.files.length > 10) {
+        alert('Maksimal 10 file!');
+        input.value = '';
+        return;
+    }
+
+    Array.from(input.files).forEach(file => {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const ic = ['jpg','jpeg','png'].includes(ext) ? 'fa-image' : 'fa-file-pdf';
+        const span = document.createElement('span');
+        span.className = 'prev-item';
+        span.innerHTML = `<i class="fas ${ic}"></i> ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+        prev.appendChild(span);
+    });
+}
+
+function previewImg(src, name) {
+    document.getElementById('previewImgSrc').src = src;
+    document.getElementById('previewImgTitle').textContent = name || 'Bukti Nota';
+    $('#modalPreviewImg').modal('show');
+}
+
+function formatRupiah(num) {
+    return (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+// Auto-focus kotak pencarian saat Select2 dibuka
+$(document).on('select2:open', () => {
+    setTimeout(() => {
+        const searchField = document.querySelector('.select2-container--open .select2-search__field');
+        if (searchField) {
+            searchField.focus();
         }
-
-        // Document ready untuk event handlers - use jQuery instead of $
-        if (typeof jQuery !== 'undefined') {
-            jQuery(document).ready(function($) {
-                // Initialize calculations on page load
-                calculateGrandTotalRealisasi();
-
-                // File preview handler
-                $('#bukti_realisasi').on('change', function() {
-                    const preview = $('#preview_realisasi');
-                    preview.empty();
-
-                    const files = this.files;
-                    const maxFiles = 5;
-                    const maxSize = 5 * 1024 * 1024; // 5MB
-
-                    if (files.length > maxFiles) {
-                        alert(`Maksimal ${maxFiles} file!`);
-                        this.value = '';
-                        return;
-                    }
-
-                    for (let i = 0; i < files.length; i++) {
-                        const file = files[i];
-
-                        if (file.size > maxSize) {
-                            alert(`File "${file.name}" terlalu besar! Maksimal 5MB per file.`);
-                            this.value = '';
-                            preview.empty();
-                            return;
-                        }
-
-                        const fileItem = $('<div class="file-preview-item"></div>');
-                        fileItem.html(`<i class="fas fa-file"></i> ${file.name} <small>(${(file.size / 1024).toFixed(1)} KB)</small>`);
-                        preview.append(fileItem);
-                    }
-                });
-
-                // Form validation
-                $('#realisasiForm').on('submit', function(e) {
-                    const buktiRealisasi = $('#bukti_realisasi')[0].files;
-                    const totalRealisasi = parseFloat($('#total_realisasi').val()) || 0;
-                    const uangKembali = parseFloat($('#uang_kembali_raw').val()) || 0;
-                    const confirmPakaiUangPribadi = $('#confirm_pakai_uang_pribadi').is(':checked');
-
-                    if (buktiRealisasi.length === 0) {
-                        e.preventDefault();
-                        alert('Bukti Nota wajib diupload!');
-                        return false;
-                    }
-
-                    if (totalRealisasi <= 0) {
-                        e.preventDefault();
-                        alert('Total Realisasi harus lebih dari 0!\nSilakan isi detail barang yang dibeli.');
-                        return false;
-                    }
-
-                    // Validasi jika ada kekurangan dana (total realisasi > uang muka)
-                    if (totalRealisasi > uangMuka && !confirmPakaiUangPribadi) {
-                        e.preventDefault();
-                        alert('Anda harus mengkonfirmasi bahwa telah menggunakan uang pribadi untuk menutupi kekurangan!\n\nSilakan centang checkbox konfirmasi.');
-                        $('#confirm_pakai_uang_pribadi').focus();
-                        return false;
-                    }
-
-                    let confirmMessage = 'Apakah Anda yakin data realisasi sudah benar?\n\n';
-
-                    if (totalRealisasi < uangMuka) {
-                        // Ada uang kembali
-                        confirmMessage += `Uang kembali: Rp ${formatNumber(uangKembali)}\n`;
-                        confirmMessage += 'Anda wajib mengembalikan sisa uang muka ke Finance.\n\n';
-                    } else if (totalRealisasi > uangMuka) {
-                        // Ada kekurangan
-                        confirmMessage += `Kekurangan: Rp ${formatNumber(uangKembali)}\n`;
-                        confirmMessage += 'Finance akan memproses reimbursement ke rekening Anda.\n\n';
-                    } else {
-                        // PAS
-                        confirmMessage += 'Total realisasi PAS dengan uang muka.\n\n';
-                    }
-
-                    confirmMessage += 'Setelah submit, data tidak dapat diubah.';
-
-                    // Use async modal confirm instead of synchronous browser confirm
-                    e.preventDefault();
-                    showConfirm('Konfirmasi Submit', confirmMessage, function() {
-                        // Ensure server receives the submit button name/value
-                        if ($('#realisasiForm input[name="submit_realisasi"]').length === 0) {
-                            $('<input>').attr({
-                                type: 'hidden',
-                                name: 'submit_realisasi',
-                                value: '1'
-                            }).appendTo('#realisasiForm');
-                        }
-
-                        // Unbind this handler temporarily to avoid interception
-                        $('#realisasiForm').off('submit');
-                        $('#realisasiForm')[0].submit();
-                    }, null, 'confirm');
-
-                    return false;
-                });
-            });
-        }
-    </script>
+    }, 50);
+});
+</script>
 </body>
-
 </html>
