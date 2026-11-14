@@ -130,7 +130,54 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
         .category-head  { background: #f8fafc; padding: 12px 18px; font-weight: 700; font-size: 14px;
                           border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
         
-        .summary-card   { border-radius: 10px; border: none; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        /* ── 4 Summary Cards Bersih & Kontras Tinggi ── */
+        .sc-card {
+            background: #ffffff !important;
+            border: 1px solid #e2e8f0 !important;
+            border-left: 4px solid #cbd5e1 !important;
+            border-radius: 10px;
+            padding: 14px 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            height: 100%;
+            transition: transform .2s, box-shadow .2s;
+        }
+        .sc-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .sc-card.card-alokasi   { border-left-color: #2563eb !important; background: #f8faff !important; }
+        .sc-card.card-realisasi { border-left-color: #059669 !important; background: #f6fdf9 !important; }
+        .sc-card.card-menunggu  { border-left-color: #d97706 !important; background: #fffdf5 !important; }
+        .sc-card.card-sisa      { border-left-color: #0284c7 !important; background: #f6fbfe !important; }
+
+        .sc-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b !important;
+            margin-bottom: 4px;
+        }
+        .sc-value {
+            font-size: 19px;
+            font-weight: 800;
+            line-height: 1.25;
+            margin-bottom: 4px;
+        }
+        .card-alokasi   .sc-value { color: #1e3a8a !important; }
+        .card-realisasi .sc-value { color: #047857 !important; }
+        .card-menunggu  .sc-value { color: #b45309 !important; }
+        .card-sisa      .sc-value { color: #0369a1 !important; }
+
+        .sc-sub {
+            font-size: 11.5px;
+            color: #64748b;
+        }
+        .sc-icon {
+            opacity: 0.8;
+            padding-left: 8px;
+        }
+
         .info-box       { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px 20px; margin-bottom: 22px; }
 
         .item-card      { border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 16px; background: #fff; transition: box-shadow .2s; }
@@ -290,40 +337,68 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                         </span>
                     </div>
                     <div>
-                        <span class="badge badge-<?= $budget['status'] === 'Active' ? 'success' : 'warning' ?> p-2 px-3" style="font-size:12px;">
-                            Status Budget: <?= htmlspecialchars($budget['status']) ?>
+                        <span class="badge p-2 px-3 font-weight-bold" style="font-size:12px; <?= $budget['status'] === 'Active' ? 'background:#dcfce7; color:#15803d; border:1px solid #86efac;' : 'background:#fef3c7; color:#b45309; border:1px solid #fde68a;' ?>">
+                            <i class="fas fa-<?= $budget['status'] === 'Active' ? 'check-circle' : 'clock' ?> mr-1"></i> Status Budget: <?= htmlspecialchars($budget['status']) ?>
                         </span>
                     </div>
                 </div>
 
-                <!-- 4 Summary Cards -->
+                <!-- 4 Summary Cards Bersih & Kontras Tinggi -->
                 <div class="row mt-3">
                     <div class="col-6 col-md-3 mb-2">
-                        <div class="summary-card bg-primary text-white">
-                            <div class="small" style="opacity:0.85;">Total Alokasi Anggaran</div>
-                            <h5 class="font-weight-bold mb-0 mt-1">Rp <?= number_format($total_alokasi_budget, 0, ',', '.') ?></h5>
-                            <small class="d-block mt-1" style="font-size:11px; opacity:0.8;"><?= count($items) ?> Item Rincian</small>
+                        <div class="sc-card card-alokasi">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="sc-label">Total Alokasi Anggaran</div>
+                                    <div class="sc-value">Rp <?= number_format($total_alokasi_budget, 0, ',', '.') ?></div>
+                                    <div class="sc-sub"><i class="fa-solid fa-layer-group mr-1"></i><?= count($items) ?> Item Rincian</div>
+                                </div>
+                                <div class="sc-icon" style="color:#2563eb;">
+                                    <i class="fa-solid fa-wallet fa-xl"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3 mb-2">
-                        <div class="summary-card bg-success text-white">
-                            <div class="small" style="opacity:0.85;">Realisasi Pengeluaran (BKK)</div>
-                            <h5 class="font-weight-bold mb-0 mt-1">Rp <?= number_format($total_approved_budget, 0, ',', '.') ?></h5>
-                            <small class="d-block mt-1" style="font-size:11px; opacity:0.8;"><?= $budget_progress_pct ?>% Terpakai (<?= $items_realized_count ?> item)</small>
+                        <div class="sc-card card-realisasi">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="sc-label">Realisasi (BKK)</div>
+                                    <div class="sc-value">Rp <?= number_format($total_approved_budget, 0, ',', '.') ?></div>
+                                    <div class="sc-sub font-weight-bold" style="color:#059669;"><i class="fa-solid fa-chart-pie mr-1"></i><?= $budget_progress_pct ?>% (<?= $items_realized_count ?> item)</div>
+                                </div>
+                                <div class="sc-icon" style="color:#059669;">
+                                    <i class="fa-solid fa-receipt fa-xl"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3 mb-2">
-                        <div class="summary-card bg-warning text-dark">
-                            <div class="small text-muted font-weight-bold">Menunggu Approval Asmen</div>
-                            <h5 class="font-weight-bold mb-0 mt-1">Rp <?= number_format($total_pending_budget, 0, ',', '.') ?></h5>
-                            <small class="d-block mt-1 text-muted" style="font-size:11px;">Dalam proses verifikasi nota</small>
+                        <div class="sc-card card-menunggu">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="sc-label">Menunggu Asmen</div>
+                                    <div class="sc-value">Rp <?= number_format($total_pending_budget, 0, ',', '.') ?></div>
+                                    <div class="sc-sub" style="color:#b45309;"><i class="fa-solid fa-clock mr-1"></i>Verifikasi nota & kas</div>
+                                </div>
+                                <div class="sc-icon" style="color:#d97706;">
+                                    <i class="fa-solid fa-hourglass-half fa-xl"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="col-6 col-md-3 mb-2">
-                        <div class="summary-card bg-info text-white">
-                            <div class="small" style="opacity:0.85;">Sisa Alokasi Anggaran</div>
-                            <h5 class="font-weight-bold mb-0 mt-1">Rp <?= number_format($total_sisa_budget, 0, ',', '.') ?></h5>
-                            <small class="d-block mt-1" style="font-size:11px; opacity:0.8;">Tersedia untuk direalisasikan</small>
+                        <div class="sc-card card-sisa">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="sc-label">Sisa Alokasi</div>
+                                    <div class="sc-value">Rp <?= number_format($total_sisa_budget, 0, ',', '.') ?></div>
+                                    <div class="sc-sub" style="color:#0284c7;"><i class="fa-solid fa-circle-check mr-1"></i>Tersedia realisasi</div>
+                                </div>
+                                <div class="sc-icon" style="color:#0284c7;">
+                                    <i class="fa-solid fa-piggy-bank fa-xl"></i>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -342,9 +417,9 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
             <?php else: ?>
                 <?php foreach ($per_kategori as $cat_name => $cat_items): ?>
                 <div class="category-block">
-                    <div class="category-head">
-                        <span><i class="fas fa-tags text-primary mr-2"></i><?= htmlspecialchars($cat_name) ?></span>
-                        <span class="badge badge-primary px-3 py-1 font-weight-bold" style="font-size:12px;">
+                    <div class="category-head" style="background:#f1f5f9; border-bottom:1px solid #cbd5e1;">
+                        <span style="color:#1e293b; font-weight:700;"><i class="fas fa-tags mr-2" style="color:#2563eb;"></i><?= htmlspecialchars($cat_name) ?></span>
+                        <span class="badge px-3 py-1 font-weight-bold" style="font-size:12px; background:#1e3a8a !important; color:#ffffff !important; border-radius:6px;">
                             Alokasi: Rp <?= number_format(array_sum(array_column($cat_items, 'total')), 0, ',', '.') ?>
                         </span>
                     </div>
@@ -379,12 +454,12 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                                 <div class="item-nama"><?= htmlspecialchars($it['rincian']) ?></div>
                                 <div class="item-meta mt-1"><?= implode(' &nbsp;·&nbsp; ', $meta_parts) ?></div>
                                 <div class="mt-2 d-flex flex-wrap align-items-center" style="gap:14px; font-size:12.5px;">
-                                    <span>Alokasi: <strong class="text-primary">Rp <?= number_format($it_alokasi, 0, ',', '.') ?></strong></span>
-                                    <span>Terealisasi: <strong class="text-success">Rp <?= number_format($it_approved, 0, ',', '.') ?></strong></span>
+                                    <span>Alokasi: <strong style="color:#1e3a8a;">Rp <?= number_format($it_alokasi, 0, ',', '.') ?></strong></span>
+                                    <span>Terealisasi: <strong style="color:#047857;">Rp <?= number_format($it_approved, 0, ',', '.') ?></strong></span>
                                     <?php if ($it_pending > 0): ?>
-                                    <span>Menunggu: <strong class="text-warning">Rp <?= number_format($it_pending, 0, ',', '.') ?></strong></span>
+                                    <span>Menunggu: <strong style="color:#b45309;">Rp <?= number_format($it_pending, 0, ',', '.') ?></strong></span>
                                     <?php endif; ?>
-                                    <span>Sisa: <strong class="<?= $it_sisa > 0 ? 'text-info' : 'text-muted' ?>">Rp <?= number_format($it_sisa, 0, ',', '.') ?></strong></span>
+                                    <span>Sisa: <strong style="color:<?= $it_sisa > 0 ? '#0284c7' : '#64748b' ?>;">Rp <?= number_format($it_sisa, 0, ',', '.') ?></strong></span>
                                 </div>
                             </div>
                             <div class="text-right" style="min-width:140px;">
