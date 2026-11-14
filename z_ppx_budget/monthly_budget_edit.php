@@ -208,7 +208,8 @@ $period_display = date('F Y', strtotime($budget['period_year'] . '-' . $budget['
                                             $tipe_options = [
                                                 'Kas Besar BCA', 'Kas Besar Jakarta', 'Kas Kecil Jakarta', 
                                                 'Bekasi', 'Cibinong', 'Medan', 'Bali', 'Surabaya', 
-                                                'Malang', 'Banjarmasin', 'HRGA', 'Bussines', 'Warehouse'
+                                                'Malang', 'Banjarmasin', 'Palembang', 'Gorontalo',
+                                                'HRGA', 'Bussines', 'Warehouse'
                                             ];
                                             foreach ($tipe_options as $opt) {
                                                 $selected = ($budget['tipe_anggaran'] == $opt) ? 'selected' : '';
