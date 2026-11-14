@@ -62,6 +62,15 @@ foreach ($items as $it) {
     $per_kategori[$cat][] = $it;
 }
 
+// Pastikan kolom transaksi kas (BKK/BKM) tersedia di tabel ppx_realisasi_detail2 (auto-migrate untuk server)
+$chk_col = mysqli_query($conn, "SHOW COLUMNS FROM ppx_realisasi_detail2 LIKE 'jenis_transaksi'");
+if ($chk_col && mysqli_num_rows($chk_col) === 0) {
+    @mysqli_query($conn, "ALTER TABLE ppx_realisasi_detail2
+        ADD COLUMN jenis_transaksi ENUM('BKK','BKM') NOT NULL DEFAULT 'BKK' AFTER no_realisasi,
+        ADD COLUMN dibayar_kepada VARCHAR(255) DEFAULT NULL AFTER tanggal_realisasi,
+        ADD COLUMN keperluan VARCHAR(255) DEFAULT NULL AFTER dibayar_kepada");
+}
+
 // ── Ambil SEMUA riwayat realisasi untuk anggaran ini ────────────────────
 $real_by_detail = []; // [id_detail_budget => [ list of realizations ]]
 

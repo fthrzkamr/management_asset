@@ -12,6 +12,16 @@ if (!$auth->isLoggedIn()) {
     exit();
 }
 
+// Pastikan kolom transaksi kas (BKK/BKM) tersedia di tabel ppx_realisasi (auto-migrate untuk server)
+$chk_col = mysqli_query($conn, "SHOW COLUMNS FROM ppx_realisasi LIKE 'jenis_transaksi'");
+if ($chk_col && mysqli_num_rows($chk_col) === 0) {
+    @mysqli_query($conn, "ALTER TABLE ppx_realisasi
+        ADD COLUMN no_transaksi VARCHAR(50) DEFAULT NULL AFTER no_ppx,
+        ADD COLUMN jenis_transaksi ENUM('BKK','BKM') NOT NULL DEFAULT 'BKK' AFTER no_transaksi,
+        ADD COLUMN dibayar_kepada VARCHAR(255) DEFAULT NULL AFTER tanggal_realisasi,
+        ADD COLUMN keperluan VARCHAR(255) DEFAULT NULL AFTER dibayar_kepada");
+}
+
 $user_id   = (int)($_SESSION['id_user'] ?? 0);
 $nama_user = $_SESSION['nama_user'] ?? '';
 $action    = trim($_POST['action'] ?? (isset($_POST['submit_realisasi']) ? 'submit_legacy' : 'save_kas'));

@@ -93,6 +93,16 @@ while ($row = mysqli_fetch_assoc($result_detail)) {
 }
 mysqli_stmt_close($stmt_detail);
 
+// Pastikan kolom transaksi kas (BKK/BKM) tersedia di tabel ppx_realisasi (auto-migrate untuk server)
+$chk_col = mysqli_query($conn, "SHOW COLUMNS FROM ppx_realisasi LIKE 'jenis_transaksi'");
+if ($chk_col && mysqli_num_rows($chk_col) === 0) {
+    @mysqli_query($conn, "ALTER TABLE ppx_realisasi
+        ADD COLUMN no_transaksi VARCHAR(50) DEFAULT NULL AFTER no_ppx,
+        ADD COLUMN jenis_transaksi ENUM('BKK','BKM') NOT NULL DEFAULT 'BKK' AFTER no_transaksi,
+        ADD COLUMN dibayar_kepada VARCHAR(255) DEFAULT NULL AFTER tanggal_realisasi,
+        ADD COLUMN keperluan VARCHAR(255) DEFAULT NULL AFTER dibayar_kepada");
+}
+
 // Ambil riwayat transaksi kas realisasi untuk PPX ini
 $q_reals = mysqli_query($conn, "SELECT * FROM ppx_realisasi WHERE no_ppx = '" . mysqli_real_escape_string($conn, $no_ppx) . "' ORDER BY tanggal_realisasi DESC, id_realisasi DESC");
 $realisasi_list = [];

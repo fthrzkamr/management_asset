@@ -17,6 +17,15 @@ $auth->requirePermission('approval_realisasi_asmen', 'approve');
 $bulan_names = ['','Januari','Februari','Maret','April','Mei','Juni',
                 'Juli','Agustus','September','Oktober','November','Desember'];
 
+// Pastikan kolom jenis_transaksi tersedia di ppx_realisasi_detail2 (auto-migrate untuk server)
+$chk_col = mysqli_query($conn, "SHOW COLUMNS FROM ppx_realisasi_detail2 LIKE 'jenis_transaksi'");
+if ($chk_col && mysqli_num_rows($chk_col) === 0) {
+    @mysqli_query($conn, "ALTER TABLE ppx_realisasi_detail2
+        ADD COLUMN jenis_transaksi ENUM('BKK','BKM') NOT NULL DEFAULT 'BKK' AFTER no_realisasi,
+        ADD COLUMN dibayar_kepada VARCHAR(255) DEFAULT NULL AFTER tanggal_realisasi,
+        ADD COLUMN keperluan VARCHAR(255) DEFAULT NULL AFTER dibayar_kepada");
+}
+
 /* ───────── 1. Ambil semua anggaran bulanan aktif + info realisasi ───────── */
 $q_budgets = mysqli_query($conn, "
     SELECT
