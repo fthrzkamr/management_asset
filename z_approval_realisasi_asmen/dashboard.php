@@ -53,7 +53,7 @@ $q_budgets = mysqli_query($conn, "
     LEFT JOIN (
         SELECT 
             id_budget,
-            SUM(CASE WHEN status = 'Disetujui' AND jenis_transaksi = 'BKM' THEN -nominal_realisasi WHEN status = 'Disetujui' THEN nominal_realisasi ELSE 0 END) AS total_approved,
+            SUM(CASE WHEN status = 'Disetujui' AND jenis_transaksi = 'BKM' THEN -uang_kembali WHEN status = 'Disetujui' THEN nominal_realisasi ELSE 0 END) AS total_approved,
             SUM(CASE WHEN status = 'Menunggu Approval' THEN nominal_realisasi ELSE 0 END) AS total_pending,
             COUNT(CASE WHEN status = 'Menunggu Approval' THEN 1 END) AS count_pending,
             COUNT(CASE WHEN status = 'Disetujui' THEN 1 END) AS count_approved,

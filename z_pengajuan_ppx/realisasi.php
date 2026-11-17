@@ -704,6 +704,11 @@ $all_select_items = array_merge($js_ppx_items, $js_master_akun);
                         </button>
                     </div>
 
+                    <!-- Informative Hint: BKK vs BKM -->
+                    <div id="kasTabHint" class="alert py-2 px-3 small mb-3" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; border-radius:8px;">
+                        <i class="fas fa-info-circle mr-1"></i> <strong>BKK (Bukti Kas Keluar):</strong> Digunakan saat uang belanja riil keluar. Transaksi ini <strong>memakai uang muka PPX</strong>.
+                    </div>
+
                     <!-- Row 1: Tanggal, Dibayar Kepada / Diterima Dari, Keperluan -->
                     <div class="row mb-3">
                         <div class="col-md-3">
@@ -738,8 +743,8 @@ $all_select_items = array_merge($js_ppx_items, $js_master_akun);
                     <!-- Section 2: Rincian Biaya / Akun -->
                     <div class="mb-2">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="font-weight-bold text-dark mb-0" style="font-size: 13.5px;">
-                                2. Rincian Biaya / Akun
+                            <label class="font-weight-bold text-dark mb-0" id="lblSection2" style="font-size: 13.5px;">
+                                2. Rincian Biaya / Akun yang Dibiayai
                             </label>
                             <button type="button" class="btn btn-sm btn-outline-primary" onclick="addKasRow()">
                                 <i class="fas fa-plus mr-1"></i> Tambah Baris
@@ -750,7 +755,7 @@ $all_select_items = array_merge($js_ppx_items, $js_master_akun);
                             <table class="table table-sm mb-0 rincian-table" id="tableKasRincian">
                                 <thead>
                                     <tr>
-                                        <th width="45%">Akun (ketik kode / nama untuk mencari)</th>
+                                        <th width="45%" id="thAkun">Akun Rencana PPX yang Dibelanjakan</th>
                                         <th width="32%">Keterangan</th>
                                         <th width="18%" class="text-right">Jumlah (Rp)</th>
                                         <th width="5%" class="text-center"></th>
@@ -761,7 +766,7 @@ $all_select_items = array_merge($js_ppx_items, $js_master_akun);
                                 </tbody>
                                 <tfoot>
                                     <tr class="bg-light font-weight-bold">
-                                        <td colspan="2" class="text-right">Total Transaksi:</td>
+                                        <td colspan="2" class="text-right" id="lblTotalTrans">Total Transaksi:</td>
                                         <td class="text-right text-success" id="kasTotalDisplay" style="font-size: 14px;">Rp 0</td>
                                         <td></td>
                                     </tr>
@@ -821,6 +826,10 @@ function switchKasTab(jenis) {
     const tbl = document.getElementById('tableKasRincian');
     const lblDibayar = document.getElementById('lblDibayar');
     const btnSimpan = document.getElementById('btnSimpanKas');
+    const hint = document.getElementById('kasTabHint');
+    const lblSec2 = document.getElementById('lblSection2');
+    const thAkun = document.getElementById('thAkun');
+    const lblTot = document.getElementById('lblTotalTrans');
 
     if (jenis === 'BKK') {
         btnBKK.className = 'kas-tab-btn active-bkk';
@@ -831,6 +840,13 @@ function switchKasTab(jenis) {
         document.getElementById('kasKeperluan').placeholder = 'Contoh: Pembelian barang operasional PPX';
         btnSimpan.style.background = '#1e3a8a';
         btnSimpan.style.borderColor = '#1e3a8a';
+        if (hint) {
+            hint.style.cssText = 'background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; border-radius:8px;';
+            hint.innerHTML = '<i class="fas fa-info-circle mr-1"></i> <strong>BKK (Bukti Kas Keluar):</strong> Digunakan saat uang belanja riil keluar. Transaksi ini <strong>MEMAKAI UANG MUKA PPX</strong>.';
+        }
+        if (lblSec2) lblSec2.textContent = '2. Rincian Biaya / Akun yang Dibiayai';
+        if (thAkun) thAkun.textContent = 'Akun Rencana PPX yang Dibelanjakan';
+        if (lblTot) lblTot.textContent = 'Total Pengeluaran (BKK):';
     } else {
         btnBKM.className = 'kas-tab-btn active-bkm';
         btnBKK.className = 'kas-tab-btn';
@@ -840,6 +856,13 @@ function switchKasTab(jenis) {
         document.getElementById('kasKeperluan').placeholder = 'Contoh: Pengembalian sisa uang muka PPX';
         btnSimpan.style.background = '#047857';
         btnSimpan.style.borderColor = '#047857';
+        if (hint) {
+            hint.style.cssText = 'background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; border-radius:8px;';
+            hint.innerHTML = '<i class="fas fa-arrow-turn-down mr-1"></i> <strong>BKM (Bukti Kas Masuk):</strong> Digunakan saat ada <strong>sisa uang muka yang dikembalikan</strong> ke Finance. Transaksi ini <strong>TIDAK MEMOTONG</strong>, melainkan <strong>mengembalikan saldo sisa</strong>.';
+        }
+        if (lblSec2) lblSec2.textContent = '2. Rincian Pengembalian Sisa Uang Muka PPX';
+        if (thAkun) thAkun.textContent = 'Akun Rencana PPX yang Dikembalikan';
+        if (lblTot) lblTot.textContent = 'Total Kas Masuk / Pengembalian (BKM):';
     }
 }
 

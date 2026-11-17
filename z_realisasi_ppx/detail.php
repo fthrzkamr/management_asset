@@ -98,26 +98,29 @@ $items_realized_count  = 0;
 
 foreach ($items as $it) {
     $item_reals = $real_by_detail[$it['id_detail']] ?? [];
-    $item_app = 0;
+    $item_bkk = 0;
+    $item_bkm = 0;
     foreach ($item_reals as $r) {
         if ($r['status'] === 'Disetujui') {
             if ($r['jenis_transaksi'] === 'BKM') {
                 $total_kembali_budget += (float)$r['uang_kembali'];
+                $item_bkm += (float)$r['uang_kembali'];
             } else {
                 $total_approved_budget += (float)$r['nominal_realisasi'];
-                $item_app += (float)$r['nominal_realisasi'];
+                $item_bkk += (float)$r['nominal_realisasi'];
             }
         } elseif ($r['status'] === 'Menunggu Approval') {
             $total_pending_budget += (float)$r['nominal_realisasi'];
         }
     }
-    if ($item_app > 0) {
+    if (($item_bkk - $item_bkm) > 0) {
         $items_realized_count++;
     }
 }
 
-$total_sisa_budget = max(0, $total_alokasi_budget - $total_approved_budget);
-$budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approved_budget / $total_alokasi_budget) * 100, 1)) : 0;
+$net_approved_budget = max(0, $total_approved_budget - $total_kembali_budget);
+$total_sisa_budget = max(0, $total_alokasi_budget - $net_approved_budget);
+$budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($net_approved_budget / $total_alokasi_budget) * 100, 1)) : 0;
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -370,9 +373,14 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                         <div class="sc-card card-realisasi">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
-                                    <div class="sc-label">Realisasi (BKK)</div>
-                                    <div class="sc-value">Rp <?= number_format($total_approved_budget, 0, ',', '.') ?></div>
-                                    <div class="sc-sub font-weight-bold" style="color:#059669;"><i class="fa-solid fa-chart-pie mr-1"></i><?= $budget_progress_pct ?>% (<?= $items_realized_count ?> item)</div>
+                                    <div class="sc-label">Realisasi Bersih</div>
+                                    <div class="sc-value">Rp <?= number_format($net_approved_budget, 0, ',', '.') ?></div>
+                                    <div class="sc-sub font-weight-bold" style="color:#059669;">
+                                        <i class="fa-solid fa-chart-pie mr-1"></i><?= $budget_progress_pct ?>% (<?= $items_realized_count ?> item)
+                                        <?php if ($total_kembali_budget > 0): ?>
+                                            <span class="d-block text-muted font-weight-normal" style="font-size:10.5px;">(BKK: <?= number_format($total_approved_budget, 0, ',', '.') ?> &minus; BKM: <?= number_format($total_kembali_budget, 0, ',', '.') ?>)</span>
+                                        <?php endif; ?>
+                                    </div>
                                 </div>
                                 <div class="sc-icon" style="color:#059669;">
                                     <i class="fa-solid fa-receipt fa-xl"></i>
@@ -437,16 +445,22 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                         $item_reals = $real_by_detail[$it_id] ?? [];
                         
                         $it_alokasi  = (float)$it['total'];
-                        $it_approved = 0;
+                        $it_bkk      = 0;
+                        $it_bkm      = 0;
                         $it_pending  = 0;
                         foreach ($item_reals as $r) {
-                            if ($r['status'] === 'Disetujui' && $r['jenis_transaksi'] === 'BKK') {
-                                $it_approved += (float)$r['nominal_realisasi'];
+                            if ($r['status'] === 'Disetujui') {
+                                if ($r['jenis_transaksi'] === 'BKM') {
+                                    $it_bkm += (float)$r['uang_kembali'];
+                                } else {
+                                    $it_bkk += (float)$r['nominal_realisasi'];
+                                }
                             } elseif ($r['status'] === 'Menunggu Approval' && $r['jenis_transaksi'] === 'BKK') {
                                 $it_pending += (float)$r['nominal_realisasi'];
                             }
                         }
-                        $it_sisa = max(0, $it_alokasi - $it_approved);
+                        $it_approved = max(0, $it_bkk - $it_bkm);
+                        $it_sisa     = max(0, $it_alokasi - $it_approved);
                         
                         $meta_parts = [];
                         if ($it['qty'])          $meta_parts[] = $it['qty'] . ' ' . $it['satuan'];
@@ -659,6 +673,11 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                         </button>
                     </div>
 
+                    <!-- Informative Hint: BKK vs BKM -->
+                    <div id="kasTabHint" class="alert py-2 px-3 small mb-3" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; border-radius:8px;">
+                        <i class="fas fa-info-circle mr-1"></i> <strong>BKK (Bukti Kas Keluar):</strong> Digunakan saat uang keluar untuk belanja/operasional riil. Transaksi ini <strong>MEMOTONG ANGGARAN</strong> (mengurangi sisa alokasi).
+                    </div>
+
                     <!-- Row 1: Tanggal, Dibayar Kepada, Keperluan -->
                     <div class="row mb-3">
                         <div class="col-md-3">
@@ -693,8 +712,8 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                     <!-- Section 2: Rincian Biaya / Akun -->
                     <div class="mb-2">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="font-weight-bold text-dark mb-0" style="font-size: 13.5px;">
-                                2. Rincian Biaya / Akun
+                            <label class="font-weight-bold text-dark mb-0" id="lblSection2" style="font-size: 13.5px;">
+                                2. Rincian Biaya / Akun yang Dibiayai
                             </label>
                             <button type="button" class="btn btn-sm btn-outline-primary" onclick="addKasRow()">
                                 <i class="fas fa-plus mr-1"></i> Tambah Baris
@@ -705,7 +724,7 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                             <table class="table table-sm mb-0 rincian-table" id="tableKasRincian">
                                 <thead>
                                     <tr>
-                                        <th width="45%">Akun (ketik kode / nama untuk mencari)</th>
+                                        <th width="45%" id="thAkun">Akun Biaya yang Dikeluarkan (Memotong Anggaran)</th>
                                         <th width="32%">Keterangan</th>
                                         <th width="18%" class="text-right">Jumlah (Rp)</th>
                                         <th width="5%" class="text-center"></th>
@@ -716,7 +735,7 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($total_approv
                                 </tbody>
                                 <tfoot>
                                     <tr class="bg-light font-weight-bold">
-                                        <td colspan="2" class="text-right">Total Transaksi:</td>
+                                        <td colspan="2" class="text-right" id="lblTotalTrans">Total Transaksi:</td>
                                         <td class="text-right text-success" id="kasTotalDisplay" style="font-size: 14px;">Rp 0</td>
                                         <td></td>
                                     </tr>
@@ -785,6 +804,10 @@ function switchKasTab(jenis) {
     const tbl = document.getElementById('tableKasRincian');
     const lblDibayar = document.getElementById('lblDibayar');
     const btnSimpan = document.getElementById('btnSimpanKas');
+    const hint = document.getElementById('kasTabHint');
+    const lblSec2 = document.getElementById('lblSection2');
+    const thAkun = document.getElementById('thAkun');
+    const lblTot = document.getElementById('lblTotalTrans');
 
     if (jenis === 'BKK') {
         btnBKK.className = 'kas-tab-btn active-bkk';
@@ -795,6 +818,13 @@ function switchKasTab(jenis) {
         document.getElementById('kasKeperluan').placeholder = 'Contoh: Pembelian ATK kantor';
         btnSimpan.style.background = '#1e3a8a';
         btnSimpan.style.borderColor = '#1e3a8a';
+        if (hint) {
+            hint.style.cssText = 'background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; border-radius:8px;';
+            hint.innerHTML = '<i class="fas fa-info-circle mr-1"></i> <strong>BKK (Bukti Kas Keluar):</strong> Digunakan saat uang keluar untuk belanja/operasional riil. Transaksi ini <strong>MEMOTONG ANGGARAN</strong> (mengurangi sisa alokasi).';
+        }
+        if (lblSec2) lblSec2.textContent = '2. Rincian Biaya / Akun yang Dibiayai';
+        if (thAkun) thAkun.textContent = 'Akun Biaya yang Dikeluarkan (Memotong Anggaran)';
+        if (lblTot) lblTot.textContent = 'Total Pengeluaran (BKK):';
     } else {
         btnBKM.className = 'kas-tab-btn active-bkm';
         btnBKK.className = 'kas-tab-btn';
@@ -804,6 +834,13 @@ function switchKasTab(jenis) {
         document.getElementById('kasKeperluan').placeholder = 'Contoh: Pengembalian sisa belanja ATK kantor';
         btnSimpan.style.background = '#047857';
         btnSimpan.style.borderColor = '#047857';
+        if (hint) {
+            hint.style.cssText = 'background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; border-radius:8px;';
+            hint.innerHTML = '<i class="fas fa-arrow-turn-down mr-1"></i> <strong>BKM (Bukti Kas Masuk):</strong> Digunakan saat ada uang <strong>kembali masuk ke kas</strong> (sisa uang belanja / retur). Transaksi ini <strong>TIDAK MEMOTONG</strong>, melainkan <strong>MENGEMBALIKAN / MENAMBAH SISA ANGGARAN</strong> pada akun yang dipilih.';
+        }
+        if (lblSec2) lblSec2.textContent = '2. Rincian Akun Anggaran yang Dikembalikan';
+        if (thAkun) thAkun.textContent = 'Akun Biaya yang Dikembalikan (Restore Anggaran)';
+        if (lblTot) lblTot.textContent = 'Total Kas Masuk / Pengembalian (BKM):';
     }
 }
 

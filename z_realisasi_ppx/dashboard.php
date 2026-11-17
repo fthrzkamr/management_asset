@@ -43,7 +43,7 @@ LEFT JOIN master_cabang mc ON u.id_cabang = mc.id_cabang
 LEFT JOIN (
     SELECT 
         id_budget,
-        SUM(CASE WHEN status = 'Disetujui' THEN nominal_realisasi ELSE 0 END) AS total_approved,
+        SUM(CASE WHEN status = 'Disetujui' AND jenis_transaksi = 'BKM' THEN -uang_kembali WHEN status = 'Disetujui' THEN nominal_realisasi ELSE 0 END) AS total_approved,
         COUNT(CASE WHEN status = 'Menunggu Approval' THEN 1 END) AS count_pending,
         COUNT(CASE WHEN status = 'Draft' THEN 1 END) AS count_draft,
         COUNT(DISTINCT CASE WHEN status = 'Disetujui' THEN id_detail_budget END) AS items_realized
