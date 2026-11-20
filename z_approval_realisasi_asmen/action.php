@@ -27,14 +27,14 @@ if (!preg_match('/^dashboard\.php/', $redirect_back)) {
     $redirect_back = 'dashboard.php';
 }
 
-if (!in_array($action, ['Disetujui', 'Ditolak'])) {
+if (!in_array($action, ['Disetujui', 'Ditolak', 'ApproveDelete', 'RejectDelete'])) {
     $_SESSION['error'] = 'Aksi tidak valid.';
     header("Location: $redirect_back");
     exit();
 }
 
-if ($action === 'Ditolak' && empty($catatan)) {
-    $_SESSION['error'] = 'Catatan wajib diisi saat menolak realisasi.';
+if (($action === 'Ditolak' || $action === 'RejectDelete') && empty($catatan)) {
+    $_SESSION['error'] = 'Catatan wajib diisi saat menolak realisasi atau permohonan hapus.';
     header("Location: $redirect_back");
     exit();
 }
@@ -42,6 +42,92 @@ if ($action === 'Ditolak' && empty($catatan)) {
 mysqli_begin_transaction($conn);
 
 try {
+    // ── Handle Permohonan Hapus (Fase 2 Item 8) ──
+    if ($action === 'ApproveDelete') {
+        if ($id_real_detail <= 0) throw new Exception("ID transaksi tidak valid.");
+        $chk = mysqli_query($conn, "SELECT rd.*, mbd.id_category 
+                                    FROM ppx_realisasi_detail2 rd
+                                    LEFT JOIN ppx_monthly_budget_item_detail mbd ON rd.id_detail_budget = mbd.id
+                                    WHERE rd.id_real_detail = $id_real_detail LIMIT 1");
+        if (!$chk || mysqli_num_rows($chk) === 0) throw new Exception("Data transaksi tidak ditemukan.");
+        $rd = mysqli_fetch_assoc($chk);
+
+        $b_id    = (int)$rd['id_budget'];
+        $id_cat  = (int)($rd['id_category'] ?? 0);
+        $nominal = ($rd['jenis_transaksi'] === 'BKM') ? (float)($rd['uang_kembali'] ?: $rd['nominal_realisasi']) : (float)$rd['nominal_realisasi'];
+
+        $up = mysqli_query($conn, "UPDATE ppx_realisasi_detail2 SET
+                                    delete_status       = 'Approved',
+                                    delete_approved_by  = $asmen_id,
+                                    delete_approved_at  = NOW(),
+                                    catatan_approval    = IF('$catatan' != '', '$catatan', catatan_approval),
+                                    updated_at          = NOW()
+                                   WHERE id_real_detail = $id_real_detail");
+        if (!$up) throw new Exception("Gagal menyetujui pembatalan: " . mysqli_error($conn));
+
+        // Jika transaksi ini sebelumnya 'Disetujui', kembalikan saldo anggarannya
+        if ($rd['status'] === 'Disetujui' && $nominal > 0) {
+            $is_bkm = (($rd['jenis_transaksi'] ?? 'BKK') === 'BKM');
+            if ($is_bkm) {
+                // Pembatalan BKM: saldo kembali berkurang
+                mysqli_query($conn, "UPDATE ppx_monthly_budget 
+                    SET total_used = total_used + $nominal,
+                        total_remaining = GREATEST(0, total_remaining - $nominal)
+                    WHERE id_budget = $b_id");
+                if ($id_cat > 0) {
+                    mysqli_query($conn, "UPDATE ppx_monthly_budget_item 
+                        SET used_amount = used_amount + $nominal,
+                            remaining = GREATEST(0, remaining - $nominal)
+                        WHERE id_budget = $b_id AND id_category = $id_cat");
+                }
+            } else {
+                // Pembatalan BKK: saldo kembali bertambah
+                mysqli_query($conn, "UPDATE ppx_monthly_budget 
+                    SET total_used = GREATEST(0, total_used - $nominal),
+                        total_remaining = total_remaining + $nominal
+                    WHERE id_budget = $b_id");
+                if ($id_cat > 0) {
+                    mysqli_query($conn, "UPDATE ppx_monthly_budget_item 
+                        SET used_amount = GREATEST(0, used_amount - $nominal),
+                            remaining = remaining + $nominal
+                        WHERE id_budget = $b_id AND id_category = $id_cat");
+                }
+            }
+        }
+
+        // Sinkronisasi header realisasi bulanan
+        $q_sum = mysqli_query($conn, "SELECT 
+            SUM(CASE WHEN status = 'Disetujui' AND delete_status != 'Approved' AND jenis_transaksi = 'BKK' THEN nominal_realisasi ELSE 0 END) as total_approved,
+            COUNT(CASE WHEN status = 'Menunggu Approval' AND delete_status != 'Approved' THEN 1 END) as pending_cnt
+        FROM ppx_realisasi_detail2 WHERE id_budget = $b_id");
+        $sum_data = mysqli_fetch_assoc($q_sum);
+        $tot_app = (float)($sum_data['total_approved'] ?? 0);
+        $pending_cnt = (int)($sum_data['pending_cnt'] ?? 0);
+        $hdr_st = ($pending_cnt > 0) ? 'Menunggu Approval' : (($tot_app > 0) ? 'Disetujui' : 'Draft');
+        mysqli_query($conn, "UPDATE ppx_realisasi_monthly SET total_nominal_realisasi = $tot_app, status = '$hdr_st', updated_at = NOW() WHERE id_budget = $b_id");
+
+        mysqli_commit($conn);
+        $_SESSION['success'] = "Pembatalan transaksi {$rd['no_realisasi']} berhasil disetujui. Saldo anggaran telah dikembalikan.";
+        header("Location: $redirect_back");
+        exit();
+    }
+
+    if ($action === 'RejectDelete') {
+        if ($id_real_detail <= 0) throw new Exception("ID transaksi tidak valid.");
+        $up = mysqli_query($conn, "UPDATE ppx_realisasi_detail2 SET
+                                    delete_status       = 'Rejected',
+                                    delete_approved_by  = $asmen_id,
+                                    delete_approved_at  = NOW(),
+                                    catatan_approval    = IF('$catatan' != '', '$catatan', catatan_approval),
+                                    updated_at          = NOW()
+                                   WHERE id_real_detail = $id_real_detail");
+        if (!$up) throw new Exception("Gagal menolak pembatalan: " . mysqli_error($conn));
+        mysqli_commit($conn);
+        $_SESSION['success'] = "Permohonan pembatalan transaksi telah ditolak. Transaksi tetap aktif.";
+        header("Location: $redirect_back");
+        exit();
+    }
+
     $status_safe = mysqli_real_escape_string($conn, $action);
 
     // Kasus 1: Action untuk 1 item realisasi spesifik (id_real_detail)

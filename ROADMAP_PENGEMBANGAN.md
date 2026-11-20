@@ -42,15 +42,15 @@ Catatan implementasi:
 4. ✅ Alert banner saat over budget di halaman detail realisasi.
 5. ✅ Menu "Anggaran Besar BCA" (`z_budget_besar`) dihapus dari sidebar — pembuatan budget "Kas Besar" sekarang cukup lewat form Monthly Budget biasa dengan tipe kas "Kas Besar BCA"/"Kas Besar Jakarta". `budget_type` ('besar'/'biasa') otomatis diset dari tipe kas yang dipilih, jadi jalur approval khusus "besar" yang sudah ada (asmen/kacab/manager/finance) tetap jalan tanpa diubah — hanya UI pembuatannya yang disatukan. File modul lama tidak dihapus (tetap bisa diakses lewat URL langsung untuk histori), hanya menu navigasinya yang dicabut.
 
-## Fase 2 — Pengembangan menengah (extend modul yang sudah ada)
+## Fase 2 — Pengembangan menengah (extend modul yang sudah ada) — ✅ SELESAI (2026-11-20)
 
-6. 🆕 Master Cabang PPX (baru, terpisah dari master cabang Asset) dengan kode cabang — fondasi untuk format nomor transaksi BKK/BKM baru (lihat Fase 0).
-7. 🔧 Approval realisasi hanya wajib jika nominal >5jt atau over budget — jalur approval (`z_approval_realisasi_asmen`) sudah ada, perlu tambah logika threshold.
-8. 🆕 Hapus realisasi yang sudah disetujui → jadi request dengan alasan + perlu approval, hasil hapus tersimpan sebagai histori (bukan hard delete seperti sekarang).
-9. 🆕 Button "Nota Susulan" pada transaksi BKK.
-10. 🆕 Menu aksi download/print PDF per transaksi BKK.
-11. 🔧 Revamp UI Master Anggaran: pilih periode, opsi ya/tidak nominal, saldo bisa diisi bertahap — engine topup bertahap (`master_topup.php`, `get_last_remaining.php`) sudah ada, yang baru cuma alur UI-nya.
-12. 🔧 Perbaikan format & struktur nomor transaksi BKK/BKM per cabang (lihat Fase 0).
+6. ✅ **Master Cabang PPX** (`z_master_cabang_ppx/`) — tabel `ppx_master_cabang` dengan kode cabang (JKT, GOR, SBY, dll.), integrasi menu di navigasi sidebar Anggaran, dan auto-mapping ke cabang user.
+7. ✅ **Threshold Approval Realisasi** — transaksi <= Rp 5.000.000 dan tidak over budget otomatis disetujui (auto-approved). Transaksi > Rp 5.000.000 atau over budget wajib melalui approval Asmen Finance.
+8. ✅ **Alur Hapus / Pembatalan Transaksi Disetujui** — tidak hard delete, pemohon mengajukan pembatalan dengan alasan, tampil di antrean khusus Asmen Finance untuk disetujui/ditolak. Jika disetujui, saldo anggaran otomatis dikembalikan dan histori tetap tersimpan rapi.
+9. ✅ **Tombol "Nota Susulan"** — tombol lampirkan bukti susulan pada transaksi BKK dengan preview dan integrasi daftar bukti.
+10. ✅ **Cetak / Print PDF Voucher Transaksi BKK & BKM** (`cetak_bkk.php`) — template cetak standar resmi PT DUA FARMA MAHAKARSA lengkap dengan kop, nomor urut cabang, terbilang rupiah, dan kolom tanda tangan pemohon, Asmen Finance, serta penerima kas.
+11. ✅ **Revamp UI Master Anggaran** (`z_master_budget/`) — pemilihan periode (Bulan & Tahun), opsi nominal saldo awal Ya/Tidak (dapat diisi bertahap via Top-Up dengan saldo awal Rp 0), dan auto-fill deskripsi.
+12. ✅ **Format & Struktur Nomor Transaksi BKK/BKM Baru** — format resmi `BKK/KODE-DD-MM/YYYY/MM/URUT` (contoh: `BKK/GOR-20-11/2026/11/0001`) dengan reset nomor urut 4 digit per bulan dan per cabang.
 
 ## Fase 3 — Pondasi Accounting baru (besar, berurutan — direncanakan detail terpisah)
 

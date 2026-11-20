@@ -29,7 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 // Get POST data
 $tanggal = mysqli_real_escape_string($conn, trim($_POST['tanggal'] ?? date('Y-m-d')));
-$amount = floatval($_POST['amount'] ?? 0);
+$isi_nominal = trim($_POST['isi_nominal'] ?? '1');
+$amount = ($isi_nominal === '0') ? 0 : floatval($_POST['amount'] ?? 0);
 $has_carryover = isset($_POST['has_carryover']) ? 1 : 0;
 $carryover_amount = $has_carryover ? floatval($_POST['carryover_amount'] ?? 0) : 0;
 $description = mysqli_real_escape_string($conn, trim($_POST['description'] ?? ''));
@@ -43,9 +44,14 @@ $kategori = in_array($_POST['kategori'] ?? '', $allowed_kategori)
 // Calculate total amount (new + carryover)
 $total_amount = $amount + $carryover_amount;
 
-// Validasi
-if ($amount <= 0) {
-    header('Location: dashboard.php?error=' . urlencode('Jumlah dana baru harus lebih besar dari 0'));
+// Validasi (Fase 2 Item 11: opsi isi bertahap mengizinkan saldo awal 0)
+if ($isi_nominal === '1' && $amount <= 0 && $carryover_amount <= 0) {
+    header('Location: dashboard.php?error=' . urlencode('Jumlah dana awal harus lebih besar dari 0 jika memilih opsi isi saldo awal sekarang'));
+    exit();
+}
+
+if ($amount < 0) {
+    header('Location: dashboard.php?error=' . urlencode('Jumlah dana tidak valid'));
     exit();
 }
 

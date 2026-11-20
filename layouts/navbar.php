@@ -647,7 +647,7 @@ function is_active($patterns) {
 
                 <!-- ANGGARAN (grouped dropdown, setiap item dikontrol permission dari Administrator) -->
                  <?php
-                $budget_patterns = ['z_ppx_budget/dashboard.php', 'z_ppx_budget/category_manage.php', 'z_ppx_budget/usage_report.php', 'z_budget_besar/', 'z_master_budget/', 'z_approval_budget_kacab/', 'z_approval_budget_asmen/', 'z_approval_budget_manager/', 'z_approval_budget_manajer_ops/', 'z_approval_budget_finance/'];
+                $budget_patterns = ['z_ppx_budget/dashboard.php', 'z_ppx_budget/category_manage.php', 'z_master_cabang_ppx/', 'z_ppx_budget/usage_report.php', 'z_budget_besar/', 'z_master_budget/', 'z_approval_budget_kacab/', 'z_approval_budget_asmen/', 'z_approval_budget_manager/', 'z_approval_budget_manajer_ops/', 'z_approval_budget_finance/'];
                 $isBudgetActive = is_active($budget_patterns);
                 
                 // Hitung total notifikasi budget untuk menu induk
@@ -682,8 +682,9 @@ function is_active($patterns) {
                             <?php if ($auth->hasPermission('ppx_budget', 'read')): ?>
                                 <li class="<?= is_active('z_ppx_budget/dashboard.php') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_ppx_budget/dashboard.php">Dashboard Anggaran</a></li>
                             <?php endif; ?>
-                            <?php if ($auth->hasPermission('ppx_budget', 'manage_category')): ?>
+                            <?php if ($auth->hasPermission('ppx_budget', 'manage_category') || $auth->isSuperAdmin()): ?>
                                 <li class="<?= is_active('z_ppx_budget/category_manage.php') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_ppx_budget/category_manage.php">Kategori Budget</a></li>
+                                <li class="<?= is_active('z_master_cabang_ppx') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_master_cabang_ppx/index.php">Master Cabang PPX</a></li>
                             <?php endif; ?>
                             <?php if ($auth->hasPermission('ppx_budget', 'read')): ?>
                                 <li class="<?= is_active('z_ppx_budget/usage_report.php') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_ppx_budget/usage_report.php">Laporan Pemakaian</a></li>

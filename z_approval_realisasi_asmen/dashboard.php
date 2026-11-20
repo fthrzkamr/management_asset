@@ -110,7 +110,25 @@ if (!empty($id_budget_all)) {
     }
 }
 
-/* ───────── 3. Statistik ringkasan ────────────────────────────────────────── */
+/* ───────── 3. Permohonan Hapus Transaksi (Fase 2 Item 8) ──────────────────── */
+$q_del_reqs = mysqli_query($conn, "
+    SELECT rd.*, mb.budget_name, mb.period_month, mb.period_year,
+           u.nama_user AS pemohon_name, mc.nama_cabang, mbd.rincian
+    FROM ppx_realisasi_detail2 rd
+    JOIN ppx_monthly_budget mb ON rd.id_budget = mb.id_budget
+    JOIN user_dfm u ON rd.created_by = u.id_user
+    LEFT JOIN master_cabang mc ON u.id_cabang = mc.id_cabang
+    LEFT JOIN ppx_monthly_budget_item_detail mbd ON rd.id_detail_budget = mbd.id
+    WHERE rd.delete_status = 'Requested'
+    ORDER BY rd.delete_requested_at DESC
+");
+$del_reqs = [];
+if ($q_del_reqs) {
+    while ($dr = mysqli_fetch_assoc($q_del_reqs)) $del_reqs[] = $dr;
+}
+$cnt_del_req = count($del_reqs);
+
+/* ───────── 4. Statistik ringkasan ────────────────────────────────────────── */
 $cnt_all      = count($budgets);
 $cnt_pending  = count(array_filter($budgets, fn($r) => (int)$r['count_pending'] > 0));
 $cnt_approved = count(array_filter($budgets, fn($r) => (int)$r['count_approved'] > 0 && (int)$r['count_pending'] === 0));
@@ -226,6 +244,74 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
                 <p>Belum ada pengajuan anggaran bulanan aktif.</p>
             </div></div>
             <?php else: ?>
+
+            <?php if (!empty($del_reqs)): ?>
+            <!-- Card Permohonan Hapus Transaksi (Fase 2 Item 8) -->
+            <div class="card mb-4 border-danger" style="border-left: 5px solid #dc2626 !important; box-shadow: 0 4px 12px rgba(220,38,38,0.08);">
+                <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center py-2 px-3">
+                    <strong><i class="fas fa-exclamation-triangle mr-2"></i> Permohonan Pembatalan / Hapus Transaksi (<?= $cnt_del_req ?>)</strong>
+                    <span class="badge badge-light text-danger font-weight-bold">Perlu Konfirmasi Asmen</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0" style="font-size:12.5px;">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th width="16%">No. Transaksi</th>
+                                    <th width="16%">Pemohon & Cabang</th>
+                                    <th width="20%">Item Anggaran</th>
+                                    <th width="14%" class="text-right">Nominal</th>
+                                    <th width="22%">Alasan Pembatalan</th>
+                                    <th width="12%" class="text-center">Aksi Asmen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($del_reqs as $dr): 
+                                    $dr_nom = ($dr['jenis_transaksi'] === 'BKM') ? (float)($dr['uang_kembali'] ?: $dr['nominal_realisasi']) : (float)$dr['nominal_realisasi'];
+                                ?>
+                                <tr>
+                                    <td>
+                                        <strong><?= htmlspecialchars($dr['no_realisasi'] ?: '-') ?></strong>
+                                        <span class="badge badge-<?= $dr['jenis_transaksi'] === 'BKM' ? 'success' : 'primary' ?> ml-1" style="font-size:10px;"><?= $dr['jenis_transaksi'] ?></span>
+                                    </td>
+                                    <td>
+                                        <strong><?= htmlspecialchars($dr['pemohon_name']) ?></strong>
+                                        <small class="text-muted d-block"><?= htmlspecialchars($dr['nama_cabang'] ?: '-') ?></small>
+                                    </td>
+                                    <td>
+                                        <div><?= htmlspecialchars($dr['rincian'] ?: '-') ?></div>
+                                        <small class="text-muted"><?= htmlspecialchars($dr['budget_name']) ?></small>
+                                    </td>
+                                    <td class="text-right font-weight-bold text-danger">
+                                        Rp <?= number_format($dr_nom, 0, ',', '.') ?>
+                                    </td>
+                                    <td>
+                                        <div class="text-dark font-weight-bold"><?= htmlspecialchars($dr['delete_reason'] ?? '-') ?></div>
+                                        <small class="text-muted">Diajukan: <?= $dr['delete_requested_at'] ? date('d/m/Y H:i', strtotime($dr['delete_requested_at'])) : '-' ?></small>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="d-flex justify-content-center" style="gap:4px;">
+                                            <form action="action.php" method="POST" style="display:inline;" onsubmit="return confirm('Setujui pembatalan transaksi ini? Saldo anggaran akan dikembalikan.');">
+                                                <input type="hidden" name="id_real_detail" value="<?= $dr['id_real_detail'] ?>">
+                                                <input type="hidden" name="action" value="ApproveDelete">
+                                                <button type="submit" class="btn btn-sm btn-success p-1 px-2" title="Setujui Pembatalan (Kembalikan Anggaran)">
+                                                    <i class="fas fa-check"></i> Setujui
+                                                </button>
+                                            </form>
+                                            <button type="button" class="btn btn-sm btn-outline-danger p-1 px-2" title="Tolak Pembatalan"
+                                                    onclick="promptRejectDelete(<?= $dr['id_real_detail'] ?>, '<?= htmlspecialchars($dr['no_realisasi'] ?: '') ?>')">
+                                                <i class="fas fa-times"></i> Tolak
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <!-- ── Stats Cards ── -->
             <div class="row mb-3">
@@ -492,7 +578,31 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
                                                         <?php endif; ?>
                                                     </td>
                                                     <td>
-                                                        <?php if ($st === 'Menunggu Approval'): ?>
+                                                        <?php 
+                                                        $del_st = $rl['delete_status'] ?? 'None';
+                                                        if ($del_st === 'Requested'): ?>
+                                                            <div class="mb-1">
+                                                                <span class="badge badge-warning px-2 py-1"><i class="fas fa-exclamation-triangle mr-1"></i> Mohon Hapus</span>
+                                                            </div>
+                                                            <div class="small text-danger font-italic mb-1" style="font-size:11px;">
+                                                                Alasan: <?= htmlspecialchars($rl['delete_reason'] ?? '-') ?>
+                                                            </div>
+                                                            <div class="d-flex align-items-center" style="gap:5px;">
+                                                                <form action="action.php" method="POST" style="display:inline;" onsubmit="return confirm('Setujui pembatalan/hapus transaksi ini? Saldo anggaran akan dikembalikan.');">
+                                                                    <input type="hidden" name="id_real_detail" value="<?= $rd_id ?>">
+                                                                    <input type="hidden" name="action" value="ApproveDelete">
+                                                                    <button type="submit" class="btn btn-sm btn-danger py-0 px-2 font-weight-bold" title="Setujui Hapus">
+                                                                        <i class="fas fa-check"></i> Hapus
+                                                                    </button>
+                                                                </form>
+                                                                <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Tolak Hapus"
+                                                                        onclick="promptRejectDelete(<?= $rd_id ?>, '<?= htmlspecialchars($rl['no_realisasi'] ?: '') ?>')">
+                                                                    <i class="fas fa-times"></i> Tolak
+                                                                </button>
+                                                            </div>
+                                                        <?php elseif ($del_st === 'Approved'): ?>
+                                                            <span class="badge badge-secondary px-2 py-1"><i class="fas fa-ban mr-1"></i> Dibatalkan</span>
+                                                        <?php elseif ($st === 'Menunggu Approval'): ?>
                                                             <div class="d-flex align-items-center" style="gap:5px;">
                                                                 <!-- Form Setujui -->
                                                                 <form action="action.php" method="POST" style="display:inline;" onsubmit="return confirm('Setujui transaksi <?= $jenis ?> ini?');">
@@ -519,6 +629,11 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
                                                         <?php else: ?>
                                                             <span class="badge badge-secondary px-2 py-1"><?= $st ?></span>
                                                         <?php endif; ?>
+                                                        <div class="mt-1">
+                                                            <a href="../z_realisasi_ppx/cetak_bkk.php?id=<?= $rd_id ?>" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:10px;" title="Cetak Voucher">
+                                                                <i class="fas fa-print mr-1"></i>Cetak
+                                                            </a>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                                 <?php endforeach; ?>
@@ -617,6 +732,24 @@ function promptReject(idRealDetail, noReal) {
     document.getElementById('rejectLabel').textContent = noReal ? '#' + noReal : '';
     document.getElementById('rejectCatatan').value = '';
     $('#modalReject').modal('show');
+}
+
+function promptRejectDelete(idRealDetail, noReal) {
+    var reason = prompt("Masukkan alasan penolakan pembatalan transaksi " + (noReal ? "(" + noReal + ")" : "") + ":");
+    if (reason === null) return;
+    reason = reason.trim();
+    if (!reason) {
+        alert("Alasan penolakan wajib diisi!");
+        return;
+    }
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = 'action.php';
+    form.innerHTML = '<input type="hidden" name="id_real_detail" value="' + idRealDetail + '">' +
+                     '<input type="hidden" name="action" value="RejectDelete">' +
+                     '<input type="hidden" name="catatan_approval" value="' + reason.replace(/"/g, '&quot;') + '">';
+    document.body.appendChild(form);
+    form.submit();
 }
 
 function previewImg(url, name) {

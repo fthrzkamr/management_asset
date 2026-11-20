@@ -334,20 +334,63 @@ $error_message = isset($_GET['error']) ? $_GET['error'] : '';
                         <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
                     </div>
                     <div class="modal-body">
-                        <div class="form-group">
-                            <label>Tanggal <span class="text-danger">*</span></label>
-                            <input type="date" name="tanggal" class="form-control" required value="<?= date('Y-m-d') ?>">
-                            <small class="text-muted">Tanggal pembuatan master budget</small>
+                        <!-- Pilih Periode Anggaran (Bulan & Tahun) - Fase 2 Item 11 -->
+                        <div class="row">
+                            <div class="col-7">
+                                <div class="form-group mb-2">
+                                    <label class="font-weight-bold small">Periode Bulan <span class="text-danger">*</span></label>
+                                    <select name="periode_bulan" id="mb_periode_bulan" class="form-control form-control-sm font-weight-bold" onchange="autoFillMasterDesc()">
+                                        <?php
+                                        $bulan_names_mb = [1=>'Januari',2=>'Februari',3=>'Maret',4=>'April',5=>'Mei',6=>'Juni',7=>'Juli',8=>'Agustus',9=>'September',10=>'Oktober',11=>'November',12=>'Desember'];
+                                        $cur_m = (int)date('n');
+                                        $next_m = ($cur_m % 12) + 1;
+                                        foreach ($bulan_names_mb as $b_num => $b_str): ?>
+                                            <option value="<?= $b_num ?>" <?= $b_num === $next_m ? 'selected' : '' ?>><?= $b_str ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-5">
+                                <div class="form-group mb-2">
+                                    <label class="font-weight-bold small">Tahun <span class="text-danger">*</span></label>
+                                    <input type="number" name="periode_tahun" id="mb_periode_tahun" class="form-control form-control-sm font-weight-bold" value="<?= (int)date('Y') + ($cur_m == 12 ? 1 : 0) ?>" required onchange="autoFillMasterDesc()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label class="font-weight-bold small">Tanggal Pembuatan Master Budget <span class="text-danger">*</span></label>
+                            <input type="date" name="tanggal" class="form-control form-control-sm" required value="<?= date('Y-m-d') ?>">
                         </div>
                         
-                        <div class="form-group">
-                            <label>Jumlah Dana Awal <span class="text-danger">*</span></label>
+                        <!-- Opsi Pengisian Nominal Saldo (Fase 2 Item 11) -->
+                        <div class="form-group mb-3 p-2 border rounded" style="background: #f8fafc;">
+                            <label class="font-weight-bold small d-block mb-1">Opsi Pengisian Saldo Awal</label>
+                            <div class="custom-control custom-radio custom-control-inline">
+                                <input type="radio" id="isi_nominal_ya" name="isi_nominal" value="1" class="custom-control-input" checked onchange="toggleIsiNominal()">
+                                <label class="custom-control-label font-weight-bold text-success small" for="isi_nominal_ya">
+                                    <i class="fas fa-check-circle mr-1"></i>Ya, Isi Saldo Awal Sekarang
+                                </label>
+                            </div>
+                            <div class="custom-control custom-radio custom-control-inline">
+                                <input type="radio" id="isi_nominal_tidak" name="isi_nominal" value="0" class="custom-control-input" onchange="toggleIsiNominal()">
+                                <label class="custom-control-label font-weight-bold text-primary small" for="isi_nominal_tidak">
+                                    <i class="fas fa-layer-group mr-1"></i>Tidak (Diisi Bertahap via Top-Up)
+                                </label>
+                            </div>
+                            <small class="text-muted d-block mt-1" style="font-size:11px;">
+                                *Jika memilih "Tidak", master budget akan dibuat dengan saldo awal Rp 0 dan saldo diisi bertahap melalui tombol Top-Up Dana.
+                            </small>
+                        </div>
+
+                        <div class="form-group" id="group_dana_awal">
+                            <label class="font-weight-bold small">Jumlah Dana Awal <span class="text-danger">*</span></label>
                             <div class="input-group">
                                 <div class="input-group-prepend">
                                     <span class="input-group-text">Rp</span>
                                 </div>
                                 <input type="text" id="amount_display" class="form-control" required placeholder="0" autocomplete="off">
-                                <input type="hidden" name="amount" id="amount_value">
+                                <input type="hidden" name="amount" id="amount_value" value="0">
                             </div>
                             <small class="text-muted">Masukkan jumlah dana baru dalam Rupiah</small>
                         </div>
@@ -420,7 +463,7 @@ $error_message = isset($_GET['error']) ? $_GET['error'] : '';
                         
                         <div class="form-group">
                             <label>Kategori Anggaran <span class="text-danger">*</span></label>
-                            <select name="kategori" class="form-control" required>
+                            <select name="kategori" id="mb_kategori_select" class="form-control" required onchange="autoFillMasterDesc()">
                                 <option value="">— Pilih Kategori —</option>
                                 <option value="Kas Kecil">Kas Kecil</option>
                                 <option value="Kas Besar">Kas Besar</option>
@@ -431,7 +474,7 @@ $error_message = isset($_GET['error']) ? $_GET['error'] : '';
 
                         <div class="form-group">
                             <label>Deskripsi <span class="text-danger">*</span></label>
-                            <textarea name="description" class="form-control" rows="3" required placeholder="Contoh: Anggaran Besar Kas BCA Bulan Maret"></textarea>
+                            <textarea name="description" id="mb_description" class="form-control" rows="3" required placeholder="Contoh: Master Kas Kecil Periode Desember 2026"></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -874,6 +917,33 @@ function updateSelectedTotal() {
 }
 
 // Toggle carryover field
+function toggleIsiNominal() {
+    var isYa = $('#isi_nominal_ya').is(':checked');
+    if (isYa) {
+        $('#group_dana_awal').show();
+        $('#amount_display').prop('required', true);
+    } else {
+        $('#group_dana_awal').hide();
+        $('#amount_display').prop('required', false).val('');
+        $('#amount_value').val('0');
+        updateTotalAmount();
+    }
+}
+
+function autoFillMasterDesc() {
+    var bln = $('#mb_periode_bulan option:selected').text();
+    var thn = $('#mb_periode_tahun').val();
+    var kat = $('#mb_kategori_select').val() || 'Anggaran';
+    var $desc = $('#mb_description');
+    if (!$desc.data('customized')) {
+        $desc.val('Master ' + kat + ' Periode ' + bln + ' ' + thn);
+    }
+}
+
+$(document).on('input', '#mb_description', function() {
+    $(this).data('customized', true);
+});
+
 function toggleCarryover() {
     const checkbox = document.getElementById('has_carryover');
     const field = document.getElementById('carryover_field');

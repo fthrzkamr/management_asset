@@ -101,7 +101,7 @@ foreach ($items as $it) {
     $item_bkk = 0;
     $item_bkm = 0;
     foreach ($item_reals as $r) {
-        if ($r['status'] === 'Disetujui') {
+        if ($r['status'] === 'Disetujui' && ($r['delete_status'] ?? 'None') !== 'Approved') {
             if ($r['jenis_transaksi'] === 'BKM') {
                 $bkm_amt = (float)($r['uang_kembali'] ?: $r['nominal_realisasi']);
                 $total_kembali_budget += $bkm_amt;
@@ -110,7 +110,7 @@ foreach ($items as $it) {
                 $total_approved_budget += (float)$r['nominal_realisasi'];
                 $item_bkk += (float)$r['nominal_realisasi'];
             }
-        } elseif ($r['status'] === 'Menunggu Approval') {
+        } elseif ($r['status'] === 'Menunggu Approval' && ($r['delete_status'] ?? 'None') !== 'Approved') {
             $total_pending_budget += (float)$r['nominal_realisasi'];
         }
     }
@@ -493,13 +493,13 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
                         $it_bkm      = 0;
                         $it_pending  = 0;
                         foreach ($item_reals as $r) {
-                            if ($r['status'] === 'Disetujui') {
+                            if ($r['status'] === 'Disetujui' && ($r['delete_status'] ?? 'None') !== 'Approved') {
                                 if ($r['jenis_transaksi'] === 'BKM') {
                                     $it_bkm += (float)($r['uang_kembali'] ?: $r['nominal_realisasi']);
                                 } else {
                                     $it_bkk += (float)$r['nominal_realisasi'];
                                 }
-                            } elseif ($r['status'] === 'Menunggu Approval' && $r['jenis_transaksi'] === 'BKK') {
+                            } elseif ($r['status'] === 'Menunggu Approval' && $r['jenis_transaksi'] === 'BKK' && ($r['delete_status'] ?? 'None') !== 'Approved') {
                                 $it_pending += (float)$r['nominal_realisasi'];
                             }
                         }
@@ -579,9 +579,16 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
                                         <tbody>
                                             <?php $r_no = 1; foreach ($item_reals as $rl): 
                                                 $st = $rl['status'];
+                                                $del_st = $rl['delete_status'] ?? 'None';
                                                 $st_badge = 'rb-wait';
                                                 $st_lbl = $st;
-                                                if ($st === 'Disetujui') {
+                                                if ($del_st === 'Approved') {
+                                                    $st_badge = 'rb-rej';
+                                                    $st_lbl = '<i class="fas fa-ban mr-1"></i> Dibatalkan';
+                                                } elseif ($del_st === 'Requested') {
+                                                    $st_badge = 'rb-wait';
+                                                    $st_lbl = '<i class="fas fa-hourglass-half mr-1"></i> Pengajuan Hapus';
+                                                } elseif ($st === 'Disetujui') {
                                                     $st_badge = 'rb-ok';
                                                     $st_lbl = '<i class="fas fa-check-circle mr-1"></i> Disetujui';
                                                 } elseif ($st === 'Ditolak') {
@@ -593,18 +600,20 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
                                                 } else {
                                                     $st_lbl = '<i class="fas fa-clock mr-1"></i> Menunggu Asmen';
                                                 }
-                                                $can_edit = in_array($st, ['Draft', 'Ditolak']);
+                                                $can_edit = in_array($st, ['Draft', 'Ditolak']) && $del_st !== 'Approved';
                                                 $is_bkm   = ($rl['jenis_transaksi'] === 'BKM');
                                                 $nom_disp = $is_bkm ? (float)$rl['uang_kembali'] : (float)$rl['nominal_realisasi'];
                                             ?>
-                                            <tr>
+                                            <tr style="<?= $del_st === 'Approved' ? 'opacity:0.6; background:#f8fafc;' : '' ?>">
                                                 <td><?= $r_no++ ?></td>
                                                 <td>
                                                     <span class="badge badge-<?= $is_bkm ? 'success' : 'primary' ?> px-2 py-1 font-weight-bold" style="font-size:10.5px;">
                                                         <?= $rl['jenis_transaksi'] ?>
                                                     </span>
                                                 </td>
-                                                <td><span class="font-weight-bold text-dark"><?= htmlspecialchars($rl['no_realisasi'] ?: '-') ?></span></td>
+                                                <td>
+                                                    <span class="font-weight-bold text-dark font-monospace" style="font-size:12px;"><?= htmlspecialchars($rl['no_realisasi'] ?: '-') ?></span>
+                                                </td>
                                                 <td><?= $rl['tanggal_realisasi'] ? date('d/m/Y', strtotime($rl['tanggal_realisasi'])) : '-' ?></td>
                                                 <td>
                                                     <strong><?= htmlspecialchars($rl['dibayar_kepada'] ?: ($rl['keperluan'] ?: '—')) ?></strong>
@@ -616,9 +625,18 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
                                                         <i class="fas fa-comment mr-1"></i> Catatan Asmen: <?= htmlspecialchars($rl['catatan_approval']) ?>
                                                     </div>
                                                     <?php endif; ?>
+                                                    <?php if ($del_st === 'Requested'): ?>
+                                                    <div class="text-warning small mt-1">
+                                                        <i class="fas fa-exclamation-triangle mr-1"></i> <strong>Alasan Hapus:</strong> <?= htmlspecialchars($rl['delete_reason'] ?? '-') ?>
+                                                    </div>
+                                                    <?php endif; ?>
                                                 </td>
                                                 <td class="text-right font-weight-bold <?= $is_bkm ? 'text-info' : 'text-success' ?>">
-                                                    <?= $is_bkm ? '+ ' : '' ?>Rp <?= number_format($nom_disp, 0, ',', '.') ?>
+                                                    <?php if ($del_st === 'Approved'): ?>
+                                                        <del class="text-muted">Rp <?= number_format($nom_disp, 0, ',', '.') ?></del>
+                                                    <?php else: ?>
+                                                        <?= $is_bkm ? '+ ' : '' ?>Rp <?= number_format($nom_disp, 0, ',', '.') ?>
+                                                    <?php endif; ?>
                                                 </td>
                                                 <td>
                                                     <?php if (!empty($rl['bukti_files'])): ?>
@@ -634,6 +652,16 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
                                                     <?php else: ?>
                                                         <span class="text-muted small">—</span>
                                                     <?php endif; ?>
+                                                    <?php if (!empty($rl['nota_susulan_files'])): ?>
+                                                        <div class="mt-1">
+                                                            <span class="badge badge-info" style="font-size:10px;"><i class="fas fa-paperclip mr-1"></i>Susulan</span>
+                                                            <?php foreach (explode(',', $rl['nota_susulan_files']) as $nsf): $nsf = trim($nsf); if (!$nsf) continue; ?>
+                                                                <a href="../uploads/realisasi/<?= htmlspecialchars($nsf) ?>" target="_blank" class="bukti-link" style="background:#fef3c7; color:#b45309;">
+                                                                    <i class="fas fa-file"></i> <?= htmlspecialchars($nsf) ?>
+                                                                </a>
+                                                            <?php endforeach; ?>
+                                                        </div>
+                                                    <?php endif; ?>
                                                 </td>
                                                 <td>
                                                     <span class="real-badge <?= $st_badge ?>"><?= $st_lbl ?></span>
@@ -642,13 +670,32 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
                                                     <?php endif; ?>
                                                 </td>
                                                 <td class="text-center">
-                                                    <?php if ($can_edit): ?>
                                                     <div class="btn-group btn-group-sm">
+                                                        <!-- Cetak Bukti BKK / BKM -->
+                                                        <a href="cetak_bkk.php?id=<?= $rl['id_real_detail'] ?>" target="_blank"
+                                                           class="btn btn-outline-secondary btn-sm p-1 px-2" title="Cetak Bukti Transaksi">
+                                                            <i class="fas fa-print fa-xs"></i>
+                                                        </a>
+
+                                                        <!-- Tombol Nota Susulan (BKK) -->
+                                                        <?php if ($rl['jenis_transaksi'] === 'BKK' && $del_st !== 'Approved'): ?>
+                                                        <button type="button" class="btn btn-outline-primary btn-sm p-1 px-2"
+                                                                title="Unggah Nota Susulan"
+                                                                onclick="openNotaSusulan(<?= $rl['id_real_detail'] ?>, '<?= htmlspecialchars($rl['no_realisasi'] ?: '') ?>')">
+                                                            <i class="fas fa-paperclip fa-xs"></i>
+                                                        </button>
+                                                        <?php endif; ?>
+
+                                                        <!-- Edit (Draft / Ditolak) -->
+                                                        <?php if ($can_edit): ?>
                                                         <button type="button" class="btn btn-outline-info btn-sm p-1 px-2"
                                                                 title="Edit Transaksi"
                                                                 onclick="editKasTransaction(<?= htmlspecialchars(json_encode($rl)) ?>)">
                                                             <i class="fas fa-edit fa-xs"></i>
                                                         </button>
+                                                        <?php endif; ?>
+
+                                                        <!-- Hapus Draft Langsung -->
                                                         <?php if ($st === 'Draft'): ?>
                                                         <form action="save_realisasi.php" method="POST" style="display:inline;" onsubmit="return confirm('Hapus draft transaksi ini?');">
                                                             <input type="hidden" name="id_budget" value="<?= $id_budget ?>">
@@ -659,10 +706,16 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
                                                             </button>
                                                         </form>
                                                         <?php endif; ?>
+
+                                                        <!-- Pengajuan Hapus untuk Transaksi yang sudah Disetujui -->
+                                                        <?php if ($st === 'Disetujui' && $del_st === 'None'): ?>
+                                                        <button type="button" class="btn btn-outline-danger btn-sm p-1 px-2"
+                                                                title="Ajukan Hapus / Pembatalan Transaksi"
+                                                                onclick="openRequestDelete(<?= $rl['id_real_detail'] ?>, '<?= htmlspecialchars($rl['no_realisasi'] ?: '') ?>')">
+                                                            <i class="fas fa-trash-alt fa-xs"></i>
+                                                        </button>
+                                                        <?php endif; ?>
                                                     </div>
-                                                    <?php else: ?>
-                                                        <span class="text-muted small"><i class="fas fa-lock"></i></span>
-                                                    <?php endif; ?>
                                                 </td>
                                             </tr>
                                             <?php endforeach; ?>
@@ -724,8 +777,13 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
                     </div>
 
                     <!-- Informative Hint: BKK vs BKM -->
-                    <div id="kasTabHint" class="alert py-2 px-3 small mb-3" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; border-radius:8px;">
+                    <div id="kasTabHint" class="alert py-2 px-3 small mb-2" style="background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; border-radius:8px;">
                         <i class="fas fa-info-circle mr-1"></i> <strong>BKK (Bukti Kas Keluar):</strong> Digunakan saat uang keluar untuk belanja/operasional riil. Transaksi ini <strong>MEMOTONG ANGGARAN</strong> (mengurangi sisa alokasi).
+                    </div>
+                    
+                    <!-- Aturan Approval Otomatis (Fase 2 Item 7) -->
+                    <div class="alert alert-light border small text-muted mb-3 py-2 px-3" style="border-radius:8px; font-size:11.5px; background:#f8fafc;">
+                        <i class="fas fa-shield-alt text-success mr-1"></i> <strong>Aturan Approval:</strong> Transaksi &le; Rp 5.000.000 dan tidak over budget akan <strong>langsung disetujui otomatis</strong>. Transaksi &gt; Rp 5.000.000 atau over budget wajib diapprove oleh Asmen Finance.
                     </div>
 
                     <!-- Row 1: Tanggal, Dibayar Kepada, Keperluan -->
@@ -814,6 +872,71 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
 
             </form>
         </div>
+    </div>
+</div>
+
+<!-- Modal: Pengajuan Pembatalan / Hapus Transaksi (Fase 2 Item 8) -->
+<div class="modal fade" id="modalRequestDelete" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="save_realisasi.php" method="POST" class="modal-content" style="border-radius:10px; overflow:hidden;">
+            <input type="hidden" name="action" value="request_delete">
+            <input type="hidden" name="id_budget" value="<?= $id_budget ?>">
+            <input type="hidden" name="id_real_detail" id="req_del_id">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-trash-alt mr-1"></i> Permohonan Pembatalan / Hapus Transaksi</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning small mb-3">
+                    <i class="fas fa-exclamation-triangle mr-1"></i> Transaksi yang sudah disetujui tidak langsung terhapus dari sistem. Permohonan pembatalan akan dikirimkan ke <strong>Asmen Finance</strong> beserta alasan pembatalan. Jika disetujui Asmen, saldo anggaran akan dikembalikan dan histori transaksi tetap tercatat secara rapi.
+                </div>
+                <div class="form-group">
+                    <label class="font-weight-bold small">Nomor Transaksi</label>
+                    <input type="text" id="req_del_no" class="form-control font-weight-bold" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="font-weight-bold small">Alasan Pembatalan / Hapus <span class="text-danger">*</span></label>
+                    <textarea name="delete_reason" class="form-control" rows="3" required placeholder="Jelaskan alasan mengapa transaksi ini perlu dibatalkan..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-light" data-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-danger font-weight-bold"><i class="fas fa-paper-plane mr-1"></i> Kirim Permohonan ke Asmen</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Upload Nota Susulan (Fase 2 Item 9) -->
+<div class="modal fade" id="modalNotaSusulan" tabindex="-1">
+    <div class="modal-dialog">
+        <form action="save_realisasi.php" method="POST" enctype="multipart/form-data" class="modal-content" style="border-radius:10px; overflow:hidden;">
+            <input type="hidden" name="action" value="upload_nota_susulan">
+            <input type="hidden" name="id_budget" value="<?= $id_budget ?>">
+            <input type="hidden" name="id_real_detail" id="ns_id">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-paperclip mr-1"></i> Unggah Nota Susulan</h5>
+                <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info small mb-3">
+                    <i class="fas fa-info-circle mr-1"></i> Lampirkan file nota/kwitansi resmi susulan pada transaksi ini. File akan otomatis ditambahkan ke daftar bukti tanpa mengubah nominal transaksi.
+                </div>
+                <div class="form-group">
+                    <label class="font-weight-bold small">Nomor Transaksi BKK</label>
+                    <input type="text" id="ns_no" class="form-control font-weight-bold" readonly>
+                </div>
+                <div class="form-group">
+                    <label class="font-weight-bold small">Pilih File Nota Susulan (JPG, PNG, PDF) <span class="text-danger">*</span></label>
+                    <input type="file" name="nota_susulan[]" class="form-control-file border p-2 rounded" multiple required accept=".jpg,.jpeg,.png,.pdf">
+                    <small class="text-muted">Bisa memilih lebih dari satu file (maks 5MB per file).</small>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-light" data-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-primary font-weight-bold"><i class="fas fa-upload mr-1"></i> Unggah Nota Susulan</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -1056,6 +1179,18 @@ function editKasTransaction(data) {
 
 function formatRupiah(num) {
     return (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+function openRequestDelete(id, no) {
+    $('#req_del_id').val(id);
+    $('#req_del_no').val(no || ('ID #' + id));
+    $('#modalRequestDelete').modal('show');
+}
+
+function openNotaSusulan(id, no) {
+    $('#ns_id').val(id);
+    $('#ns_no').val(no || ('ID #' + id));
+    $('#modalNotaSusulan').modal('show');
 }
 
 // Auto-focus kotak pencarian saat Select2 dibuka

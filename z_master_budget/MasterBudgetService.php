@@ -64,20 +64,20 @@ class MasterBudgetService {
      * @return array ['success' => bool, 'message' => string, 'master_id' => string]
      */
     public function topupMasterBudget($master_id, $amount, $description, $created_by, $reference_id = null, $tanggal = null) {
-        // Validasi input
-        if ($amount <= 0) {
-            return [
-                'success' => false,
-                'message' => 'Error: Amount harus lebih besar dari 0',
-                'master_id' => null
-            ];
-        }
-        
         // Auto-generate ID jika kosong
         $is_new = false;
         if (empty($master_id)) {
             $master_id = $this->generateMasterId();
             $is_new = true;
+        }
+
+        // Validasi input: untuk budget baru diperbolehkan amount == 0 (pengisian saldo bertahap)
+        if ($amount < 0 || ($amount == 0 && !$is_new)) {
+            return [
+                'success' => false,
+                'message' => 'Error: Amount harus lebih besar dari 0',
+                'master_id' => null
+            ];
         }
         
         // Default tanggal ke NOW jika tidak diisi
@@ -146,7 +146,7 @@ class MasterBudgetService {
             
             // Insert log
             $log_ref_id = $reference_id ?: 'TOPUP-' . date('YmdHis');
-            $note = "Top-up: {$description}";
+            $note = ($amount == 0 && $is_new) ? "Inisialisasi Master Budget (Pengisian Saldo Bertahap): {$description}" : "Top-up: {$description}";
             
             $log_query = "INSERT INTO master_budget_log 
                           (master_id, reference_type, reference_id, amount, type, 
@@ -164,9 +164,13 @@ class MasterBudgetService {
             // Commit transaction
             $this->conn->commit();
             
+            $succ_msg = ($amount == 0 && $is_new)
+                ? "Berhasil membuat Master Budget {$master_id} dengan saldo awal Rp 0 (dapat diisi bertahap via Top-Up)."
+                : "Berhasil top-up Rp " . number_format($amount, 0, ',', '.') . " ke {$master_id}";
+
             return [
                 'success' => true,
-                'message' => "Berhasil top-up Rp " . number_format($amount, 0, ',', '.') . " ke {$master_id}",
+                'message' => $succ_msg,
                 'master_id' => $master_id,
                 'balance' => $balance_after
             ];
