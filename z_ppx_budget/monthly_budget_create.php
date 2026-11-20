@@ -101,23 +101,34 @@ $master_budgets_result = null;
                                         <select name="period_month" id="period_month" class="form-control" required>
                                             <option value="">-- Pilih Bulan --</option>
                                             <?php
-                                            $months = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                                            $months = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                                                       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                                            $current_year  = (int)date('Y');
+                                            $next_month    = (int)date('n') + 1;
+                                            $next_year     = $current_year;
+                                            if ($next_month > 12) {
+                                                $next_month = 1;
+                                                $next_year  = $current_year + 1;
+                                            }
                                             for ($i = 1; $i <= 12; $i++) {
-                                                echo '<option value="' . $i . '">' . $months[$i] . '</option>';
+                                                $sel = ($i === $next_month) ? ' selected' : '';
+                                                echo '<option value="' . $i . '"' . $sel . '>' . $months[$i] . '</option>';
                                             }
                                             ?>
                                         </select>
+                                        <small class="text-muted">Default: bulan depan</small>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="form-group">
                                         <label>Tahun <span class="text-danger">*</span></label>
-                                        <?php $current_year = date('Y'); ?>
                                         <select name="period_year" id="period_year" class="form-control bg-light" required style="pointer-events: none;">
-                                            <option value="<?= $current_year ?>" selected><?= $current_year ?></option>
+                                            <option value="<?= $current_year ?>" <?= $next_year === $current_year ? 'selected' : '' ?>><?= $current_year ?></option>
+                                            <?php if ($next_year !== $current_year): ?>
+                                                <option value="<?= $next_year ?>" selected><?= $next_year ?></option>
+                                            <?php endif; ?>
                                         </select>
-                                        <small class="text-muted">Tahun berjalan</small>
+                                        <small class="text-muted">Mengikuti bulan yang dipilih</small>
                                     </div>
                                 </div>
                                 <div class="col-md-4">
@@ -855,6 +866,22 @@ $(document).ready(function() {
     // Jalankan pengecekan otomatis saat Bulan atau Tipe Kas diubah
     $('#period_month, #tipe_anggaran').on('change', function() {
         checkPrevBudget();
+    });
+
+    // Sinkronkan Tahun saat Bulan diubah manual (jaga-jaga kasus Desember -> Januari tahun depan)
+    $('#period_month').on('change', function() {
+        var selMonth  = parseInt($(this).val(), 10);
+        var curYear   = <?= $current_year ?>;
+        var curMonth  = <?= (int)date('n') ?>;
+        if (!selMonth) return;
+        var year = (selMonth < curMonth) ? curYear + 1 : curYear;
+        $('#period_year option').prop('selected', false);
+        var $opt = $('#period_year option[value="' + year + '"]');
+        if ($opt.length === 0) {
+            $('#period_year').append('<option value="' + year + '">' + year + '</option>');
+            $opt = $('#period_year option[value="' + year + '"]');
+        }
+        $opt.prop('selected', true);
     });
 
     // ============================================================

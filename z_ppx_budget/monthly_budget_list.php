@@ -56,6 +56,16 @@ if (!empty($filter_cabang)) {
 
 $where_clause = !empty($where_conditions) ? "WHERE " . implode(" AND ", $where_conditions) : "";
 
+// Hitung jumlah budget berstatus Draft (untuk button Quick Access Draft)
+$draft_conditions = $where_conditions;
+$draft_conditions[] = "mb.status = 'Draft'";
+$draft_where_clause = "WHERE " . implode(" AND ", $draft_conditions);
+$draft_count_q = mysqli_query($conn, "SELECT COUNT(*) as c FROM ppx_monthly_budget mb
+    LEFT JOIN user_dfm u ON mb.created_by = u.id_user
+    LEFT JOIN divisi creator_div_name ON u.divisi = creator_div_name.id_divisi
+    $draft_where_clause");
+$draft_count = $draft_count_q ? (int)mysqli_fetch_assoc($draft_count_q)['c'] : 0;
+
 
 $query = "SELECT 
     mb.id_budget,
@@ -113,6 +123,10 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
                         </ul>
                     </div>
                     <div class="col-auto">
+                        <button type="button" id="btnQuickDraft" class="btn btn-outline-warning">
+                            <i class="fas fa-file-alt"></i> Draft
+                            <span class="badge badge-warning ml-1"><?= $draft_count ?></span>
+                        </button>
                         <?php if ($auth->canCreateBudget()): ?>
                         <a href="monthly_budget_create.php" class="btn btn-primary">
                             <i class="fas fa-plus"></i> Buat Budget Baru
@@ -252,7 +266,7 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
 
     <script>
         $(document).ready(function() {
-            $('#budgetTable').DataTable({
+            var table = $('#budgetTable').DataTable({
                 "order": [
                     [0, "desc"]
                 ],
@@ -277,6 +291,27 @@ $error_msg = isset($_GET['error']) ? trim($_GET['error']) : '';
                         "next": "&raquo;",
                         "previous": "&laquo;"
                     }
+                }
+            });
+
+            // Quick Access Draft - toggle filter tabel hanya status Draft
+            // Cek langsung teks sel Status di DOM (bukan search() bawaan DataTables)
+            // karena isi selnya berupa HTML badge, bukan teks polos.
+            var draftFilterActive = false;
+            $.fn.dataTable.ext.search.push(function(settings, searchData, dataIndex) {
+                if (settings.nTable.id !== 'budgetTable' || !draftFilterActive) return true;
+                var statusText = $(table.row(dataIndex).node()).find('td').eq(5).text().trim();
+                return statusText === 'Draft';
+            });
+
+            $('#btnQuickDraft').on('click', function() {
+                var $btn = $(this);
+                draftFilterActive = !draftFilterActive;
+                table.draw();
+                if (draftFilterActive) {
+                    $btn.addClass('active btn-warning').removeClass('btn-outline-warning');
+                } else {
+                    $btn.removeClass('active btn-warning').addClass('btn-outline-warning');
                 }
             });
         });

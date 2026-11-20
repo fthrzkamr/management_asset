@@ -206,25 +206,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Insert header budget dengan status dinamis sesuai routing
+        // "Kas Besar..." masuk ke jalur approval khusus budget_type='besar' (dulu lewat menu
+        // Anggaran Besar BCA terpisah / z_budget_besar - sekarang disatukan lewat tipe kas ini saja)
+        $budget_type = (stripos($tipe_anggaran, 'Kas Besar') === 0) ? 'besar' : 'biasa';
+
         // Build INSERT: if master_id is null, insert NULL explicitly to avoid inserting empty string or 0
         if (is_null($master_id)) {
-            $insert_budget = "INSERT INTO ppx_monthly_budget 
-                             (master_id, period_year, period_month, budget_name, tipe_anggaran, total_allocation, 
-                              master_allocation, total_remaining, status, created_by, notes, file_excel) 
-                             VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $insert_budget = "INSERT INTO ppx_monthly_budget
+                             (master_id, period_year, period_month, budget_name, tipe_anggaran, total_allocation,
+                              master_allocation, total_remaining, status, created_by, notes, file_excel, budget_type)
+                             VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = mysqli_prepare($conn, $insert_budget);
-            mysqli_stmt_bind_param($stmt, 'iissddsssss', 
+            mysqli_stmt_bind_param($stmt, 'iissddssssss',
                 $period_year, $period_month, $budget_name, $tipe_anggaran,
-                $total_allocation, $total_allocation, $total_allocation, $initial_status, $created_by, $notes, $file_excel_name);
+                $total_allocation, $total_allocation, $total_allocation, $initial_status, $created_by, $notes, $file_excel_name, $budget_type);
         } else {
-            $insert_budget = "INSERT INTO ppx_monthly_budget 
-                             (master_id, period_year, period_month, budget_name, tipe_anggaran, total_allocation, 
-                              master_allocation, total_remaining, status, created_by, notes, file_excel) 
-                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            $insert_budget = "INSERT INTO ppx_monthly_budget
+                             (master_id, period_year, period_month, budget_name, tipe_anggaran, total_allocation,
+                              master_allocation, total_remaining, status, created_by, notes, file_excel, budget_type)
+                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             $stmt = mysqli_prepare($conn, $insert_budget);
-            mysqli_stmt_bind_param($stmt, 'siissddsssss', 
+            mysqli_stmt_bind_param($stmt, 'siissddssssss',
                 $master_id, $period_year, $period_month, $budget_name, $tipe_anggaran,
-                $total_allocation, $total_allocation, $total_allocation, $initial_status, $created_by, $notes, $file_excel_name);
+                $total_allocation, $total_allocation, $total_allocation, $initial_status, $created_by, $notes, $file_excel_name, $budget_type);
         }
         
         if (!mysqli_stmt_execute($stmt)) {

@@ -688,9 +688,6 @@ function is_active($patterns) {
                             <?php if ($auth->hasPermission('ppx_budget', 'read')): ?>
                                 <li class="<?= is_active('z_ppx_budget/usage_report.php') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_ppx_budget/usage_report.php">Laporan Pemakaian</a></li>
                             <?php endif; ?>
-                            <?php if ($auth->hasPermission('budget_besar', 'read')): ?>
-                                <li class="<?= is_active('z_budget_besar/') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_budget_besar/dashboard.php"></i>Anggaran Besar BCA</a></li>
-                            <?php endif; ?>
                             <?php if ($auth->hasPermission('master_budget', 'read')): ?>
                                 <li class="<?= is_active('z_master_budget') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_master_budget/dashboard.php">Master Anggaran</a></li>
                             <?php endif; ?>

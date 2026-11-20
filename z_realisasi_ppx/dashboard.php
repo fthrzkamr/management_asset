@@ -43,7 +43,7 @@ LEFT JOIN master_cabang mc ON u.id_cabang = mc.id_cabang
 LEFT JOIN (
     SELECT 
         id_budget,
-        SUM(CASE WHEN status = 'Disetujui' AND jenis_transaksi = 'BKM' THEN -uang_kembali WHEN status = 'Disetujui' THEN nominal_realisasi ELSE 0 END) AS total_approved,
+        SUM(CASE WHEN status = 'Disetujui' AND jenis_transaksi = 'BKM' THEN -(CASE WHEN uang_kembali > 0 THEN uang_kembali ELSE nominal_realisasi END) WHEN status = 'Disetujui' THEN nominal_realisasi ELSE 0 END) AS total_approved,
         COUNT(CASE WHEN status = 'Menunggu Approval' THEN 1 END) AS count_pending,
         COUNT(CASE WHEN status = 'Draft' THEN 1 END) AS count_draft,
         COUNT(DISTINCT CASE WHEN status = 'Disetujui' THEN id_detail_budget END) AS items_realized
@@ -59,6 +59,11 @@ $result = mysqli_query($conn, $query);
 
 $budgets = [];
 if ($result) while ($r = mysqli_fetch_assoc($result)) $budgets[] = $r;
+
+$draft_card_count = 0;
+foreach ($budgets as $mb) {
+    if ((int)$mb['count_draft'] > 0) $draft_card_count++;
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -128,6 +133,14 @@ if ($result) while ($r = mysqli_fetch_assoc($result)) $budgets[] = $r;
                             <li class="breadcrumb-item active">Realisasi Bulanan</li>
                         </ul>
                     </div>
+                    <?php if ($draft_card_count > 0): ?>
+                    <div class="col-auto">
+                        <button type="button" id="btnQuickDraft" class="btn btn-outline-warning">
+                            <i class="fas fa-edit"></i> Draft
+                            <span class="badge badge-warning ml-1"><?= $draft_card_count ?></span>
+                        </button>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -161,8 +174,16 @@ if ($result) while ($r = mysqli_fetch_assoc($result)) $budgets[] = $r;
                         $tot_items   = (int)$mb['total_items'];
                         $it_realized = (int)$mb['items_realized'];
 
+                        $is_over = ($tot_alloc > 0 && $tot_app > $tot_alloc);
+
                         // Tentukan tampilan berdasarkan status realisasi detail
-                        if ($cnt_pend > 0) {
+                        if ($is_over) {
+                            $head_cls = 'head-rejected';
+                            $pill_cls = 'pill-rejected';
+                            $pill_ico = 'fas fa-triangle-exclamation';
+                            $pill_txt = 'Over Budget (' . round(($tot_app / $tot_alloc) * 100) . '%)';
+                            $hint     = 'Realisasi bersih melebihi total alokasi anggaran';
+                        } elseif ($cnt_pend > 0) {
                             $head_cls = 'head-waiting';
                             $pill_cls = 'pill-waiting';
                             $pill_ico = 'fas fa-clock';
@@ -197,10 +218,11 @@ if ($result) while ($r = mysqli_fetch_assoc($result)) $budgets[] = $r;
                         $url = "detail.php?id_budget={$mb['id_budget']}";
 
                         // Progress penggunaan anggaran
-                        $pct = $tot_alloc > 0 ? min(100, round(($tot_app / $tot_alloc) * 100)) : 0;
-                        $prog_danger = $pct >= 80;
+                        $pct = $tot_alloc > 0 ? round(($tot_app / $tot_alloc) * 100) : 0;
+                        $prog_danger = $pct >= 80 || $is_over;
+                        $bar_width   = min(100, max(0, $pct));
                     ?>
-                    <div class="col-sm-6 col-md-4 col-xl-3 mb-4">
+                    <div class="col-sm-6 col-md-4 col-xl-3 mb-4 rl-card-col" data-has-draft="<?= $cnt_draft > 0 ? 1 : 0 ?>">
                         <div class="rl-card card h-100" onclick="window.location='<?= $url ?>'">
 
                             <div class="<?= $head_cls ?> card-head-inner">
@@ -233,22 +255,22 @@ if ($result) while ($r = mysqli_fetch_assoc($result)) $budgets[] = $r;
                                     <span class="val text-primary">Rp <?= number_format($tot_alloc, 0, ',', '.') ?></span>
                                 </div>
                                 <div class="stat-row">
-                                    <span class="lbl"><i class="fas fa-shopping-cart mr-1"></i>Terealisasi</span>
-                                    <span class="val text-success">Rp <?= number_format($tot_app, 0, ',', '.') ?></span>
+                                    <span class="lbl"><i class="fas fa-receipt mr-1"></i>Realisasi Bersih</span>
+                                    <span class="val <?= $is_over ? 'text-danger font-weight-bold' : 'text-success' ?>">Rp <?= number_format($tot_app, 0, ',', '.') ?></span>
                                 </div>
                                 <div class="stat-row">
-                                    <span class="lbl"><i class="fas fa-wallet mr-1"></i>Sisa</span>
-                                    <span class="val text-info">Rp <?= number_format(max(0, $tot_alloc - $tot_app), 0, ',', '.') ?></span>
+                                    <span class="lbl"><i class="<?= $is_over ? 'fas fa-triangle-exclamation text-danger' : 'fas fa-wallet' ?> mr-1"></i><?= $is_over ? 'Kelebihan' : 'Sisa' ?></span>
+                                    <span class="val <?= $is_over ? 'text-danger font-weight-bold' : 'text-info' ?>"><?= $is_over ? '&minus; ' : '' ?>Rp <?= number_format(abs($tot_alloc - $tot_app), 0, ',', '.') ?></span>
                                 </div>
 
                                 <!-- Progress bar utilisasi -->
                                 <div class="prog-wrap mt-1">
                                     <div class="prog-bar <?= $prog_danger ? 'danger' : '' ?>"
-                                         style="width:<?= $pct ?>%"></div>
+                                         style="width:<?= $bar_width ?>%"></div>
                                 </div>
                                 <div class="d-flex justify-content-between mt-1" style="font-size:10.5px; color:#9ca3af;">
                                     <span><?= $tot_items ?> item total</span>
-                                    <span><?= $pct ?>% terealisasi</span>
+                                    <span class="<?= $is_over ? 'text-danger font-weight-bold' : '' ?>"><?= $pct ?>% terealisasi</span>
                                 </div>
 
                                 <hr style="margin:8px 0;">
@@ -272,5 +294,23 @@ if ($result) while ($r = mysqli_fetch_assoc($result)) $budgets[] = $r;
 if ($layout_dir && file_exists($layout_dir . '/footer.php'))    include $layout_dir . '/footer.php';
 if ($layout_dir && file_exists($layout_dir . '/footer_js.php')) include $layout_dir . '/footer_js.php';
 ?>
+<script>
+$(function() {
+    // Quick Access Draft - tampilkan hanya card yang punya item draft
+    $('#btnQuickDraft').on('click', function() {
+        var $btn = $(this);
+        var active = $btn.hasClass('active');
+        if (active) {
+            $('.rl-card-col').show();
+            $btn.removeClass('active btn-warning').addClass('btn-outline-warning');
+        } else {
+            $('.rl-card-col').each(function() {
+                $(this).toggle($(this).data('has-draft') == 1);
+            });
+            $btn.addClass('active btn-warning').removeClass('btn-outline-warning');
+        }
+    });
+});
+</script>
 </body>
 </html>

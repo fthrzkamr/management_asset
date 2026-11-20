@@ -53,7 +53,7 @@ $q_budgets = mysqli_query($conn, "
     LEFT JOIN (
         SELECT 
             id_budget,
-            SUM(CASE WHEN status = 'Disetujui' AND jenis_transaksi = 'BKM' THEN -uang_kembali WHEN status = 'Disetujui' THEN nominal_realisasi ELSE 0 END) AS total_approved,
+            SUM(CASE WHEN status = 'Disetujui' AND jenis_transaksi = 'BKM' THEN -(CASE WHEN uang_kembali > 0 THEN uang_kembali ELSE nominal_realisasi END) WHEN status = 'Disetujui' THEN nominal_realisasi ELSE 0 END) AS total_approved,
             SUM(CASE WHEN status = 'Menunggu Approval' THEN nominal_realisasi ELSE 0 END) AS total_pending,
             COUNT(CASE WHEN status = 'Menunggu Approval' THEN 1 END) AS count_pending,
             COUNT(CASE WHEN status = 'Disetujui' THEN 1 END) AS count_approved,
@@ -334,8 +334,12 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
                                 Rp <?= number_format($tot_alloc, 0, ',', '.') ?>
                             </div>
                             <?php if ($tot_real > 0): ?>
-                            <small class="text-success font-weight-bold">
+                            <?php $is_b_over = ($tot_alloc > 0 && $tot_real > $tot_alloc); ?>
+                            <small class="<?= $is_b_over ? 'text-danger font-weight-bold' : 'text-success font-weight-bold' ?>">
                                 Rp <?= number_format($tot_real, 0, ',', '.') ?> disetujui
+                                <?php if ($is_b_over): ?>
+                                    <span class="d-block text-danger font-weight-bold"><i class="fas fa-triangle-exclamation mr-1"></i>Over Budget</span>
+                                <?php endif; ?>
                             </small>
                             <?php endif; ?>
                         </div>
@@ -371,8 +375,20 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
                             <?php foreach ($items as $it): 
                                 $it_id = (int)$it['id_detail'];
                                 $it_reals = $reals_map[$it_id] ?? [];
+                                $it_net_real = 0;
+                                foreach ($it_reals as $r_it) {
+                                    if ($r_it['status'] === 'Disetujui') {
+                                        if (($r_it['jenis_transaksi'] ?? 'BKK') === 'BKM') {
+                                            $it_net_real -= (float)($r_it['uang_kembali'] ?: $r_it['nominal_realisasi']);
+                                        } else {
+                                            $it_net_real += (float)$r_it['nominal_realisasi'];
+                                        }
+                                    }
+                                }
+                                $it_net_real = max(0, $it_net_real);
+                                $it_is_over = ((float)$it['total_ajuan'] > 0 && $it_net_real > (float)$it['total_ajuan']);
                             ?>
-                            <div class="item-box">
+                            <div class="item-box <?= $it_is_over ? 'border-danger' : '' ?>" style="<?= $it_is_over ? 'border-left:4px solid #dc2626 !important;' : '' ?>">
                                 <div class="item-box-head">
                                     <div>
                                         <span class="badge badge-light border mr-1 font-weight-normal"><?= htmlspecialchars($it['category_name'] ?? '') ?></span>
@@ -382,6 +398,15 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
                                     <div class="text-right">
                                         <span class="text-muted small">Alokasi:</span>
                                         <strong class="text-primary ml-1" style="font-size:13px;">Rp <?= number_format($it['total_ajuan'], 0, ',', '.') ?></strong>
+                                        <?php if ($it_net_real > 0): ?>
+                                            <span class="text-muted small ml-2">Realisasi:</span>
+                                            <strong class="<?= $it_is_over ? 'text-danger' : 'text-success' ?> ml-1" style="font-size:13px;">
+                                                Rp <?= number_format($it_net_real, 0, ',', '.') ?>
+                                            </strong>
+                                            <?php if ($it_is_over): ?>
+                                                <span class="badge badge-danger ml-1"><i class="fas fa-triangle-exclamation mr-1"></i>Over Budget (+Rp <?= number_format($it_net_real - (float)$it['total_ajuan'], 0, ',', '.') ?>)</span>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
 
@@ -409,10 +434,12 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
                                                     $rd_id = (int)$rl['id_real_detail'];
                                                     $st    = $rl['status'];
                                                     $jenis = $rl['jenis_transaksi'] ?? 'BKK';
+                                                    $is_bkm = ($jenis === 'BKM');
+                                                    $nom_disp = $is_bkm ? (float)($rl['uang_kembali'] ?: $rl['nominal_realisasi']) : (float)$rl['nominal_realisasi'];
                                                 ?>
                                                 <tr>
                                                     <td>
-                                                        <?php if ($jenis === 'BKM'): ?>
+                                                        <?php if ($is_bkm): ?>
                                                             <span class="badge badge-success px-2 py-1" style="font-size:11px; font-weight:700;">
                                                                 <i class="fas fa-arrow-down mr-1"></i> BKM
                                                             </span>
@@ -424,8 +451,8 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
                                                     </td>
                                                     <td><strong class="text-dark"><?= htmlspecialchars($rl['no_realisasi'] ?: '-') ?></strong></td>
                                                     <td><?= $rl['tanggal_realisasi'] ? date('d/m/Y', strtotime($rl['tanggal_realisasi'])) : '-' ?></td>
-                                                    <td class="text-right font-weight-bold <?= $jenis === 'BKM' ? 'text-info' : 'text-success' ?>">
-                                                        <?= $jenis === 'BKM' ? '+' : '' ?>Rp <?= number_format($rl['nominal_realisasi'], 0, ',', '.') ?>
+                                                    <td class="text-right font-weight-bold <?= $is_bkm ? 'text-info' : 'text-success' ?>">
+                                                        <?= $is_bkm ? '+' : '' ?>Rp <?= number_format($nom_disp, 0, ',', '.') ?>
                                                     </td>
                                                     <td>
                                                         <div style="font-weight:600; color:#1e293b;"><?= htmlspecialchars($rl['dibayar_kepada'] ?: '—') ?></div>

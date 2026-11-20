@@ -103,8 +103,9 @@ foreach ($items as $it) {
     foreach ($item_reals as $r) {
         if ($r['status'] === 'Disetujui') {
             if ($r['jenis_transaksi'] === 'BKM') {
-                $total_kembali_budget += (float)$r['uang_kembali'];
-                $item_bkm += (float)$r['uang_kembali'];
+                $bkm_amt = (float)($r['uang_kembali'] ?: $r['nominal_realisasi']);
+                $total_kembali_budget += $bkm_amt;
+                $item_bkm += $bkm_amt;
             } else {
                 $total_approved_budget += (float)$r['nominal_realisasi'];
                 $item_bkk += (float)$r['nominal_realisasi'];
@@ -113,14 +114,19 @@ foreach ($items as $it) {
             $total_pending_budget += (float)$r['nominal_realisasi'];
         }
     }
-    if (($item_bkk - $item_bkm) > 0) {
+    $it_net_spent = max(0, $item_bkk - $item_bkm);
+    if ($it_net_spent > 0) {
         $items_realized_count++;
+    }
+    if ((float)$it['total'] > 0 && $it_net_spent > (float)$it['total']) {
+        $items_over_budget_count = ($items_over_budget_count ?? 0) + 1;
     }
 }
 
 $net_approved_budget = max(0, $total_approved_budget - $total_kembali_budget);
-$total_sisa_budget = max(0, $total_alokasi_budget - $net_approved_budget);
-$budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($net_approved_budget / $total_alokasi_budget) * 100, 1)) : 0;
+$total_sisa_budget = $total_alokasi_budget - $net_approved_budget;
+$budget_progress_pct = $total_alokasi_budget > 0 ? round(($net_approved_budget / $total_alokasi_budget) * 100, 1) : 0;
+$total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_alokasi_budget;
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -159,6 +165,16 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($net_approved
         .sc-card.card-realisasi { border-left-color: #059669 !important; background: #f6fdf9 !important; }
         .sc-card.card-menunggu  { border-left-color: #d97706 !important; background: #fffdf5 !important; }
         .sc-card.card-sisa      { border-left-color: #0284c7 !important; background: #f6fbfe !important; }
+        .sc-card.card-overbudget {
+            border-left-color: #dc2626 !important;
+            background: #fef2f2 !important;
+        }
+        .sc-card.card-overbudget .sc-value {
+            color: #dc2626 !important;
+        }
+        .sc-card.card-overbudget .sc-label {
+            color: #b91c1c !important;
+        }
 
         .sc-label {
             font-size: 11px;
@@ -333,6 +349,25 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($net_approved
             </div>
             <?php unset($_SESSION[$t]); endif; endforeach; ?>
 
+            <?php if ($total_over_budget): ?>
+            <div class="alert alert-danger d-flex align-items-center" style="border-left:4px solid #dc2626; background:#fef2f2; color:#991b1b;">
+                <i class="fas fa-triangle-exclamation mr-2 fa-lg"></i>
+                <div>
+                    <strong>Peringatan: Anggaran ini sudah Over Budget!</strong> Realisasi bersih
+                    <strong>Rp <?= number_format($net_approved_budget, 0, ',', '.') ?> (<?= $budget_progress_pct ?>%)</strong>
+                    melebihi total alokasi <strong>Rp <?= number_format($total_alokasi_budget, 0, ',', '.') ?></strong>
+                    (kelebihan <strong>Rp <?= number_format(abs($total_sisa_budget), 0, ',', '.') ?></strong>).
+                </div>
+            </div>
+            <?php elseif (($items_over_budget_count ?? 0) > 0): ?>
+            <div class="alert alert-warning d-flex align-items-center" style="border-left:4px solid #f59e0b; background:#fffbeb; color:#92400e;">
+                <i class="fas fa-exclamation-triangle mr-2 fa-lg"></i>
+                <div>
+                    <strong>Perhatian:</strong> Terdapat <strong><?= $items_over_budget_count ?> item rincian</strong> yang realisasinya melebihi alokasi masing-masing item, meskipun total realisasi keseluruhan masih dalam batas anggaran.
+                </div>
+            </div>
+            <?php endif; ?>
+
             <!-- Info Anggaran Header -->
             <div class="info-box">
                 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap" style="gap:10px;">
@@ -370,20 +405,23 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($net_approved
                         </div>
                     </div>
                     <div class="col-6 col-md-3 mb-2">
-                        <div class="sc-card card-realisasi">
+                        <div class="sc-card card-realisasi <?= $total_over_budget ? 'card-overbudget' : '' ?>" style="<?= $total_over_budget ? 'border-left-color:#dc2626 !important; background:#fef2f2 !important;' : '' ?>">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
-                                    <div class="sc-label">Realisasi Bersih</div>
-                                    <div class="sc-value">Rp <?= number_format($net_approved_budget, 0, ',', '.') ?></div>
-                                    <div class="sc-sub font-weight-bold" style="color:#059669;">
+                                    <div class="sc-label" style="<?= $total_over_budget ? 'color:#b91c1c !important;' : '' ?>">Realisasi Bersih</div>
+                                    <div class="sc-value" style="<?= $total_over_budget ? 'color:#dc2626 !important;' : '' ?>">Rp <?= number_format($net_approved_budget, 0, ',', '.') ?></div>
+                                    <div class="sc-sub font-weight-bold" style="color:<?= $total_over_budget ? '#dc2626' : '#059669' ?>;">
                                         <i class="fa-solid fa-chart-pie mr-1"></i><?= $budget_progress_pct ?>% (<?= $items_realized_count ?> item)
+                                        <?php if ($total_over_budget): ?>
+                                            <span class="badge badge-danger ml-1"><i class="fas fa-triangle-exclamation mr-1"></i>Over Budget</span>
+                                        <?php endif; ?>
                                         <?php if ($total_kembali_budget > 0): ?>
                                             <span class="d-block text-muted font-weight-normal" style="font-size:10.5px;">(BKK: <?= number_format($total_approved_budget, 0, ',', '.') ?> &minus; BKM: <?= number_format($total_kembali_budget, 0, ',', '.') ?>)</span>
                                         <?php endif; ?>
                                     </div>
                                 </div>
-                                <div class="sc-icon" style="color:#059669;">
-                                    <i class="fa-solid fa-receipt fa-xl"></i>
+                                <div class="sc-icon" style="color:<?= $total_over_budget ? '#dc2626' : '#059669' ?>;">
+                                    <i class="fa-solid <?= $total_over_budget ? 'fa-triangle-exclamation' : 'fa-receipt' ?> fa-xl"></i>
                                 </div>
                             </div>
                         </div>
@@ -403,15 +441,21 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($net_approved
                         </div>
                     </div>
                     <div class="col-6 col-md-3 mb-2">
-                        <div class="sc-card card-sisa">
+                        <div class="sc-card card-sisa <?= $total_over_budget ? 'card-overbudget' : '' ?>" style="<?= $total_over_budget ? 'border-left-color:#dc2626 !important; background:#fef2f2 !important;' : '' ?>">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
-                                    <div class="sc-label">Sisa Alokasi</div>
-                                    <div class="sc-value">Rp <?= number_format($total_sisa_budget, 0, ',', '.') ?></div>
-                                    <div class="sc-sub" style="color:#0284c7;"><i class="fa-solid fa-circle-check mr-1"></i>Tersedia realisasi</div>
+                                    <div class="sc-label" style="<?= $total_over_budget ? 'color:#b91c1c !important;' : '' ?>"><?= $total_over_budget ? 'Kelebihan Budget' : 'Sisa Alokasi' ?></div>
+                                    <div class="sc-value" style="<?= $total_over_budget ? 'color:#dc2626 !important;' : '' ?>">
+                                        <?= $total_over_budget ? '&minus; ' : '' ?>Rp <?= number_format(abs($total_sisa_budget), 0, ',', '.') ?>
+                                    </div>
+                                    <?php if ($total_over_budget): ?>
+                                        <div class="sc-sub font-weight-bold" style="color:#dc2626;"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Melebihi alokasi anggaran</div>
+                                    <?php else: ?>
+                                        <div class="sc-sub" style="color:#0284c7;"><i class="fa-solid fa-circle-check mr-1"></i>Tersedia realisasi</div>
+                                    <?php endif; ?>
                                 </div>
-                                <div class="sc-icon" style="color:#0284c7;">
-                                    <i class="fa-solid fa-piggy-bank fa-xl"></i>
+                                <div class="sc-icon" style="color:<?= $total_over_budget ? '#dc2626' : '#0284c7' ?>;">
+                                    <i class="fa-solid <?= $total_over_budget ? 'fa-triangle-exclamation' : 'fa-piggy-bank' ?> fa-xl"></i>
                                 </div>
                             </div>
                         </div>
@@ -451,7 +495,7 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($net_approved
                         foreach ($item_reals as $r) {
                             if ($r['status'] === 'Disetujui') {
                                 if ($r['jenis_transaksi'] === 'BKM') {
-                                    $it_bkm += (float)$r['uang_kembali'];
+                                    $it_bkm += (float)($r['uang_kembali'] ?: $r['nominal_realisasi']);
                                 } else {
                                     $it_bkk += (float)$r['nominal_realisasi'];
                                 }
@@ -460,7 +504,8 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($net_approved
                             }
                         }
                         $it_approved = max(0, $it_bkk - $it_bkm);
-                        $it_sisa     = max(0, $it_alokasi - $it_approved);
+                        $it_sisa     = $it_alokasi - $it_approved;
+                        $it_over     = $it_alokasi > 0 && $it_approved > $it_alokasi;
                         
                         $meta_parts = [];
                         if ($it['qty'])          $meta_parts[] = $it['qty'] . ' ' . $it['satuan'];
@@ -468,7 +513,7 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($net_approved
                         if ($it['jumlah_minggu'])$meta_parts[] = $it['jumlah_minggu'] . ' minggu';
                         if ($it['harga_satuan']) $meta_parts[] = 'Rp ' . number_format($it['harga_satuan'], 0, ',', '.') . ' / satuan';
                     ?>
-                    <div class="item-card">
+                    <div class="item-card <?= $it_over ? 'border-danger' : '' ?>" style="<?= $it_over ? 'border-left: 4px solid #dc2626 !important;' : '' ?>">
                         <!-- Head item -->
                         <div class="item-head">
                             <div style="flex:1;">
@@ -476,16 +521,21 @@ $budget_progress_pct = $total_alokasi_budget > 0 ? min(100, round(($net_approved
                                 <div class="item-meta mt-1"><?= implode(' &nbsp;·&nbsp; ', $meta_parts) ?></div>
                                 <div class="mt-2 d-flex flex-wrap align-items-center" style="gap:14px; font-size:12.5px;">
                                     <span>Alokasi: <strong style="color:#1e3a8a;">Rp <?= number_format($it_alokasi, 0, ',', '.') ?></strong></span>
-                                    <span>Terealisasi: <strong style="color:#047857;">Rp <?= number_format($it_approved, 0, ',', '.') ?></strong></span>
+                                    <span>Terealisasi: <strong style="color:<?= $it_over ? '#dc2626' : '#047857' ?>;">Rp <?= number_format($it_approved, 0, ',', '.') ?></strong></span>
                                     <?php if ($it_pending > 0): ?>
                                     <span>Menunggu: <strong style="color:#b45309;">Rp <?= number_format($it_pending, 0, ',', '.') ?></strong></span>
                                     <?php endif; ?>
-                                    <span>Sisa: <strong style="color:<?= $it_sisa > 0 ? '#0284c7' : '#64748b' ?>;">Rp <?= number_format($it_sisa, 0, ',', '.') ?></strong></span>
+                                    <span><?= $it_over ? 'Kelebihan' : 'Sisa' ?>: <strong style="color:<?= $it_over ? '#dc2626' : ($it_sisa > 0 ? '#0284c7' : '#64748b') ?>;">Rp <?= number_format(abs($it_sisa), 0, ',', '.') ?></strong></span>
+                                    <?php if ($it_over): ?>
+                                        <span class="badge badge-danger"><i class="fas fa-triangle-exclamation mr-1"></i>Over Budget</span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <div class="text-right" style="min-width:140px;">
                                 <div>
-                                    <?php if ($it_approved >= $it_alokasi && $it_alokasi > 0): ?>
+                                    <?php if ($it_over): ?>
+                                        <span class="real-badge" style="background:#fee2e2; color:#dc2626;"><i class="fas fa-triangle-exclamation"></i> Melebihi Alokasi</span>
+                                    <?php elseif ($it_approved >= $it_alokasi && $it_alokasi > 0): ?>
                                         <span class="real-badge rb-ok"><i class="fas fa-check-double"></i> Selesai Direalisasikan</span>
                                     <?php elseif ($it_pending > 0): ?>
                                         <span class="real-badge rb-wait"><i class="fas fa-clock"></i> Ada Menunggu Approval</span>
