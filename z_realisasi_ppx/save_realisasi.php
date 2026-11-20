@@ -2,8 +2,10 @@
 require_once __DIR__ . '/../dist/config/config.php';
 require_once __DIR__ . '/../dist/config/auth_helper.php';
 require_once __DIR__ . '/../dist/config/ppx_helper.php';
+require_once __DIR__ . '/../dist/config/acc_helper.php';
 
 init_ppx_fase2_db($conn);
+init_acc_fase3_db($conn);
 
 $auth = new AuthHelper($conn);
 if (!$auth->isLoggedIn()) {
@@ -409,7 +411,17 @@ try {
             if (!mysqli_query($conn, $sql_ins)) {
                 throw new Exception("Gagal menyimpan rincian transaksi: " . mysqli_error($conn));
             }
+            $inserted_id = mysqli_insert_id($conn);
             $inserted_count++;
+
+            // Auto-Journaling Fase 3 jika transaksi auto-approved
+            if ($is_auto_approved && $inserted_id > 0) {
+                if ($jenis_transaksi === 'BKM') {
+                    acc_post_bkm_journal($conn, $inserted_id);
+                } else {
+                    acc_post_bkk_journal($conn, $inserted_id);
+                }
+            }
         }
 
         if ($inserted_count === 0) {

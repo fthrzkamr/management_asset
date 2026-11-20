@@ -268,6 +268,7 @@ $PERMISSION_MODULES = [
         'group' => 'Lainnya',
         'actions' => ['read'],
     ],
+    // === DATA MASTER ===
     'master_data' => [
         'label' => 'Dashboard Data Master',
         'icon'  => 'fas fa-database',
@@ -277,8 +278,26 @@ $PERMISSION_MODULES = [
     'master_akun' => [
         'label' => 'Master Akun (COA)',
         'icon'  => 'fas fa-file-invoice-dollar',
-        'group' => 'Data Master',
+        'group' => 'Akuntansi',
         'actions' => ['create', 'read', 'update', 'delete'],
+    ],
+    'acc_mutasi_bank' => [
+        'label' => 'Mutasi Kas & Bank',
+        'icon'  => 'fas fa-university',
+        'group' => 'Akuntansi',
+        'actions' => ['create', 'read', 'update', 'delete'],
+    ],
+    'acc_cash_opname' => [
+        'label' => 'Cash Opname Mingguan',
+        'icon'  => 'fas fa-coins',
+        'group' => 'Akuntansi',
+        'actions' => ['create', 'read', 'update', 'delete', 'approve'],
+    ],
+    'acc_jurnal' => [
+        'label' => 'Jurnal & Buku Besar',
+        'icon'  => 'fas fa-book-open',
+        'group' => 'Akuntansi',
+        'actions' => ['create', 'read', 'delete'],
     ],
     'master_vendor' => [
         'label' => 'Master Vendor',

@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/../dist/config/config.php';
 require_once __DIR__ . '/../dist/config/auth_helper.php';
+require_once __DIR__ . '/../dist/config/acc_helper.php';
+
+init_acc_fase3_db($conn);
 
 $auth = new AuthHelper($conn);
 if (!$auth->isLoggedIn()) {
@@ -191,6 +194,13 @@ try {
                         WHERE id_budget = $b_id AND id_category = $id_cat");
                 }
             }
+
+            // Auto-Journaling Fase 3 jika Disetujui
+            if (($rd['jenis_transaksi'] ?? 'BKK') === 'BKM') {
+                acc_post_bkm_journal($conn, $id_real_detail);
+            } else {
+                acc_post_bkk_journal($conn, $id_real_detail);
+            }
         }
 
         // Sync ppx_realisasi_monthly header
@@ -247,6 +257,13 @@ try {
                                 remaining = GREATEST(0, remaining - $nominal)
                             WHERE id_budget = $id_budget AND id_category = $id_cat");
                     }
+                }
+
+                // Auto-Journaling Fase 3 jika Disetujui
+                if ($is_bkm) {
+                    acc_post_bkm_journal($conn, $rd_id);
+                } else {
+                    acc_post_bkk_journal($conn, $rd_id);
                 }
             }
             $cnt++;

@@ -557,6 +557,38 @@ function is_active($patterns) {
                     </li>
                 <?php endif; ?>
 
+                <!-- AKUNTANSI & KAS (FASE 3: COA, Mutasi Bank, Cash Opname, Jurnal) -->
+                <?php
+                $acc_patterns = ['z_acc_coa', 'z_acc_mutasi_bank', 'z_acc_cash_opname', 'z_acc_jurnal'];
+                $isAccActive = is_active($acc_patterns);
+                $hasAccMenu = $auth->hasPermission('realisasi_ppx', 'read') || 
+                              $auth->hasPermission('master_budget', 'read') || 
+                              $auth->hasPermission('master_akun', 'read') || 
+                              $auth->isSuperAdmin();
+                if ($hasAccMenu): ?>
+                    <li class="submenu <?= $isAccActive ? 'active' : '' ?>">
+                        <a href="javascript:void(0);" class="<?= $isAccActive ? 'subdrop' : '' ?>">
+                            <i class="fa-solid fa-calculator"></i>
+                            <span>Akuntansi & Kas</span>
+                            <span class="menu-arrow"></span>
+                        </a>
+                        <ul style="display: <?= $isAccActive ? 'block' : 'none' ?>;">
+                            <li class="<?= is_active('z_acc_coa') ? 'active' : '' ?>">
+                                <a href="<?= BASE_URL ?>/z_acc_coa/index.php">Master COA</a>
+                            </li>
+                            <li class="<?= is_active('z_acc_mutasi_bank') ? 'active' : '' ?>">
+                                <a href="<?= BASE_URL ?>/z_acc_mutasi_bank/index.php">Mutasi Bank</a>
+                            </li>
+                            <li class="<?= is_active('z_acc_cash_opname') ? 'active' : '' ?>">
+                                <a href="<?= BASE_URL ?>/z_acc_cash_opname/index.php">Cash Opname</a>
+                            </li>
+                            <li class="<?= is_active('z_acc_jurnal') ? 'active' : '' ?>">
+                                <a href="<?= BASE_URL ?>/z_acc_jurnal/index.php">Jurnal & Buku Besar</a>
+                            </li>
+                        </ul>
+                    </li>
+                <?php endif; ?>
+
                 <!-- PPX MANAGEMENT (grouped dropdown, setiap item dikontrol permission dari Administrator) -->
                 <?php
                 // Note: z_pengajuan_ppx is no longer in this pattern as it was moved to Pengajuan
@@ -856,7 +888,7 @@ function is_active($patterns) {
                                 <li class="<?= is_active('z_master_data') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_master_data/dashboard.php">Dashboard</a></li>
                             <?php endif; ?>
                             <?php if ($auth->hasPermission('master_akun', 'read')): ?>
-                                <li class="<?= is_active('z_master_akun') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_master_akun/dashboard.php">Master Akun</a></li>
+                                <li class="<?= is_active(['z_master_akun', 'z_acc_coa']) ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_acc_coa/index.php">Master Akun (COA)</a></li>
                             <?php endif; ?>
                             <?php if ($auth->hasPermission('master_vendor', 'read')): ?>
                                 <li class="<?= is_active('z_master_vendor') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_master_vendor/dashboard.php">Master Vendor</a></li>

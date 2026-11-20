@@ -52,19 +52,18 @@ Catatan implementasi:
 11. ✅ **Revamp UI Master Anggaran** (`z_master_budget/`) — pemilihan periode (Bulan & Tahun), opsi nominal saldo awal Ya/Tidak (dapat diisi bertahap via Top-Up dengan saldo awal Rp 0), dan auto-fill deskripsi.
 12. ✅ **Format & Struktur Nomor Transaksi BKK/BKM Baru** — format resmi `BKK/KODE-DD-MM/YYYY/MM/URUT` (contoh: `BKK/GOR-20-11/2026/11/0001`) dengan reset nomor urut 4 digit per bulan dan per cabang.
 
-## Fase 3 — Pondasi Accounting baru (besar, berurutan — direncanakan detail terpisah)
+## Fase 3 — Pondasi Accounting baru (besar, berurutan — direncanakan detail terpisah) — ✅ SELESAI (2026-11-20)
 
 Urutan wajib karena saling bergantung:
 
-13. 🆕 Master COA (akun akuntansi terpisah dari "Master Akun" yang ada sekarang, yang masih flat untuk kategori budget).
-14. 🆕 Mutasi Bank/Rekening (butuh Master COA).
-15. 🆕 Cash Opname (CO) mingguan — terhubung ke Mutasi Bank.
-16. 🆕 Jurnal — butuh Master COA + Mutasi Bank + CO sebagai sumber data.
+13. ✅ **Master COA (Chart of Accounts)** (`z_acc_coa/`) — tabel `acc_coa`, hierarki akun 4 level (Klasifikasi Utama, Sub-Klasifikasi, Header Buku Besar, Akun Detail Transaksi), saldo normal otomatis (Debit/Kredit), bridge otomatis dari `master_akun` (224 akun), filter kategori & pencarian interaktif, modal tambah/edit dan validasi proteksi hapus jika akun sudah memiliki jurnal.
+14. ✅ **Mutasi Bank / Rekening** (`z_acc_mutasi_bank/`) — tabel `acc_master_rekening` & `acc_mutasi_bank`, pencatatan mutasi kas/bank masuk & keluar, running balance real-time, upload bukti transfer, nomor urut mutasi unik per bank, dan posting otomatis ke Jurnal Umum double-entry.
+15. ✅ **Cash Opname (CO) Mingguan** (`z_acc_cash_opname/`) — tabel `acc_cash_opname`, kalkulator lembar/keping pecahan fisik uang brankas (kertas 100k s/d koin 100), kalkulasi selisih real-time vs saldo buku kas sistem (Klop/Kurang/Lebih), unggah foto bukti fisik, approval pemeriksaan, cetak resmi Berita Acara Cash Opname (`cetak_opname.php`), serta auto-jurnal penyesuaian selisih kas.
+16. ✅ **Jurnal Umum & Jurnal Otomatis** (`z_acc_jurnal/`) — tabel `acc_jurnal_header` & `acc_jurnal_detail`, pencatatan jurnal umum manual multi-baris dinamis dengan validasi keseimbangan (Debit == Kredit), auto-journaling otomatis untuk realisasi kas (BKK/BKM), mutasi bank, dan selisih cash opname, serta modul **Buku Besar (General Ledger)** per akun COA dengan perhitungan saldo awal dan mutasi berjalan.
 
 ---
 
-## Urutan eksekusi yang disarankan
-
-Fase 1 → Fase 2 → (rancang detail dulu) → Fase 3.
-
-Fase 3 sengaja dipisah paling akhir karena ini modul akuntansi baru yang besar dan setiap bagiannya saling bergantung — sebaiknya didesain lebih detail (skema tabel, relasi ke modul existing) sebelum mulai coding, idealnya di sesi perencanaan terpisah.
+## Status Pengembangan Keseluruhan
+- ✅ **Fase 1 (Quick Wins)**: Selesai (2026-11-20)
+- ✅ **Fase 2 (Pengembangan Menengah Realisasi PPX & Anggaran)**: Selesai (2026-11-20)
+- ✅ **Fase 3 (Pondasi Accounting Baru & Engine Pembukuan)**: Selesai (2026-11-20)
