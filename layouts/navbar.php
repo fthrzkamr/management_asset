@@ -475,6 +475,35 @@ function is_active($patterns) {
         .table-responsive::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
+
+        /* ═════════════════════════════════════════════════════════════════════
+           PERBAIKAN KONTRAS WARNA PRIMARY & MODAL HEADER (MENCEGAH TEKS PUTIH PADA PALE YELLOW)
+           ═════════════════════════════════════════════════════════════════════ */
+        .bg-primary {
+            background-color: #18aefa !important;
+            color: #ffffff !important;
+        }
+        .modal-header.bg-primary {
+            background-color: #18aefa !important;
+            color: #ffffff !important;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+        .modal-header.bg-primary .modal-title,
+        .modal-header.bg-primary h5,
+        .modal-header.bg-primary i,
+        .modal-header.bg-primary .close {
+            color: #ffffff !important;
+            opacity: 1 !important;
+            text-shadow: none !important;
+        }
+        .badge-primary, .pro-bg-primary {
+            background-color: #18aefa !important;
+            color: #ffffff !important;
+        }
+        .modal-header.bg-warning.text-white {
+            background-color: #d97706 !important;
+            color: #ffffff !important;
+        }
     </style>
 </head>
 

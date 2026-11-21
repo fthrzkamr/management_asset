@@ -343,10 +343,11 @@ table.table td h2 span {
 	border-radius: 50px;
 }
 .bg-primary {
-	background-color: #fff5d9 !important;
+	background-color: #18aefa !important;
 }
 .pro-bg-primary, .badge-primary {
-	background-color: #fdbb38 !important;
+	background-color: #18aefa !important;
+	color: #fff !important;
 }
 .bg-light {
     background-color: #ebebff!important;
@@ -356,6 +357,15 @@ a.bg-primary:hover,
 button.bg-primary:focus, 
 button.bg-primary:hover {
     background-color: #18aefa !important;
+}
+.modal-header.bg-primary {
+    background-color: #18aefa !important;
+    color: #ffffff !important;
+}
+.modal-header.bg-primary .modal-title,
+.modal-header.bg-primary .close {
+    color: #ffffff !important;
+    opacity: 1 !important;
 }
 .bg-success,
 .badge-success {

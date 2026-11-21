@@ -328,7 +328,7 @@ if ($parents_q) {
         <form action="action.php" method="POST" class="modal-content" style="border-radius:10px; overflow:hidden;">
             <input type="hidden" name="action" value="save">
             <input type="hidden" name="id_coa" id="coaId" value="0">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header bg-primary text-white" style="background: linear-gradient(135deg, #18aefa 0%, #0d8abc 100%) !important; color: #fff !important;">
                 <h5 class="modal-title font-weight-bold" id="modalCOATitle">
                     <i class="fas fa-plus-circle mr-1"></i> Tambah Akun COA Baru
                 </h5>

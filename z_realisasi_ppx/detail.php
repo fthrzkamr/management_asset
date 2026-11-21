@@ -914,7 +914,7 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
             <input type="hidden" name="action" value="upload_nota_susulan">
             <input type="hidden" name="id_budget" value="<?= $id_budget ?>">
             <input type="hidden" name="id_real_detail" id="ns_id">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header bg-primary text-white" style="background: linear-gradient(135deg, #18aefa 0%, #0d8abc 100%) !important; color: #fff !important;">
                 <h5 class="modal-title font-weight-bold"><i class="fas fa-paperclip mr-1"></i> Unggah Nota Susulan</h5>
                 <button type="button" class="close text-white" data-dismiss="modal">&times;</button>
             </div>

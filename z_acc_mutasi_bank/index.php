@@ -338,7 +338,7 @@ if ($coa_lawan_q) {
     <div class="modal-dialog modal-lg">
         <form action="action.php" method="POST" enctype="multipart/form-data" class="modal-content" style="border-radius:10px; overflow:hidden;">
             <input type="hidden" name="action" value="save_mutasi">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header bg-primary text-white" style="background: linear-gradient(135deg, #18aefa 0%, #0d8abc 100%) !important; color: #fff !important;">
                 <h5 class="modal-title font-weight-bold">
                     <i class="fas fa-money-check-alt mr-1"></i> Catat Transaksi Mutasi Kas & Bank
                 </h5>

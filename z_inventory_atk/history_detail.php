@@ -81,7 +81,7 @@ $r_history = mysqli_query($conn, $query_history);
 
                 <div class="row">
                     <div class="col-md-4">
-                        <div class="card bg-primary text-white shadow-sm">
+                        <div class="card bg-primary text-white shadow-sm" style="background: linear-gradient(135deg, #18aefa 0%, #028ee1 100%) !important;">
                             <div class="card-body">
                                 <h6 class="card-title text-white mb-1">Informasi Barang</h6>
                                 <h4><?= htmlspecialchars($barang['nama_barang']) ?></h4>
