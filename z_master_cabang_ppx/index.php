@@ -37,7 +37,7 @@ if ($q_ppx) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Master Cabang PPX – DFM Asset</title>
+    <title>Master Lokasi & Cabang Kas (Accounting) – DFM Asset</title>
     <link rel="icon" href="../assets/img/dua.png" type="image/png">
     <?php if ($layout_dir && file_exists($layout_dir . '/header_css.php')) include $layout_dir . '/header_css.php'; ?>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -73,16 +73,16 @@ if ($q_ppx) {
                 <div class="row align-items-center">
                     <div class="col">
                         <h3 class="page-title mb-1 font-weight-bold">
-                            <i class="fas fa-building text-primary mr-2"></i>Master Cabang PPX
+                            <i class="fas fa-map-marker-alt text-primary mr-2"></i>Master Lokasi & Cabang Kas
                         </h3>
                         <ul class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="../z_ppx_budget/dashboard.php">PPX Budget</a></li>
-                            <li class="breadcrumb-item active">Master Cabang PPX</li>
+                            <li class="breadcrumb-item"><a href="../z_acc_coa/index.php">Akuntansi & Keuangan</a></li>
+                            <li class="breadcrumb-item active">Master Lokasi & Cabang Kas</li>
                         </ul>
                     </div>
                     <div class="col-auto">
                         <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#modalAddCabang">
-                            <i class="fas fa-plus mr-1"></i> Tambah Cabang PPX
+                            <i class="fas fa-plus mr-1"></i> Tambah Lokasi / Cabang
                         </button>
                     </div>
                 </div>
@@ -101,9 +101,9 @@ if ($q_ppx) {
             <div class="alert alert-info d-flex align-items-center mb-4" style="border-left: 4px solid #0284c7; background: #f0f9ff;">
                 <i class="fas fa-info-circle fa-xl mr-3 text-info"></i>
                 <div style="font-size: 13px;">
-                    <strong>Tentang Master Cabang PPX:</strong><br>
-                    Master Cabang PPX digunakan khusus sebagai acuan kode cabang dan penomoran resmi Bukti Kas Keluar (BKK) dan Bukti Kas Masuk (BKM)
-                    dengan format baku: <code>BKK/KODE-DD-MM/YYYY/MM/URUT</code> (misal: <code>BKK/JKT-21-01/2027/01/0002</code>).
+                    <strong>Tentang Master Lokasi & Cabang Kas (Accounting & PPX):</strong><br>
+                    Master Lokasi & Cabang ini digunakan sebagai referensi kode lokasi kas untuk penomoran resmi Bukti Kas Keluar (BKK) dan Bukti Kas Masuk (BKM)
+                    dengan format baku: <code>BKK/KODE-DD-MM/YYYY/MM/URUT</code> (misal: <code>BKK/JKT-21-01/2027/01/0002</code>), serta pemetaan alokasi anggaran kas per cabang.
                 </div>
             </div>
 
@@ -175,17 +175,17 @@ if ($q_ppx) {
         <form action="action.php" method="POST" class="modal-content">
             <input type="hidden" name="action" value="create">
             <div class="modal-header">
-                <h5 class="modal-title font-weight-bold"><i class="fas fa-plus-circle text-primary mr-1"></i> Tambah Cabang PPX</h5>
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-plus-circle text-primary mr-1"></i> Tambah Lokasi / Cabang Kas</h5>
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label class="font-weight-bold">Kode Cabang (3-5 Huruf Singkatan) <span class="text-danger">*</span></label>
+                    <label class="font-weight-bold">Kode Lokasi / Cabang (3-5 Huruf Singkatan) <span class="text-danger">*</span></label>
                     <input type="text" name="kode_cabang" class="form-control text-uppercase font-weight-bold" maxlength="10" placeholder="Contoh: JKT, GOR, SBY" required>
                     <small class="text-muted">Digunakan sebagai kode penomoran BKK/BKM.</small>
                 </div>
                 <div class="form-group">
-                    <label class="font-weight-bold">Nama Cabang PPX <span class="text-danger">*</span></label>
+                    <label class="font-weight-bold">Nama Lokasi / Cabang Kas <span class="text-danger">*</span></label>
                     <input type="text" name="nama_cabang" class="form-control" placeholder="Contoh: Gorontalo" required>
                 </div>
                 <div class="form-group">
@@ -223,16 +223,16 @@ if ($q_ppx) {
             <input type="hidden" name="action" value="update">
             <input type="hidden" name="id_cabang_ppx" id="edit_id_cabang_ppx">
             <div class="modal-header">
-                <h5 class="modal-title font-weight-bold"><i class="fas fa-edit text-info mr-1"></i> Edit Cabang PPX</h5>
+                <h5 class="modal-title font-weight-bold"><i class="fas fa-edit text-info mr-1"></i> Edit Lokasi / Cabang Kas</h5>
                 <button type="button" class="close" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label class="font-weight-bold">Kode Cabang <span class="text-danger">*</span></label>
+                    <label class="font-weight-bold">Kode Lokasi / Cabang <span class="text-danger">*</span></label>
                     <input type="text" name="kode_cabang" id="edit_kode_cabang" class="form-control text-uppercase font-weight-bold" maxlength="10" required>
                 </div>
                 <div class="form-group">
-                    <label class="font-weight-bold">Nama Cabang PPX <span class="text-danger">*</span></label>
+                    <label class="font-weight-bold">Nama Lokasi / Cabang Kas <span class="text-danger">*</span></label>
                     <input type="text" name="nama_cabang" id="edit_nama_cabang" class="form-control" required>
                 </div>
                 <div class="form-group">

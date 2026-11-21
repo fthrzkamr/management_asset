@@ -922,12 +922,12 @@ function is_active($patterns) {
                                         <a href="<?= BASE_URL ?>/z_master_budget/dashboard.php">Master Anggaran</a>
                                     </li>
                                 <?php endif; ?>
-                                <?php if ($auth->hasPermission('ppx_budget', 'manage_category') || $auth->isSuperAdmin()): ?>
+                                <?php if ($auth->hasPermission('ppx_budget', 'manage_category') || $auth->isSuperAdmin() || $auth->hasPermission('master_budget', 'read') || $auth->hasPermission('realisasi_ppx', 'read')): ?>
                                     <li class="<?= is_active('z_ppx_budget/category_manage.php') ? 'active' : '' ?>">
                                         <a href="<?= BASE_URL ?>/z_ppx_budget/category_manage.php">Kategori Budget</a>
                                     </li>
                                     <li class="<?= is_active('z_master_cabang_ppx') ? 'active' : '' ?>">
-                                        <a href="<?= BASE_URL ?>/z_master_cabang_ppx/index.php">Master Cabang PPX</a>
+                                        <a href="<?= BASE_URL ?>/z_master_cabang_ppx/index.php">Master Lokasi & Cabang PPX</a>
                                     </li>
                                 <?php endif; ?>
                                 <?php if ($auth->hasPermission('ppx_routing', 'read')): ?>
@@ -981,7 +981,7 @@ function is_active($patterns) {
                 <!-- 3. KELOMPOK: AKUNTANSI & KEUANGAN (ACCOUNTING ENGINE)      -->
                 <!-- ═══════════════════════════════════════════════════════════ -->
                 <?php
-                $acc_patterns = ['z_acc_coa', 'z_acc_mutasi_bank', 'z_acc_cash_opname', 'z_acc_jurnal'];
+                $acc_patterns = ['z_acc_coa', 'z_master_cabang_ppx', 'z_acc_mutasi_bank', 'z_acc_cash_opname', 'z_acc_jurnal'];
                 $isAccActive = is_active($acc_patterns);
                 $hasAccMenu = $auth->hasPermission('realisasi_ppx', 'read') || 
                               $auth->hasPermission('master_budget', 'read') || 
@@ -998,6 +998,9 @@ function is_active($patterns) {
                         <ul style="display: <?= $isAccActive ? 'block' : 'none' ?>;">
                             <li class="<?= is_active('z_acc_coa') ? 'active' : '' ?>">
                                 <a href="<?= BASE_URL ?>/z_acc_coa/index.php">Master COA (Bagan Akun)</a>
+                            </li>
+                            <li class="<?= is_active('z_master_cabang_ppx') ? 'active' : '' ?>">
+                                <a href="<?= BASE_URL ?>/z_master_cabang_ppx/index.php">Master Lokasi & Cabang Kas</a>
                             </li>
                             <li class="<?= is_active('z_acc_mutasi_bank') ? 'active' : '' ?>">
                                 <a href="<?= BASE_URL ?>/z_acc_mutasi_bank/index.php">Mutasi Bank & Rekening</a>
