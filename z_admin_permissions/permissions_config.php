@@ -6,346 +6,368 @@
  */
 
 $PERMISSION_MODULES = [
-    // === PENGAJUAN ===
+    // ═══════════════════════════════════════════════════════════
+    // 1. ASET & GENERAL AFFAIRS (GA)
+    // ═══════════════════════════════════════════════════════════
+    'analytics' => [
+        'label' => 'Dashboard Aset (Analytics)',
+        'icon'  => 'fas fa-chart-pie',
+        'group' => 'Aset & General Affairs',
+        'actions' => ['read'],
+    ],
     'pengajuan_asset' => [
         'label' => 'Pengajuan Aset (Pengaju)',
         'hint'  => 'Akses Pengaju/Staf (Buat, lihat, & edit pengajuan milik sendiri)',
         'icon'  => 'fas fa-clipboard-list',
-        'group' => 'Pengajuan',
+        'group' => 'Aset & General Affairs',
         'actions' => ['create', 'read', 'update', 'delete', 'approve'],
     ],
     'approval_asset_it' => [
         'label' => 'Approval Aset IT (Verifikator IT)',
         'hint'  => 'Akses Verifikator IT (Setujui & tolak pengajuan aset IT)',
         'icon'  => 'fas fa-laptop-code',
-        'group' => 'Pengajuan',
+        'group' => 'Aset & General Affairs',
         'actions' => ['read', 'approve'],
     ],
     'approval_asset_ga' => [
         'label' => 'Approval Aset GA (Verifikator GA)',
         'hint'  => 'Akses Verifikator GA (Setujui & tolak pengajuan aset GA)',
         'icon'  => 'fas fa-building',
-        'group' => 'Pengajuan',
+        'group' => 'Aset & General Affairs',
         'actions' => ['read', 'approve'],
     ],
     'pengajuan_renovasi' => [
         'label' => 'Pengajuan Renovasi',
         'icon'  => 'fa-solid fa-house-circle-exclamation',
-        'group' => 'Pengajuan',
+        'group' => 'Aset & General Affairs',
         'actions' => ['create', 'read', 'update', 'delete', 'approve'],
     ],
     'pengajuan_service' => [
         'label' => 'Service Aset',
         'icon'  => 'fa-solid fa-screwdriver-wrench',
-        'group' => 'Pengajuan',
+        'group' => 'Aset & General Affairs',
         'actions' => ['create', 'read', 'update', 'delete', 'approve'],
     ],
     'approval_peminjaman' => [
         'label' => 'Approval Peminjaman Aset',
         'icon'  => 'fas fa-hand-holding',
-        'group' => 'Pengajuan',
+        'group' => 'Aset & General Affairs',
         'actions' => ['read', 'approve'],
     ],
-    // === MANAJEMEN ASET ===
     'management_asset' => [
         'label' => 'Manajemen Aset (IT)',
         'icon'  => 'fas fa-desktop',
-        'group' => 'Manajemen Aset',
+        'group' => 'Aset & General Affairs',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
     'management_asset_ga' => [
         'label' => 'Manajemen Aset (GA)',
         'icon'  => 'fas fa-boxes',
-        'group' => 'Manajemen Aset',
+        'group' => 'Aset & General Affairs',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
-    // === PPX ===
+    'monitoring_ga' => [
+        'label' => 'Monitoring Pekerjaan GA',
+        'icon'  => 'fas fa-tasks',
+        'group' => 'Aset & General Affairs',
+        'actions' => ['create', 'read', 'update', 'delete'],
+    ],
+
+    // ═══════════════════════════════════════════════════════════
+    // 2. PPX & REALISASI KAS
+    // ═══════════════════════════════════════════════════════════
     'ppx' => [
         'label' => 'Pengajuan PPX',
         'icon'  => 'fa-solid fa-money-bill-1-wave',
-        'group' => 'PPX',
+        'group' => 'PPX & Realisasi Kas',
         'actions' => ['create', 'read', 'update', 'delete', 'approve', 'process'],
     ],
     'realisasi_ppx' => [
-        'label' => 'Realisasi Anggaran (User)',
+        'label' => 'Realisasi Kas BKK/BKM (User)',
         'icon'  => 'fa-solid fa-check-double',
-        'group' => 'Realisasi Anggaran',
+        'group' => 'PPX & Realisasi Kas',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
     'approval_realisasi_asmen' => [
-        'label' => 'Approval Realisasi Anggaran (Asmen)',
+        'label' => 'Approval Realisasi Kas (Asmen)',
         'icon'  => 'fa-solid fa-stamp',
-        'group' => 'Realisasi Anggaran',
+        'group' => 'PPX & Realisasi Kas',
         'actions' => ['read', 'approve'],
+    ],
+    'ppx_routing' => [
+        'label' => 'Routing Approval PPX',
+        'icon'  => 'fas fa-route',
+        'group' => 'PPX & Realisasi Kas',
+        'actions' => ['create', 'read', 'update', 'delete'],
     ],
     'report_ppx' => [
         'label' => 'Laporan Anggaran Bulanan',
         'icon'  => 'fa-solid fa-file-export',
-        'group' => 'Laporan',
+        'group' => 'PPX & Realisasi Kas',
         'actions' => ['read'],
     ],
     'report_ppx_all' => [
         'label' => 'Laporan PPX (Regular & Monthly)',
         'icon'  => 'fa-solid fa-file-invoice-dollar',
-        'group' => 'Laporan',
+        'group' => 'PPX & Realisasi Kas',
         'actions' => ['read', 'export'],
     ],
+
+    // ═══════════════════════════════════════════════════════════
+    // 3. APPROVAL PPX
+    // ═══════════════════════════════════════════════════════════
     'approval_ppx_leader' => [
         'label' => 'Approval PPX (Leader)',
         'icon'  => 'fas fa-check-circle',
-        'group' => 'PPX Approval',
+        'group' => 'Approval PPX',
         'actions' => ['approve'],
     ],
     'approval_ppx_kacab' => [
         'label' => 'Approval PPX (Kepala Cabang)',
         'icon'  => 'fas fa-user-tie',
-        'group' => 'PPX Approval',
+        'group' => 'Approval PPX',
         'actions' => ['approve'],
     ],
     'approval_ppx_manager' => [
         'label' => 'Approval PPX (Manager Finance)',
         'icon'  => 'fas fa-user-cog',
-        'group' => 'PPX Approval',
+        'group' => 'Approval PPX',
         'actions' => ['approve'],
     ],
     'approval_ppx_hr' => [
         'label' => 'Approval PPX (HR)',
         'icon'  => 'fas fa-user-check',
-        'group' => 'PPX Approval',
+        'group' => 'Approval PPX',
         'actions' => ['approve'],
     ],
     'approval_ppx_ga' => [
         'label' => 'Approval PPX (GA)',
         'icon'  => 'fas fa-warehouse',
-        'group' => 'PPX Approval',
+        'group' => 'Approval PPX',
         'actions' => ['approve', 'process'],
     ],
     'approval_ppx_finance' => [
         'label' => 'Approval PPX (Finance AP)',
         'icon'  => 'fas fa-money-check-alt',
-        'group' => 'PPX Approval',
+        'group' => 'Approval PPX',
         'actions' => ['approve', 'process'],
     ],
     'approval_ppx_operasional' => [
         'label' => 'Approval PPX (Operasional)',
         'icon'  => 'fas fa-tasks',
-        'group' => 'PPX Approval',
+        'group' => 'Approval PPX',
         'actions' => ['approve'],
     ],
     'approval_ppx_direktur' => [
         'label' => 'Approval PPX (Direktur)',
         'icon'  => 'fas fa-signature',
-        'group' => 'PPX Approval',
+        'group' => 'Approval PPX',
         'actions' => ['approve'],
     ],
     'approval_ppx_asmen' => [
         'label'   => 'Approval PPX (Asmen Finance)',
         'icon'    => 'fas fa-user-tie',
-        'group'   => 'PPX Approval',
+        'group'   => 'Approval PPX',
         'actions' => ['approve'],
     ],
-    // === ANGGARAN ===
+
+    // ═══════════════════════════════════════════════════════════
+    // 4. ANGGARAN & ROUTING
+    // ═══════════════════════════════════════════════════════════
     'ppx_budget' => [
-        'label' => 'Anggaran Bulanan PPX',
+        'label' => 'Anggaran Bulanan (Monthly Budget)',
         'icon'  => 'fas fa-wallet',
-        'group' => 'Anggaran',
+        'group' => 'Anggaran & Routing',
         'actions' => ['create', 'read', 'update', 'delete', 'approve', 'manage_category'],
     ],
     'budget_besar' => [
-        'label' => 'Anggaran Bulanan Besar',
+        'label' => 'Anggaran Bulanan Besar (Non Budget)',
         'icon'  => 'fas fa-money-bill-wave',
-        'group' => 'Anggaran',
+        'group' => 'Anggaran & Routing',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
     'master_budget' => [
         'label' => 'Master Anggaran',
         'icon'  => 'fas fa-coins',
-        'group' => 'Anggaran',
+        'group' => 'Anggaran & Routing',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
+    'budget_routing' => [
+        'label' => 'Routing Approval Anggaran',
+        'icon'  => 'fas fa-route',
+        'group' => 'Anggaran & Routing',
+        'actions' => ['create', 'read', 'update', 'delete'],
+    ],
+
+    // ═══════════════════════════════════════════════════════════
+    // 5. APPROVAL ANGGARAN
+    // ═══════════════════════════════════════════════════════════
     'approval_budget_kacab' => [
         'label' => 'Approval Anggaran (Kacab)',
         'icon'  => 'fas fa-user-tie',
-        'group' => 'Anggaran Approval',
+        'group' => 'Approval Anggaran',
         'actions' => ['read', 'approve'],
     ],
     'approval_budget_asmen' => [
         'label' => 'Approval Anggaran (Asmen Finance)',
         'icon'  => 'fas fa-user-check',
-        'group' => 'Anggaran Approval',
+        'group' => 'Approval Anggaran',
         'actions' => ['read', 'approve'],
     ],
     'approval_budget_manager' => [
         'label' => 'Approval Anggaran (Manager Finance)',
         'icon'  => 'fas fa-user-cog',
-        'group' => 'Anggaran Approval',
+        'group' => 'Approval Anggaran',
         'actions' => ['read', 'approve'],
     ],
     'approval_budget_manajer_ops' => [
         'label' => 'Approval Anggaran (Manajer Ops)',
         'icon'  => 'fas fa-user-shield',
-        'group' => 'Anggaran Approval',
+        'group' => 'Approval Anggaran',
         'actions' => ['read', 'approve'],
     ],
     'approval_budget_finance' => [
         'label' => 'Approval Anggaran (Finance)',
         'icon'  => 'fas fa-coins',
-        'group' => 'Anggaran Approval',
+        'group' => 'Approval Anggaran',
         'actions' => ['read', 'approve', 'process'],
     ],
-    'budget_routing' => [
-        'label' => 'Routing Approval Anggaran',
-        'icon'  => 'fas fa-route',
-        'group' => 'Anggaran',
-        'actions' => ['create', 'read', 'update', 'delete'],
-    ],
-    'ppx_routing' => [
-        'label' => 'Routing Approval PPX',
-        'icon'  => 'fas fa-route',
-        'group' => 'PPX',
-        'actions' => ['create', 'read', 'update', 'delete'],
-    ],
-    // === LAINNYA ===
-    // === INVENTORY ATK ===
-    'inventory_atk_master' => [
-        'label' => 'Master Inventory (Barang)',
-        'icon'  => 'fas fa-boxes',
-        'group' => 'Inventory ATK',
-        'actions' => ['create', 'read', 'update', 'delete'],
-    ],
-    'inventory_atk_stok' => [
-        'label' => 'Stok Gudang ATK',
-        'icon'  => 'fas fa-warehouse',
-        'group' => 'Inventory ATK',
-        'actions' => ['read', 'update'],
-    ],
-    'inventory_atk_po' => [
-        'label' => 'Pengajuan PO ATK',
-        'icon'  => 'fas fa-shopping-cart',
-        'group' => 'Inventory ATK',
-        'actions' => ['create', 'read', 'update', 'delete', 'approve'],
-    ],
-    'inventory_atk_penerimaan' => [
-        'label' => 'Penerimaan Barang ATK',
-        'icon'  => 'fas fa-download',
-        'group' => 'Inventory ATK',
-        'actions' => ['create', 'read', 'process'],
-    ],
-    'inventory_atk_pengambilan' => [
-        'label' => 'Pengambilan ATK (User)',
-        'icon'  => 'fas fa-hand-holding',
-        'group' => 'Inventory ATK',
-        'actions' => ['create', 'read', 'approve', 'reject', 'process'],
-    ],
-    // === PT BST ===
-    'pt_bst_inventory' => [
-        'label' => 'Inventory PT BST',
-        'icon'  => 'fas fa-boxes',
-        'group' => 'Modul PT BST',
-        'actions' => ['create', 'read', 'update', 'delete'],
-    ],
-    'pt_bst_po_masuk' => [
-        'label' => 'PO Masuk (BST)',
-        'icon'  => 'fas fa-file-import',
-        'group' => 'Modul PT BST',
-        'actions' => ['read', 'process'],
-    ],
-    'pt_bst_po_pembelian' => [
-        'label' => 'PO Pembelian (BST)',
-        'icon'  => 'fas fa-shopping-bag',
-        'group' => 'Modul PT BST',
-        'actions' => ['create', 'read', 'update', 'delete', 'process'],
-    ],
-    'pt_bst_asset' => [
-        'label' => 'Manajemen Aset (BST)',
-        'icon'  => 'fas fa-laptop-medical',
-        'group' => 'Modul PT BST',
-        'actions' => ['create', 'read', 'update', 'delete'],
-    ],
-    'analytics' => [
-        'label' => 'Dashboard Aset',
-        'icon'  => 'fas fa-chart-pie',
-        'group' => 'Lainnya',
-        'actions' => ['read'],
-    ],
-    // === DATA MASTER ===
-    'master_data' => [
-        'label' => 'Dashboard Data Master',
-        'icon'  => 'fas fa-database',
-        'group' => 'Data Master',
-        'actions' => ['read'],
-    ],
+
+    // ═══════════════════════════════════════════════════════════
+    // 6. AKUNTANSI & KEUANGAN
+    // ═══════════════════════════════════════════════════════════
     'master_akun' => [
         'label' => 'Master Akun (COA)',
         'icon'  => 'fas fa-file-invoice-dollar',
-        'group' => 'Akuntansi',
+        'group' => 'Akuntansi & Keuangan',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
     'acc_mutasi_bank' => [
         'label' => 'Mutasi Kas & Bank',
         'icon'  => 'fas fa-university',
-        'group' => 'Akuntansi',
+        'group' => 'Akuntansi & Keuangan',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
     'acc_cash_opname' => [
         'label' => 'Cash Opname Mingguan',
         'icon'  => 'fas fa-coins',
-        'group' => 'Akuntansi',
+        'group' => 'Akuntansi & Keuangan',
         'actions' => ['create', 'read', 'update', 'delete', 'approve'],
     ],
     'acc_jurnal' => [
         'label' => 'Jurnal & Buku Besar',
         'icon'  => 'fas fa-book-open',
-        'group' => 'Akuntansi',
+        'group' => 'Akuntansi & Keuangan',
         'actions' => ['create', 'read', 'delete'],
+    ],
+
+    // ═══════════════════════════════════════════════════════════
+    // 7. LOGISTIK & OPERASIONAL
+    // ═══════════════════════════════════════════════════════════
+    'inventory_atk_master' => [
+        'label' => 'Master Inventory (Barang)',
+        'icon'  => 'fas fa-boxes',
+        'group' => 'Logistik & Operasional',
+        'actions' => ['create', 'read', 'update', 'delete'],
+    ],
+    'inventory_atk_stok' => [
+        'label' => 'Stok Gudang ATK',
+        'icon'  => 'fas fa-warehouse',
+        'group' => 'Logistik & Operasional',
+        'actions' => ['read', 'update'],
+    ],
+    'inventory_atk_po' => [
+        'label' => 'Pengajuan PO ATK',
+        'icon'  => 'fas fa-shopping-cart',
+        'group' => 'Logistik & Operasional',
+        'actions' => ['create', 'read', 'update', 'delete', 'approve'],
+    ],
+    'inventory_atk_penerimaan' => [
+        'label' => 'Penerimaan Barang ATK',
+        'icon'  => 'fas fa-download',
+        'group' => 'Logistik & Operasional',
+        'actions' => ['create', 'read', 'process'],
+    ],
+    'inventory_atk_pengambilan' => [
+        'label' => 'Pengambilan ATK (User)',
+        'icon'  => 'fas fa-hand-holding',
+        'group' => 'Logistik & Operasional',
+        'actions' => ['create', 'read', 'approve', 'reject', 'process'],
+    ],
+    'pt_bst_inventory' => [
+        'label' => 'Inventory PT BST',
+        'icon'  => 'fas fa-boxes',
+        'group' => 'Logistik & Operasional',
+        'actions' => ['create', 'read', 'update', 'delete'],
+    ],
+    'pt_bst_po_masuk' => [
+        'label' => 'PO Masuk (BST)',
+        'icon'  => 'fas fa-file-import',
+        'group' => 'Logistik & Operasional',
+        'actions' => ['read', 'process'],
+    ],
+    'pt_bst_po_pembelian' => [
+        'label' => 'PO Pembelian (BST)',
+        'icon'  => 'fas fa-shopping-bag',
+        'group' => 'Logistik & Operasional',
+        'actions' => ['create', 'read', 'update', 'delete', 'process'],
+    ],
+    'pt_bst_asset' => [
+        'label' => 'Manajemen Aset (BST)',
+        'icon'  => 'fas fa-laptop-medical',
+        'group' => 'Logistik & Operasional',
+        'actions' => ['create', 'read', 'update', 'delete'],
+    ],
+
+    // ═══════════════════════════════════════════════════════════
+    // 8. PENGATURAN SISTEM & MASTER DATA
+    // ═══════════════════════════════════════════════════════════
+    'master_data' => [
+        'label' => 'Dashboard Data Master',
+        'icon'  => 'fas fa-database',
+        'group' => 'Pengaturan Sistem & Master Data',
+        'actions' => ['read'],
     ],
     'master_vendor' => [
         'label' => 'Master Vendor',
         'icon'  => 'fas fa-handshake',
-        'group' => 'Data Master',
+        'group' => 'Pengaturan Sistem & Master Data',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
     'master_cabang' => [
         'label' => 'Master Cabang',
         'icon'  => 'fas fa-map-marker-alt',
-        'group' => 'Data Master',
+        'group' => 'Pengaturan Sistem & Master Data',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
     'master_divisi' => [
         'label' => 'Master Divisi',
         'icon'  => 'fas fa-building',
-        'group' => 'Data Master',
+        'group' => 'Pengaturan Sistem & Master Data',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
     'master_departemen' => [
         'label' => 'Master Departemen',
         'icon'  => 'fas fa-briefcase',
-        'group' => 'Data Master',
+        'group' => 'Pengaturan Sistem & Master Data',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
     'master_kategori_asset' => [
         'label' => 'Master Kategori Asset',
         'icon'  => 'fas fa-tags',
-        'group' => 'Data Master',
+        'group' => 'Pengaturan Sistem & Master Data',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
     'master_lokasi_asset' => [
         'label' => 'Master Lokasi Asset',
         'icon'  => 'fas fa-map-signs',
-        'group' => 'Data Master',
+        'group' => 'Pengaturan Sistem & Master Data',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
     'user_management' => [
         'label' => 'Manajemen Pengguna',
         'icon'  => 'fas fa-users',
-        'group' => 'Lainnya',
-        'actions' => ['create', 'read', 'update', 'delete'],
-    ],
-    // === MONITORING GA ===
-    'monitoring_ga' => [
-        'label' => 'Monitoring Pekerjaan GA',
-        'icon'  => 'fas fa-tasks',
-        'group' => 'Monitoring GA',
+        'group' => 'Pengaturan Sistem & Master Data',
         'actions' => ['create', 'read', 'update', 'delete'],
     ],
 ];

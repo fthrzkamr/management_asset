@@ -1016,7 +1016,7 @@ function is_active($patterns) {
                                 <span>Inventory ATK</span> 
                                 <?php if ($totalATKBadge > 0): ?>
                                     <span class="nav-parent-badge">!</span>
-                                <?php endif; ?>
+<!--  -->                                <?php endif; ?>
                                 <span class="menu-arrow"></span>
                             </a>
                             <ul style="display: <?= $isInventoryActive ? 'block' : 'none' ?>;">
@@ -1069,10 +1069,10 @@ function is_active($patterns) {
 
 
                 <!-- ═══════════════════════════════════════════════════════════ -->
-                <!-- 5. KELOMPOK: PENGATURAN SISTEM & DATA MASTER               -->
+                <!-- 6. KELOMPOK: PENGATURAN SISTEM & ADMINISTRATOR             -->
                 <!-- ═══════════════════════════════════════════════════════════ -->
                 <?php 
-                $hasMasterMenu = $auth->hasPermission('master_data', 'read') || $auth->hasPermission('master_akun', 'read') || $auth->hasPermission('master_vendor', 'read');
+                $hasMasterMenu = $auth->hasPermission('master_data', 'read') || $auth->hasPermission('master_vendor', 'read');
                 $hasUsersMenu  = $auth->hasPermission('user_management', 'read');
                 $hasSuperAdmin = $auth->isSuperAdmin();
 
@@ -1081,20 +1081,17 @@ function is_active($patterns) {
 
                     <!-- DATA MASTER -->
                     <?php if ($hasMasterMenu): 
-                        $isMasterActive = is_active(['z_master_data', 'z_master_akun', 'z_acc_coa', 'z_master_vendor']);
+                        $isMasterActive = is_active(['z_master_data', 'z_master_vendor']);
                     ?>
                         <li class="submenu <?= $isMasterActive ? 'active' : '' ?>">
                             <a href="javascript:void(0);" class="<?= $isMasterActive ? 'subdrop' : '' ?>">
                                 <i class="fas fa-database"></i>
-                                <span> Data Master</span>
+                                <span>Data Master</span>
                                 <span class="menu-arrow"></span>
                             </a>
                             <ul style="display: <?= $isMasterActive ? 'block' : 'none' ?>;">
                                 <?php if ($auth->hasPermission('master_data', 'read')): ?>
                                     <li class="<?= is_active('z_master_data') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_master_data/dashboard.php">Dashboard</a></li>
-                                <?php endif; ?>
-                                <?php if ($auth->hasPermission('master_akun', 'read')): ?>
-                                    <li class="<?= is_active(['z_master_akun', 'z_acc_coa']) ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_acc_coa/index.php">Master Akun (COA)</a></li>
                                 <?php endif; ?>
                                 <?php if ($auth->hasPermission('master_vendor', 'read')): ?>
                                     <li class="<?= is_active('z_master_vendor') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_master_vendor/dashboard.php">Master Vendor</a></li>
@@ -1103,14 +1100,29 @@ function is_active($patterns) {
                         </li>
                     <?php endif; ?>
 
-                    <!-- MANAJEMEN PENGGUNA -->
-                    <?php if ($hasUsersMenu): ?>
-                        <li class="<?= is_active('z_users') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_users/dashboard.php"><i class="fas fa-users"></i> <span>Manajemen Pengguna</span></a></li>
-                    <?php endif; ?>
-
-                    <!-- ADMINISTRATOR -->
-                    <?php if ($hasSuperAdmin): ?>
-                        <li class="<?= is_active('z_admin_permissions') ? 'active' : '' ?>"><a href="<?= BASE_URL ?>/z_admin_permissions/dashboard.php"><i class="fas fa-user-shield"></i> <span>Administrator</span></a></li>
+                    <!-- ADMINISTRATOR & PENGGUNA -->
+                    <?php if ($hasSuperAdmin || $hasUsersMenu): 
+                        $isAdminGroupActive = is_active(['z_admin_permissions', 'z_users']);
+                    ?>
+                        <li class="submenu <?= $isAdminGroupActive ? 'active' : '' ?>">
+                            <a href="javascript:void(0);" class="<?= $isAdminGroupActive ? 'subdrop' : '' ?>">
+                                <i class="fas fa-user-shield"></i>
+                                <span>Administrator</span>
+                                <span class="menu-arrow"></span>
+                            </a>
+                            <ul style="display: <?= $isAdminGroupActive ? 'block' : 'none' ?>;">
+                                <?php if ($hasSuperAdmin): ?>
+                                    <li class="<?= is_active('z_admin_permissions') ? 'active' : '' ?>">
+                                        <a href="<?= BASE_URL ?>/z_admin_permissions/dashboard.php">Hak Akses & Permission</a>
+                                    </li>
+                                <?php endif; ?>
+                                <?php if ($hasUsersMenu || $hasSuperAdmin): ?>
+                                    <li class="<?= is_active('z_users') ? 'active' : '' ?>">
+                                        <a href="<?= BASE_URL ?>/z_users/dashboard.php">Manajemen Pengguna</a>
+                                    </li>
+                                <?php endif; ?>
+                            </ul>
+                        </li>
                     <?php endif; ?>
                 <?php endif; ?>
 
