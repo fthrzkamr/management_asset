@@ -1357,7 +1357,7 @@ div.dataTables_wrapper div.dataTables_info {
     height: 48px;
     padding: 0 20px;
     position: relative;
-    width: 256px;
+    width: 290px;
     z-index: 1;
     transition: all 0.2s ease-in-out;
     background-color: #f7f7fa;
@@ -1606,7 +1606,7 @@ footer p {
     position: fixed;
     top: 48px;
     transition: all 0.2s ease-in-out 0s;
-    width: 256px;
+    width: 290px;
     z-index: 1001;	
 }
 .sidebar.opened {
@@ -1804,7 +1804,7 @@ footer p {
 	flex-direction: column;
 }
 .page-wrapper {
-	margin-left: 256px;
+	margin-left: 290px;
 	padding-top: 48px;
 	position: relative;
 	transition: all 0.4s ease;

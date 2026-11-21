@@ -228,6 +228,47 @@ function is_active($patterns) {
 
     <!-- JS moved to footer to ensure jQuery loads first -->
     <style>
+        /* ═════════════════════════════════════════════
+           LEBAR SIDEBAR & LAYOUT RESPONSIF TERBARU
+           ═════════════════════════════════════════════ */
+        :root {
+            --sidebar-width: 290px;
+        }
+
+        @media (min-width: 992px) {
+            .header .header-left {
+                width: var(--sidebar-width) !important;
+            }
+            .sidebar {
+                width: var(--sidebar-width) !important;
+            }
+            .page-wrapper {
+                margin-left: var(--sidebar-width) !important;
+            }
+            .mini-sidebar.expand-menu .sidebar {
+                width: var(--sidebar-width) !important;
+            }
+            .mini-sidebar .header .header-left {
+                width: 78px !important;
+            }
+            .mini-sidebar .page-wrapper {
+                margin-left: 78px !important;
+            }
+        }
+
+        @media (max-width: 991.98px) {
+            .header .header-left {
+                width: 100% !important;
+            }
+            .sidebar {
+                width: 270px !important;
+                margin-left: -270px !important;
+            }
+            .page-wrapper {
+                margin-left: 0 !important;
+            }
+        }
+
         /* ═══════════════════════════════════════════
            SIDEBAR BADGE NOTIFIKASI - PREMIUM DESIGN
            ═══════════════════════════════════════════ */
@@ -244,8 +285,8 @@ function is_active($patterns) {
             color: #fff;
             background: linear-gradient(135deg, #ff416c 0%, #e8132b 100%);
             border-radius: 4px;
-            margin-left: auto; /* Memastikan badge selalu rapat ke kanan setelah text jika sisa space banyak */
-            margin-right: 5px; /* Memberi jarak sedikit dari tepi */
+            margin-left: auto; /* Memastikan badge selalu rapat ke kanan setelah text */
+            margin-right: 5px;
             vertical-align: middle;
             flex-shrink: 0;
             position: relative;
@@ -256,7 +297,7 @@ function is_active($patterns) {
         }
         /* Dot indikator kecil di dalam badge */
         .nav-badge-dot {
-            display: none; /* disembunyikan untuk badge yang punya angka */
+            display: none;
         }
         /* Animasi pulse lebih halus dan premium */
         @keyframes badgePulse {
@@ -274,7 +315,7 @@ function is_active($patterns) {
         .nav-badge {
             transition: all 0.25s ease;
         }
-        /* Badge untuk submenu (ukuran sedikit lebih kecil) */
+        /* Badge untuk submenu */
         #sidebar-menu ul li ul li a .nav-badge {
             min-width: 20px;
             height: 20px;
@@ -285,14 +326,98 @@ function is_active($patterns) {
             background: linear-gradient(135deg, #ff416c 0%, #c0392b 100%);
             box-shadow: 0 2px 6px rgba(192,57,43,0.4);
         }
-        /* Pastikan teks menu tidak wrap karena badge */
-        #sidebar-menu ul li a {
-            display: flex;
-            align-items: center;
-            flex-wrap: nowrap;
+
+        /* Top-level menu item styling */
+        #sidebar-menu > ul > li > a {
+            position: relative !important;
+            display: flex !important;
+            align-items: center !important;
+            margin: 0 -15px !important;
+            padding: 10px 42px 10px 22px !important;
+            font-size: 14px !important;
+            line-height: 1.4 !important;
+            transition: all 0.2s ease-in-out !important;
         }
-        #sidebar-menu ul li a span:not(.menu-arrow):not(.nav-badge) {
-            flex: 1;
+        #sidebar-menu > ul > li > a:hover,
+        #sidebar-menu > ul > li.active > a {
+            background-color: #fff !important;
+            color: #18aefa !important;
+            padding-left: 26px !important;
+        }
+        #sidebar-menu > ul > li > a i {
+            width: 22px !important;
+            font-size: 14px !important;
+            margin-right: 10px !important;
+            text-align: center !important;
+            flex-shrink: 0 !important;
+        }
+        #sidebar-menu > ul > li > a > span:first-of-type {
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            flex: 1 !important;
+        }
+
+        /* Menu Arrow: selalu presisi di kanan dan tidak bertabrakan dengan text */
+        #sidebar-menu .menu-arrow {
+            position: absolute !important;
+            right: 16px !important;
+            top: 50% !important;
+            transform: translateY(-50%) !important;
+            margin-top: 0 !important;
+            font-size: 13px !important;
+            color: #9e9e9e !important;
+            transition: transform 0.2s ease-in-out !important;
+            pointer-events: none !important;
+            line-height: 1 !important;
+        }
+        #sidebar-menu li a.subdrop .menu-arrow {
+            transform: translateY(-50%) rotate(90deg) !important;
+        }
+
+        /* Submenu Child Styling */
+        #sidebar-menu ul ul li a {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding: 8px 18px 8px 45px !important;
+            font-size: 13px !important;
+        }
+        #sidebar-menu ul ul li a .nav-badge {
+            margin-left: auto !important;
+            margin-right: 0 !important;
+        }
+
+        /* Parent Submenu Alert Indicator (!) */
+        .nav-parent-badge {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 18px !important;
+            height: 18px !important;
+            min-width: 18px !important;
+            border-radius: 4px !important;
+            padding: 0 !important;
+            margin-left: 6px !important;
+            margin-right: 0 !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            line-height: 1 !important;
+            color: #fff !important;
+            background: linear-gradient(135deg, #ff416c 0%, #e8132b 100%) !important;
+            box-shadow: 0 2px 6px rgba(232, 19, 43, 0.4) !important;
+            flex-shrink: 0 !important;
+            animation: badgePulse 2.5s ease-in-out infinite;
+        }
+
+        /* Section Title Header */
+        .sidebar-menu li.menu-title {
+            padding: 14px 18px 4px !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.5px !important;
+            text-transform: uppercase !important;
+            color: #94a3b8 !important;
         }
 
         /* ═════════════════════════════════════════════════════════════════════
@@ -323,7 +448,7 @@ function is_active($patterns) {
         .sidebar-inner::-webkit-scrollbar-thumb:hover {
             background: #94a3b8;
         }
-        /* Ruang padding bawah agar menu paling bawah (seperti PPX) tidak terpotong tepi layar */
+        /* Ruang padding bawah agar menu paling bawah tidak terpotong tepi layar */
         #sidebar-menu {
             padding-bottom: 70px !important;
         }
@@ -456,7 +581,7 @@ function is_active($patterns) {
                                 <i class="fas fa-clipboard-list"></i>
                                 <span>Pengajuan Aset & GA</span>
                                 <?php if ($totalLayananBadge > 0): ?>
-                                    <span class="badge badge-danger" style="margin-left: 10px; margin-right: 25px; width: 18px !important; height: 18px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; border-radius: 4px; padding: 0 !important; flex: none !important; font-size: 11px; vertical-align: middle;">!</span>
+                                    <span class="nav-parent-badge">!</span>
                                 <?php endif; ?>
                                 <span class="menu-arrow"></span>
                             </a>
@@ -617,7 +742,7 @@ function is_active($patterns) {
                                 <i class="fa-solid fa-check-double"></i>
                                 <span>Realisasi Kas (BKK/BKM)</span>
                                 <?php if ($totalRealisasiBadge > 0): ?>
-                                    <span class="badge badge-danger" style="margin-left: 10px; margin-right: 25px; width: 18px !important; height: 18px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; border-radius: 4px; padding: 0 !important; flex: none !important; font-size: 11px; vertical-align: middle;">!</span>
+                                    <span class="nav-parent-badge">!</span>
                                 <?php endif; ?>
                                 <span class="menu-arrow"></span>
                             </a>
@@ -648,7 +773,7 @@ function is_active($patterns) {
                                 <i class="fa-solid fa-money-bill-1-wave"></i> 
                                 <span>Approval PPX</span> 
                                 <?php if ($totalPpxBadge > 0): ?>
-                                    <span class="badge badge-danger" style="margin-left: 10px; margin-right: 25px; width: 18px !important; height: 18px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; border-radius: 4px; padding: 0 !important; flex: none !important; font-size: 11px; vertical-align: middle;">!</span>
+                                    <span class="nav-parent-badge">!</span>
                                 <?php endif; ?>
                                 <span class="menu-arrow"></span>
                             </a>
@@ -712,7 +837,7 @@ function is_active($patterns) {
                                 <i class="fas fa-wallet"></i> 
                                 <span>Approval Anggaran</span> 
                                 <?php if ($totalBudgetBadge > 0): ?>
-                                    <span class="badge badge-danger" style="margin-left: 10px; margin-right: 25px; width: 18px !important; height: 18px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; border-radius: 4px; padding: 0 !important; flex: none !important; font-size: 11px; vertical-align: middle;">!</span>
+                                    <span class="nav-parent-badge">!</span>
                                 <?php endif; ?>
                                 <span class="menu-arrow"></span>
                             </a>
@@ -890,7 +1015,7 @@ function is_active($patterns) {
                                 <i class="fas fa-boxes"></i> 
                                 <span>Inventory ATK</span> 
                                 <?php if ($totalATKBadge > 0): ?>
-                                    <span class="badge badge-danger" style="margin-left: 10px; margin-right: 25px; width: 18px !important; height: 18px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; border-radius: 4px; padding: 0 !important; flex: none !important; font-size: 11px; vertical-align: middle;">!</span>
+                                    <span class="nav-parent-badge">!</span>
                                 <?php endif; ?>
                                 <span class="menu-arrow"></span>
                             </a>
