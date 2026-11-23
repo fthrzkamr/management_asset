@@ -60,6 +60,7 @@ $auth->requirePermission('master_departemen', 'create');
                     </div>
                 </div>
                 <?php include '../layouts/footer.php'; ?>
+                <?php include '../layouts/flash_modal.php'; ?>
             </div>
         </div>
     </div>

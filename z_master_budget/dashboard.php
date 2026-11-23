@@ -25,6 +25,45 @@ $auth->requirePermission('master_budget', 'read');
 // Initialize service
 $budgetService = new MasterBudgetService($conn);
 
+// Auto-migrate kolom review per-cabang (Fase 2 lanjutan - item 18 koreksi nominal pengajuan)
+$review_cols = [
+    'approved_allocation' => "ALTER TABLE ppx_monthly_budget ADD COLUMN approved_allocation DECIMAL(15,2) NULL AFTER total_allocation",
+    'review_decision'     => "ALTER TABLE ppx_monthly_budget ADD COLUMN review_decision ENUM('Sesuai','Dikoreksi') NULL AFTER approved_allocation",
+    'reviewed_by'         => "ALTER TABLE ppx_monthly_budget ADD COLUMN reviewed_by INT(11) NULL AFTER review_decision",
+    'reviewed_at'         => "ALTER TABLE ppx_monthly_budget ADD COLUMN reviewed_at DATETIME NULL AFTER reviewed_by",
+];
+foreach ($review_cols as $col => $alt_sql) {
+    $c_res = @mysqli_query($conn, "SHOW COLUMNS FROM ppx_monthly_budget LIKE '$col'");
+    if ($c_res && mysqli_num_rows($c_res) === 0) {
+        @mysqli_query($conn, $alt_sql);
+    }
+}
+
+// Periode yang mau direview (default: bulan depan, sesuai alur pengajuan)
+$rv_month = isset($_GET['rv_month']) ? (int)$_GET['rv_month'] : ((int)date('n') + 1);
+$rv_year  = isset($_GET['rv_year'])  ? (int)$_GET['rv_year']  : (int)date('Y');
+if ($rv_month > 12) { $rv_month = 1; $rv_year++; }
+if ($rv_month < 1)  { $rv_month = 12; $rv_year--; }
+
+// Daftar pengajuan per cabang untuk periode terpilih (untuk di-review Ya/Tidak)
+$review_items = [];
+$rv_q = mysqli_query($conn, "
+    SELECT pb.id_budget, pb.period_year, pb.period_month, pb.total_allocation, pb.approved_allocation,
+           pb.review_decision, pb.budget_name, pb.status, pb.tipe_anggaran,
+           u.nama_user AS pic, mc.nama_cabang
+    FROM ppx_monthly_budget pb
+    LEFT JOIN user_dfm u ON pb.created_by = u.id_user
+    LEFT JOIN master_cabang mc ON u.id_cabang = mc.id_cabang
+    WHERE pb.period_year = $rv_year AND pb.period_month = $rv_month
+      AND pb.status NOT IN ('Draft', 'Rejected', 'Closed')
+    ORDER BY mc.nama_cabang ASC, pb.id_budget ASC
+");
+if ($rv_q) {
+    while ($r = mysqli_fetch_assoc($rv_q)) {
+        $review_items[] = $r;
+    }
+}
+
 // Get all master budgets
 $masterBudgets = $budgetService->getAllMasterBudgets();
 
@@ -44,7 +83,7 @@ $last_remaining = $last_budget ? floatval($last_budget['balance']) : 0;
 
 // Get pending monthly budget items (submitted but not allocated / master not assigned)
  $pending_items = [];
- $pg_sql = "SELECT pb.id_budget, pb.period_year, pb.period_month, pb.total_allocation, pb.budget_name, pb.budget_type,
+ $pg_sql = "SELECT pb.id_budget, pb.period_year, pb.period_month, pb.total_allocation, pb.approved_allocation, pb.review_decision, pb.budget_name, pb.budget_type,
             u.nama_user as pic
             FROM ppx_monthly_budget pb
             LEFT JOIN user_dfm u ON pb.created_by = u.id_user
@@ -110,7 +149,88 @@ $error_message = isset($_GET['error']) ? $_GET['error'] : '';
             <i class="fas fa-exclamation-circle"></i> <?= htmlspecialchars($error_message) ?>
         </div>
         <?php endif; ?>
-        
+
+        <!-- Review Pengajuan Per Cabang (Ya/Tidak + koreksi nominal) -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <div class="d-flex justify-content-between align-items-center flex-wrap" style="gap:10px;">
+                    <h5 class="card-title mb-0 font-weight-bold">
+                        <i class="fas fa-clipboard-check text-primary mr-1"></i> Review Pengajuan Per Cabang
+                    </h5>
+                    <form method="GET" class="form-inline" style="gap:8px;">
+                        <select name="rv_month" class="form-control form-control-sm mr-2">
+                            <?php
+                            $mm_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+                            for ($m = 1; $m <= 12; $m++): ?>
+                                <option value="<?= $m ?>" <?= $m === $rv_month ? 'selected' : '' ?>><?= $mm_names[$m] ?></option>
+                            <?php endfor; ?>
+                        </select>
+                        <input type="number" name="rv_year" class="form-control form-control-sm mr-2" style="width:90px;" value="<?= $rv_year ?>">
+                        <button type="submit" class="btn btn-sm btn-outline-primary"><i class="fas fa-filter"></i> Tampilkan</button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body">
+                <?php if (empty($review_items)): ?>
+                    <p class="text-muted mb-0">Tidak ada pengajuan untuk periode <?= $mm_names[$rv_month] ?> <?= $rv_year ?>.</p>
+                <?php else: ?>
+                <form action="review_pengajuan_process.php" method="POST" id="formReviewPengajuan">
+                    <input type="hidden" name="rv_month" value="<?= $rv_month ?>">
+                    <input type="hidden" name="rv_year" value="<?= $rv_year ?>">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered align-middle">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Cabang</th>
+                                    <th>PIC</th>
+                                    <th class="text-right">Nominal Diajukan</th>
+                                    <th width="140">Keputusan</th>
+                                    <th width="200">Nominal Disetujui</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($review_items as $ri): $bid = (int)$ri['id_budget']; ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($ri['nama_cabang'] ?: '-') ?></td>
+                                    <td><?= htmlspecialchars($ri['pic'] ?: '-') ?></td>
+                                    <td class="text-right">Rp <?= number_format($ri['total_allocation'], 0, ',', '.') ?></td>
+                                    <td>
+                                        <div class="custom-control custom-radio">
+                                            <input type="radio" class="custom-control-input rv-decision" name="decision_<?= $bid ?>" id="rv_ya_<?= $bid ?>" value="Sesuai" <?= ($ri['review_decision'] !== 'Dikoreksi') ? 'checked' : '' ?> onchange="toggleRvNominal(<?= $bid ?>)">
+                                            <label class="custom-control-label" for="rv_ya_<?= $bid ?>">Ya</label>
+                                        </div>
+                                        <div class="custom-control custom-radio">
+                                            <input type="radio" class="custom-control-input rv-decision" name="decision_<?= $bid ?>" id="rv_tidak_<?= $bid ?>" value="Dikoreksi" <?= ($ri['review_decision'] === 'Dikoreksi') ? 'checked' : '' ?> onchange="toggleRvNominal(<?= $bid ?>)">
+                                            <label class="custom-control-label" for="rv_tidak_<?= $bid ?>">Tidak</label>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control form-control-sm rv-nominal-input rupiah-mask" id="rv_nominal_<?= $bid ?>" name="approved_<?= $bid ?>"
+                                               value="<?= $ri['approved_allocation'] !== null ? number_format($ri['approved_allocation'], 0, ',', '.') : '' ?>"
+                                               placeholder="Nominal yang disetujui"
+                                               <?= ($ri['review_decision'] !== 'Dikoreksi') ? 'disabled' : '' ?>>
+                                    </td>
+                                    <td>
+                                        <?php if ($ri['review_decision'] === 'Dikoreksi'): ?>
+                                            <span class="badge badge-warning">Dikoreksi: Rp <?= number_format($ri['approved_allocation'], 0, ',', '.') ?></span>
+                                        <?php elseif ($ri['review_decision'] === 'Sesuai'): ?>
+                                            <span class="badge badge-success">Sesuai Pengajuan</span>
+                                        <?php else: ?>
+                                            <span class="badge badge-secondary">Belum Direview</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan Review</button>
+                </form>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <!-- Summary Statistics -->
         <div class="row">
             <?php
@@ -423,15 +543,20 @@ $error_message = isset($_GET['error']) ? $_GET['error'] : '';
                         <div class="alert alert-warning mt-3">
                             <strong>Pengajuan Bulanan Pending</strong>
                                 <div>
-                                    <?php foreach ($pending_items as $pi): ?>
+                                    <?php foreach ($pending_items as $pi):
+                                        $effective_amount = $pi['approved_allocation'] !== null ? (float)$pi['approved_allocation'] : (float)$pi['total_allocation'];
+                                    ?>
                                     <div class="form-check py-1">
-                                        <input class="form-check-input commit-checkbox" type="checkbox" name="commit_budget_id[]" 
-                                               value="<?= intval($pi['id_budget']) ?>" 
-                                               data-amount="<?= floatval($pi['total_allocation']) ?>"
+                                        <input class="form-check-input commit-checkbox" type="checkbox" name="commit_budget_id[]"
+                                               value="<?= intval($pi['id_budget']) ?>"
+                                               data-amount="<?= $effective_amount ?>"
                                                id="commit_<?= intval($pi['id_budget']) ?>"
                                                onchange="updateSelectedTotal()">
                                         <label class="form-check-label" for="commit_<?= intval($pi['id_budget']) ?>">
-                                            <?= str_pad(intval($pi['period_month']),2,'0',STR_PAD_LEFT) ?>/<?= $pi['period_year'] ?> — Rp <?= number_format($pi['total_allocation'],0,',','.') ?>
+                                            <?= str_pad(intval($pi['period_month']),2,'0',STR_PAD_LEFT) ?>/<?= $pi['period_year'] ?> — Rp <?= number_format($effective_amount,0,',','.') ?>
+                                            <?php if ($pi['review_decision'] === 'Dikoreksi'): ?>
+                                                <span class="text-muted small">(diajukan: Rp <?= number_format($pi['total_allocation'],0,',','.') ?>)</span>
+                                            <?php endif; ?>
                                             <?php if (!empty($pi['budget_name'])): ?>
                                                 — <strong><?= htmlspecialchars($pi['budget_name']) ?></strong>
                                             <?php endif; ?>
@@ -441,6 +566,11 @@ $error_message = isset($_GET['error']) ? $_GET['error'] : '';
                                                 $b_class = ($b_type === 'besar') ? 'badge-primary' : 'badge-info';
                                             ?>
                                             <span class="badge <?= $b_class ?> ml-1"><?= $b_label ?></span>
+                                            <?php if ($pi['review_decision'] === 'Dikoreksi'): ?>
+                                                <span class="badge badge-warning ml-1">Dikoreksi</span>
+                                            <?php elseif ($pi['review_decision'] === null): ?>
+                                                <span class="badge badge-secondary ml-1">Belum Direview</span>
+                                            <?php endif; ?>
                                             <?php if (!empty($pi['pic'])): ?>
                                                 — PIC: <?= htmlspecialchars($pi['pic']) ?>
                                             <?php endif; ?>
@@ -872,6 +1002,29 @@ function formatRupiah(angka, prefix = '') {
 function parseRupiah(rupiah) {
     return parseInt(rupiah.replace(/\./g, '').replace(/,/g, '')) || 0;
 }
+
+// Review Pengajuan Per Cabang - toggle input nominal koreksi
+function toggleRvNominal(bid) {
+    var isTidak = $('#rv_tidak_' + bid).is(':checked');
+    var $input = $('#rv_nominal_' + bid);
+    $input.prop('disabled', !isTidak);
+    if (!isTidak) $input.val('');
+}
+
+$(document).on('input', '.rv-nominal-input', function() {
+    this.value = formatRupiah(this.value);
+});
+
+$('#formReviewPengajuan').on('submit', function(e) {
+    var ok = true;
+    $('.rv-nominal-input:not([disabled])').each(function() {
+        if (parseRupiah($(this).val()) <= 0) ok = false;
+    });
+    if (!ok) {
+        e.preventDefault();
+        alert('Untuk pengajuan yang dipilih "Tidak", isi nominal yang disetujui (harus lebih dari 0).');
+    }
+});
 
 // Show error modal
 function showErrorModal(title, content) {

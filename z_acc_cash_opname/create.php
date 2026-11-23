@@ -22,10 +22,19 @@ $cab_q = mysqli_query($conn, "SELECT id_cabang_ppx, kode_cabang, nama_cabang FRO
 $all_cabang = [];
 while ($c = mysqli_fetch_assoc($cab_q)) $all_cabang[] = $c;
 
-// Akun kas COA
-$kas_coa_q = mysqli_query($conn, "SELECT id_coa, kode_akun, nama_akun FROM acc_coa WHERE kode_akun LIKE '1101%' AND is_header = 0 ORDER BY kode_akun ASC");
+// Akun kas COA (kas fisik 1101% + bank 1102% - kalau bank, saldo diambil otomatis dari Mutasi Bank)
+$kas_coa_q = mysqli_query($conn, "SELECT id_coa, kode_akun, nama_akun FROM acc_coa WHERE (kode_akun LIKE '1101%' OR kode_akun LIKE '1102%') AND is_header = 0 ORDER BY kode_akun ASC");
 $all_kas_coa = [];
 while ($kc = mysqli_fetch_assoc($kas_coa_q)) $all_kas_coa[] = $kc;
+
+// Peta id_coa -> saldo_saat_ini rekening bank (untuk auto-isi saldo buku kalau akun yang dipilih adalah rekening bank)
+$rek_q = mysqli_query($conn, "SELECT id_coa, saldo_saat_ini, nama_bank FROM acc_master_rekening WHERE id_coa IS NOT NULL AND status = 'Aktif'");
+$bank_saldo_map = [];
+if ($rek_q) {
+    while ($rk = mysqli_fetch_assoc($rek_q)) {
+        $bank_saldo_map[(int)$rk['id_coa']] = ['saldo' => (float)$rk['saldo_saat_ini'], 'nama_bank' => $rk['nama_bank']];
+    }
+}
 
 // Default periode minggu
 $day = (int)date('d');
@@ -113,14 +122,16 @@ $default_week = "Minggu ke-{$week_num} ({$month_name})";
                                     </div>
                                     <div class="col-md-6 form-group">
                                         <label class="small font-weight-bold">Akun Kas yang Diperiksa</label>
-                                        <select name="id_coa_kas" class="form-control">
+                                        <select name="id_coa_kas" id="selectAkunKas" class="form-control" onchange="handleAkunKasChange()">
                                             <option value="">-- Pilih Akun Kas COA --</option>
                                             <?php foreach ($all_kas_coa as $kc): ?>
-                                                <option value="<?= $kc['id_coa'] ?>">
-                                                    [<?= $kc['kode_akun'] ?>] <?= htmlspecialchars($kc['nama_akun']) ?>
+                                                <?php $isBank = isset($bank_saldo_map[(int)$kc['id_coa']]); ?>
+                                                <option value="<?= $kc['id_coa'] ?>" data-is-bank="<?= $isBank ? '1' : '0' ?>" data-saldo="<?= $isBank ? $bank_saldo_map[(int)$kc['id_coa']]['saldo'] : '' ?>">
+                                                    [<?= $kc['kode_akun'] ?>] <?= htmlspecialchars($kc['nama_akun']) ?><?= $isBank ? ' (Rekening Bank)' : '' ?>
                                                 </option>
                                             <?php endforeach; ?>
                                         </select>
+                                        <small class="text-muted" id="bankSaldoHint" style="display:none;"></small>
                                     </div>
                                 </div>
                                 <div class="row">
@@ -143,8 +154,8 @@ $default_week = "Minggu ke-{$week_num} ({$month_name})";
                             </div>
                         </div>
 
-                        <!-- Kalkulator Rincian Pecahan Uang Fisik -->
-                        <div class="card border-0 shadow-sm mb-4" style="border-radius:10px;">
+                        <!-- Kalkulator Rincian Pecahan Uang Fisik (hanya untuk akun Kas fisik) -->
+                        <div class="card border-0 shadow-sm mb-4" id="cardDenomKas" style="border-radius:10px;">
                             <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
                                 <h5 class="card-title font-weight-bold mb-0 text-dark">
                                     <i class="fas fa-calculator text-success mr-1"></i> Penghitungan Fisik Uang di Brankas (Denominasi)
@@ -205,6 +216,22 @@ $default_week = "Minggu ke-{$week_num} ({$month_name})";
                                             <?php endforeach; ?>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Input Saldo Fisik manual (hanya untuk akun Rekening Bank) -->
+                        <div class="card border-0 shadow-sm mb-4" id="cardFisikBank" style="border-radius:10px; display:none;">
+                            <div class="card-header bg-white py-3 border-bottom">
+                                <h5 class="card-title font-weight-bold mb-0 text-dark">
+                                    <i class="fas fa-university text-primary mr-1"></i> Saldo Riil Rekening (sesuai Rekening Koran / e-Banking)
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <small class="text-muted d-block mb-2">Akun ini rekening bank — tidak ada uang fisik yang dihitung. Masukkan saldo riil rekening sesuai pengecekan rekening koran/e-banking untuk dibandingkan dengan saldo sistem (Mutasi Bank).</small>
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text font-weight-bold">Rp</span></div>
+                                    <input type="text" name="saldo_fisik_bank" id="saldoFisikBank" class="form-control font-weight-bold text-right" placeholder="0" value="0" oninput="formatRupiahInput(this); calculateDenominations();">
                                 </div>
                             </div>
                         </div>
@@ -294,6 +321,35 @@ if ($layout_dir && file_exists($layout_dir . '/footer.php'))    include $layout_
 if ($layout_dir && file_exists($layout_dir . '/footer_js.php')) include $layout_dir . '/footer_js.php';
 ?>
 <script>
+function handleAkunKasChange() {
+    const sel = document.getElementById('selectAkunKas');
+    const opt = sel.options[sel.selectedIndex];
+    const saldoInput = document.getElementById('saldoBuku');
+    const hint = document.getElementById('bankSaldoHint');
+    const isBank = opt && opt.getAttribute('data-is-bank') === '1';
+
+    if (isBank) {
+        const saldo = parseFloat(opt.getAttribute('data-saldo')) || 0;
+        saldoInput.value = new Intl.NumberFormat('id-ID').format(saldo);
+        saldoInput.readOnly = true;
+        saldoInput.classList.add('bg-light');
+        hint.style.display = 'block';
+        hint.innerHTML = '<i class="fas fa-link mr-1"></i> Saldo otomatis diambil dari data Mutasi Bank terakhir.';
+        // Rekening bank: sembunyikan kalkulator pecahan uang, pakai input saldo riil manual
+        document.getElementById('cardDenomKas').style.display = 'none';
+        document.getElementById('cardFisikBank').style.display = 'block';
+    } else {
+        saldoInput.readOnly = false;
+        saldoInput.classList.remove('bg-light');
+        hint.style.display = sel.value ? 'block' : 'none';
+        hint.innerHTML = '<i class="fas fa-pen mr-1"></i> Akun kas fisik - hitung & isi saldo buku secara manual.';
+        // Kas fisik: tampilkan lagi kalkulator pecahan uang
+        document.getElementById('cardDenomKas').style.display = 'block';
+        document.getElementById('cardFisikBank').style.display = 'none';
+    }
+    calculateDenominations();
+}
+
 function formatRupiahInput(input) {
     let val = input.value.replace(/[^0-9]/g, '');
     if (val === '') {
@@ -304,18 +360,27 @@ function formatRupiahInput(input) {
 }
 
 function calculateDenominations() {
+    const sel = document.getElementById('selectAkunKas');
+    const opt = sel.options[sel.selectedIndex];
+    const isBank = opt && opt.getAttribute('data-is-bank') === '1';
+
     let totalFisik = 0;
-    const inputs = document.querySelectorAll('.denom-input');
-    inputs.forEach(inp => {
-        const qty = parseInt(inp.value) || 0;
-        const val = parseInt(inp.getAttribute('data-value')) || 0;
-        const sub = qty * val;
-        totalFisik += sub;
-        const subEl = document.getElementById('sub_' + inp.id);
-        if (subEl) {
-            subEl.textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(sub);
-        }
-    });
+    if (isBank) {
+        const raw = document.getElementById('saldoFisikBank').value.replace(/\./g, '');
+        totalFisik = parseFloat(raw) || 0;
+    } else {
+        const inputs = document.querySelectorAll('.denom-input');
+        inputs.forEach(inp => {
+            const qty = parseInt(inp.value) || 0;
+            const val = parseInt(inp.getAttribute('data-value')) || 0;
+            const sub = qty * val;
+            totalFisik += sub;
+            const subEl = document.getElementById('sub_' + inp.id);
+            if (subEl) {
+                subEl.textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(sub);
+            }
+        });
+    }
 
     const saldoBukuRaw = document.getElementById('saldoBuku').value.replace(/\./g, '');
     const saldoBuku = parseFloat(saldoBukuRaw) || 0;

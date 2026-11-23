@@ -7,7 +7,7 @@ date_default_timezone_set('Asia/Jakarta');
 
 // Cek session login
 if (!isset($_SESSION['id_user'])) {
-    echo "<script>alert('Session expired. Silakan login kembali.'); window.location.href='login.php';</script>";
+    header("Location: ../login.php");
     exit;
 }
 
@@ -55,14 +55,16 @@ $updated_at     = date("Y-m-d H:i:s");
 
 // Validasi data required
 if (empty($kategori_aset) || empty($lokasi) || empty($nama_aset) || empty($satuan) || empty($kondisi)) {
-    echo "<script>alert('Data yang wajib diisi belum lengkap!'); history.back();</script>";
+    $_SESSION['error'] = 'Data yang wajib diisi belum lengkap!';
+    header("Location: " . ($_SERVER['HTTP_REFERER'] ?? 'dashboard.php'));
     exit;
 }
 
 // Cek apakah asset dengan kode lama ada
 $check_query = mysqli_query($conn, "SELECT kode_aset FROM asset_dfm WHERE kode_aset = '$kode_aset_lama' LIMIT 1");
 if (!$check_query || mysqli_num_rows($check_query) == 0) {
-    echo "<script>alert('Asset tidak ditemukan!'); window.location.href='dashboard.php';</script>";
+    $_SESSION['error'] = 'Asset tidak ditemukan!';
+    header("Location: dashboard.php");
     exit;
 }
 
@@ -77,8 +79,8 @@ if (isset($_FILES['foto_asset']) && $_FILES['foto_asset']['error'] == UPLOAD_ERR
         $foto_asset = $uploadResult['filename'];
         $foto_baru_diupload = true;
     } else {
-        $errMsg = addslashes($uploadResult['error'] ?: 'Gagal upload foto baru.');
-        echo "<script>alert('{$errMsg}'); history.back();</script>";
+        $_SESSION['error'] = $uploadResult['error'] ?: 'Gagal upload foto baru.';
+        header("Location: " . ($_SERVER['HTTP_REFERER'] ?? 'dashboard.php'));
         exit;
     }
 }
@@ -123,12 +125,14 @@ if ($update) {
     sentineldesk_sync_asset($kode_aset_lama, $kondisi, $status_barang, $user_pemakai, $lokasi, $nama_aset, $merk, $spesifikasi, $lokasi_detail);
 
     $success_message = "Data asset berhasil diupdate!";
-    
+
     if ($foto_baru_diupload) {
-        $success_message .= "\\nFoto baru: $foto_asset";
+        $success_message .= " (Foto baru: $foto_asset)";
     }
-    
-    echo "<script>alert('$success_message'); window.location.href='dashboard.php?status=updated';</script>";
+
+    $_SESSION['success'] = $success_message;
+    header("Location: dashboard.php?status=updated");
+    exit;
 } else {
     // Jika gagal update dan ada foto baru yang sudah diupload, hapus foto baru
     if ($foto_baru_diupload && !empty($foto_asset)) {
@@ -137,9 +141,11 @@ if ($update) {
             unlink($new_photo_path);
         }
     }
-    
+
     // Tampilkan error detail untuk debugging
     $error = mysqli_error($conn);
-    echo "<script>alert('Gagal update data: $error'); history.back();</script>";
+    $_SESSION['error'] = "Gagal update data: $error";
+    header("Location: " . ($_SERVER['HTTP_REFERER'] ?? 'dashboard.php'));
+    exit;
 }
 ?>

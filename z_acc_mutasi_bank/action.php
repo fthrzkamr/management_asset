@@ -88,6 +88,12 @@ if ($action === 'save_mutasi') {
         exit();
     }
 
+    if ($id_coa_lawan <= 0) {
+        $_SESSION['error'] = 'Akun Lawan COA wajib dipilih, supaya mutasi ini otomatis tercatat ke Jurnal Umum.';
+        header("Location: index.php");
+        exit();
+    }
+
     // Ambil data rekening
     $q_rek = mysqli_query($conn, "SELECT * FROM acc_master_rekening WHERE id_rekening = $id_rekening LIMIT 1 FOR UPDATE");
     if (!$q_rek || mysqli_num_rows($q_rek) === 0) {

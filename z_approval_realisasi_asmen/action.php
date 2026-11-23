@@ -98,6 +98,13 @@ try {
             }
         }
 
+        // Reversal jurnal otomatis yang sudah terlanjur diposting (kalau transaksi ini sebelumnya sudah auto-approved/disetujui)
+        if (!empty($rd['id_jurnal'])) {
+            mysqli_query($conn, "DELETE FROM acc_jurnal_detail WHERE id_jurnal = " . (int)$rd['id_jurnal']);
+            mysqli_query($conn, "DELETE FROM acc_jurnal_header WHERE id_jurnal = " . (int)$rd['id_jurnal']);
+            mysqli_query($conn, "UPDATE ppx_realisasi_detail2 SET id_jurnal = NULL WHERE id_real_detail = $id_real_detail");
+        }
+
         // Sinkronisasi header realisasi bulanan
         $q_sum = mysqli_query($conn, "SELECT 
             SUM(CASE WHEN status = 'Disetujui' AND delete_status != 'Approved' AND jenis_transaksi = 'BKK' THEN nominal_realisasi ELSE 0 END) as total_approved,

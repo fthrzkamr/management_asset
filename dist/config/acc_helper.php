@@ -295,35 +295,12 @@ function seed_default_coa_and_bridge($conn) {
 }
 
 /**
- * Seeding Default Bank Rekening
+ * Dulu fungsi ini auto-seed 2 rekening bank dummy (BCA & Mandiri) saat tabel masih kosong.
+ * Sudah tidak dipakai lagi - rekening bank sekarang murni diisi manual oleh user lewat
+ * menu "Kelola Rekening" supaya tidak ada data contoh yang membingungkan.
  */
 function seed_default_bank_rekening($conn) {
-    $chk = mysqli_query($conn, "SELECT COUNT(*) FROM acc_master_rekening");
-    if (!$chk) return;
-    $cnt = (int)mysqli_fetch_row($chk)[0];
-
-    if ($cnt === 0) {
-        // Ambil ID COA untuk BCA dan Mandiri
-        $id_bca = 0;
-        $id_mandiri = 0;
-        $qbca = mysqli_query($conn, "SELECT id_coa FROM acc_coa WHERE kode_akun = '1102-01' LIMIT 1");
-        if ($qbca && $rb = mysqli_fetch_assoc($qbca)) $id_bca = (int)$rb['id_coa'];
-
-        $qman = mysqli_query($conn, "SELECT id_coa FROM acc_coa WHERE kode_akun = '1102-02' LIMIT 1");
-        if ($qman && $rm = mysqli_fetch_assoc($qman)) $id_mandiri = (int)$rm['id_coa'];
-
-        $banks = [
-            ['nama_bank' => 'Bank Central Asia (BCA)', 'nomor' => '8410293847', 'atas_nama' => 'PT DUA FARMA MAHAKARSA', 'id_coa' => $id_bca, 'saldo' => 50000000.00],
-            ['nama_bank' => 'Bank Mandiri', 'nomor' => '1370019283746', 'atas_nama' => 'PT DUA FARMA MAHAKARSA', 'id_coa' => $id_mandiri, 'saldo' => 25000000.00],
-        ];
-
-        foreach ($banks as $b) {
-            $id_coa_val = $b['id_coa'] ?: "NULL";
-            @mysqli_query($conn, "INSERT INTO acc_master_rekening 
-                (nama_bank, nomor_rekening, atas_nama, id_coa, saldo_awal, saldo_saat_ini, status)
-                VALUES ('{$b['nama_bank']}', '{$b['nomor']}', '{$b['atas_nama']}', $id_coa_val, {$b['saldo']}, {$b['saldo']}, 'Aktif')");
-        }
-    }
+    // Sengaja dikosongkan (no-op).
 }
 
 /**
@@ -530,7 +507,11 @@ function acc_post_bkk_journal($conn, $id_real_detail) {
         ['id_coa' => $id_coa_kas,   'posisi' => 'Kredit', 'nominal' => $nom, 'memo' => "Kas Cabang {$kode_cab}"],
     ];
 
-    return acc_create_jurnal($conn, $header, $details);
+    $res = acc_create_jurnal($conn, $header, $details);
+    if ($res && !empty($res['id_jurnal'])) {
+        mysqli_query($conn, "UPDATE ppx_realisasi_detail2 SET id_jurnal = " . (int)$res['id_jurnal'] . " WHERE id_real_detail = " . (int)$id_real_detail);
+    }
+    return $res;
 }
 
 /**
@@ -583,7 +564,11 @@ function acc_post_bkm_journal($conn, $id_real_detail) {
         ['id_coa' => $id_coa_kredit, 'posisi' => 'Kredit', 'nominal' => $nom, 'memo' => "Pengembalian: " . ($r['keperluan'] ?: $r['nama_item'])],
     ];
 
-    return acc_create_jurnal($conn, $header, $details);
+    $res = acc_create_jurnal($conn, $header, $details);
+    if ($res && !empty($res['id_jurnal'])) {
+        mysqli_query($conn, "UPDATE ppx_realisasi_detail2 SET id_jurnal = " . (int)$res['id_jurnal'] . " WHERE id_real_detail = " . (int)$id_real_detail);
+    }
+    return $res;
 }
 
 /**

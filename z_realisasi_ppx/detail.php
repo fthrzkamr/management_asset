@@ -41,6 +41,29 @@ if (!$mb_q || mysqli_num_rows($mb_q) === 0) {
 }
 $budget = mysqli_fetch_assoc($mb_q);
 
+// Input transaksi/realisasi baru boleh dilakukan setelah budget sampai tahap "Finance (Realisasi)" (atau sudah "Active")
+$canInputRealisasi = in_array($budget['status'], ['Finance (Realisasi)', 'Active']);
+
+// ── Data grafik tren pengeluaran harian (tanggal 1 s/d akhir bulan anggaran) ──
+$chart_days_in_month = (int)date('t', strtotime($budget['period_year'] . '-' . $budget['period_month'] . '-01'));
+$chart_daily = array_fill(1, $chart_days_in_month, 0.0);
+$q_daily = mysqli_query($conn, "
+    SELECT DAY(tanggal_realisasi) AS tgl,
+           SUM(CASE WHEN jenis_transaksi = 'BKK' THEN nominal_realisasi ELSE 0 END) -
+           SUM(CASE WHEN jenis_transaksi = 'BKM' THEN uang_kembali ELSE 0 END) AS net_amount
+    FROM ppx_realisasi_detail2
+    WHERE id_budget = $id_budget AND status = 'Disetujui'
+    GROUP BY DAY(tanggal_realisasi)
+");
+if ($q_daily) {
+    while ($rd = mysqli_fetch_assoc($q_daily)) {
+        $d = (int)$rd['tgl'];
+        if ($d >= 1 && $d <= $chart_days_in_month) {
+            $chart_daily[$d] = (float)$rd['net_amount'];
+        }
+    }
+}
+
 // ── Ambil item detail dari anggaran ini ──────────────────────────────────
 $items_q = mysqli_query($conn, "
     SELECT
@@ -330,9 +353,16 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
                         </ul>
                     </div>
                     <div class="col-auto d-flex" style="gap:8px;">
-                        <button type="button" class="btn btn-primary font-weight-bold" onclick="openKasModal('BKK', 0)">
-                            <i class="fas fa-plus-circle mr-1"></i> Input Transaksi Kas (BKK / BKM)
-                        </button>
+                        <?php if ($canInputRealisasi): ?>
+                            <button type="button" class="btn btn-primary font-weight-bold" onclick="openKasModal('BKK', 0)">
+                                <i class="fas fa-plus-circle mr-1"></i> Input Transaksi Kas (BKK / BKM)
+                            </button>
+                        <?php else: ?>
+                            <button type="button" class="btn btn-secondary font-weight-bold" disabled
+                                    title="Belum bisa input transaksi - status budget masih '<?= htmlspecialchars($budget['status']) ?>', harus sampai 'Finance (Realisasi)' dulu.">
+                                <i class="fas fa-lock mr-1"></i> Input Transaksi Kas (BKK / BKM)
+                            </button>
+                        <?php endif; ?>
                         <a href="dashboard.php" class="btn btn-outline-secondary">
                             <i class="fas fa-arrow-left"></i> Kembali
                         </a>
@@ -348,6 +378,17 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
                 <button class="close" data-dismiss="alert"><span>&times;</span></button>
             </div>
             <?php unset($_SESSION[$t]); endif; endforeach; ?>
+
+            <?php if (!$canInputRealisasi): ?>
+            <div class="alert alert-warning d-flex align-items-center">
+                <i class="fas fa-lock mr-2 fa-lg"></i>
+                <div>
+                    <strong>Input transaksi belum bisa dilakukan.</strong> Status anggaran ini masih
+                    <strong>"<?= htmlspecialchars($budget['status']) ?>"</strong> — realisasi baru bisa diinput setelah
+                    anggaran disetujui sampai tahap <strong>"Finance (Realisasi)"</strong>.
+                </div>
+            </div>
+            <?php endif; ?>
 
             <?php if ($total_over_budget): ?>
             <div class="alert alert-danger d-flex align-items-center" style="border-left:4px solid #dc2626; background:#fef2f2; color:#991b1b;">
@@ -463,6 +504,16 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
                 </div>
             </div>
 
+            <!-- Grafik Tren Pengeluaran Harian -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h6 class="mb-3 font-weight-bold">
+                        <i class="fas fa-chart-column text-primary mr-1"></i> Tren Pengeluaran Harian — <?= $bulan_names[(int)$budget['period_month']] ?> <?= $budget['period_year'] ?>
+                    </h6>
+                    <canvas id="chartHarian" height="80"></canvas>
+                </div>
+            </div>
+
             <!-- Rincian Item Anggaran -->
             <h5 class="mb-3 font-weight-bold">
                 <i class="fas fa-list-check text-primary mr-1"></i> Rincian Item Anggaran & Histori Realisasi
@@ -546,10 +597,17 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
                                     <?php endif; ?>
                                 </div>
                                 <div class="mt-2">
-                                    <button type="button" class="btn btn-sm btn-outline-primary"
-                                            onclick="openKasModal('BKK', <?= $it_id ?>)">
-                                        <i class="fas fa-plus mr-1"></i> Input Transaksi
-                                    </button>
+                                    <?php if ($canInputRealisasi): ?>
+                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                                onclick="openKasModal('BKK', <?= $it_id ?>)">
+                                            <i class="fas fa-plus mr-1"></i> Input Transaksi
+                                        </button>
+                                    <?php else: ?>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" disabled
+                                                title="Status budget belum 'Finance (Realisasi)'">
+                                            <i class="fas fa-lock mr-1"></i> Input Transaksi
+                                        </button>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -963,6 +1021,7 @@ const budgetItems = <?= json_encode(array_map(function($it) use ($real_by_detail
         'kategori' => $it['category_name'],
         'kode' => $it['category_code'],
         'total' => (float)$it['total'],
+        'terpakai' => $it_app,
         'sisa' => $sisa
     ];
 }, $items)) ?>;
@@ -1067,7 +1126,10 @@ function addKasRow(selectedId, keteranganVal, jumlahVal) {
     const jmlText = jumlahVal ? formatRupiah(jumlahVal) : '';
 
     tr.innerHTML = `
-        <td style="min-width: 260px;">${selectHtml}</td>
+        <td style="min-width: 260px;">
+            ${selectHtml}
+            <div class="akun-info-box small mt-1" style="display:none;"></div>
+        </td>
         <td><input type="text" name="item_keterangan[]" class="form-control form-control-sm" placeholder="Keterangan (opsional)" value="${ketText}"></td>
         <td><input type="text" name="item_jumlah[]" class="form-control form-control-sm rupiah-kas text-right font-weight-bold" placeholder="0" value="${jmlText}" oninput="calcKasTotal()" required></td>
         <td class="text-center">
@@ -1090,7 +1152,38 @@ function addKasRow(selectedId, keteranganVal, jumlahVal) {
         });
     }
 
+    // Notifikasi Budget / Realisasi / Sisa setelah akun dipilih
+    $sel.on('change', function() {
+        updateAkunInfo($(this));
+    });
+    if (selectedId) {
+        updateAkunInfo($sel);
+    }
+
     calcKasTotal();
+}
+
+function updateAkunInfo($sel) {
+    const $box = $sel.closest('td').find('.akun-info-box');
+    const id = $sel.val();
+    const it = budgetItems.find(b => b.id == id);
+    if (!it) {
+        $box.hide().html('');
+        return;
+    }
+    const over = it.terpakai > it.total;
+    const colorSisa = over ? '#dc2626' : '#0284c7';
+    $box.css({
+        background: over ? '#fef2f2' : '#f8fafc',
+        border: '1px solid ' + (over ? '#fecaca' : '#e2e8f0'),
+        borderRadius: '6px',
+        padding: '4px 8px'
+    }).html(
+        `<span class="text-muted">Budget:</span> <strong>Rp ${formatRupiah(it.total)}</strong>` +
+        ` &nbsp;|&nbsp; <span class="text-muted">Realisasi:</span> <strong>Rp ${formatRupiah(it.terpakai)}</strong>` +
+        ` &nbsp;|&nbsp; <span class="text-muted">${over ? 'Kelebihan' : 'Sisa'}:</span> <strong style="color:${colorSisa}">Rp ${formatRupiah(Math.abs(it.total - it.terpakai))}</strong>` +
+        (over ? ' <span class="badge badge-danger ml-1">Over Budget</span>' : '')
+    ).show();
 }
 
 function removeKasRow(btn) {
@@ -1202,6 +1295,48 @@ $(document).on('select2:open', () => {
         }
     }, 50);
 });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function() {
+    const dailyData = <?= json_encode(array_values($chart_daily)) ?>;
+    const dailyLabels = <?= json_encode(range(1, $chart_days_in_month)) ?>;
+    const ctx = document.getElementById('chartHarian');
+    if (ctx && window.Chart) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: dailyLabels,
+                datasets: [{
+                    label: 'Pengeluaran Bersih (BKK - BKM)',
+                    data: dailyData,
+                    backgroundColor: dailyData.map(v => v < 0 ? '#10b981' : '#2563eb'),
+                    borderRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctxItem) => 'Rp ' + new Intl.NumberFormat('id-ID').format(ctxItem.raw)
+                        }
+                    }
+                },
+                scales: {
+                    x: { title: { display: true, text: 'Tanggal' } },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: (val) => 'Rp ' + new Intl.NumberFormat('id-ID', { notation: 'compact' }).format(val)
+                        }
+                    }
+                }
+            }
+        });
+    }
+})();
 </script>
 </body>
 </html>

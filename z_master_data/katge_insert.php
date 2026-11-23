@@ -14,14 +14,16 @@ if (isset($_POST['submit'])) {
 
     // Validasi sederhana
     if ($kategori_asset == "" || $sub_kategori == "" || $kode_kategori == "") {
-        echo "<script>alert('Semua field wajib diisi!'); window.history.back();</script>";
+        $_SESSION['error'] = 'Semua field wajib diisi!';
+        header("Location: katge_add.php");
         exit;
     }
 
     // Cek apakah kode sudah ada
     $cek = mysqli_query($conn, "SELECT * FROM kategori_asset WHERE kode_kategori = '$kode_kategori'");
     if (mysqli_num_rows($cek) > 0) {
-        echo "<script>alert('Kode kategori sudah terdaftar!'); window.history.back();</script>";
+        $_SESSION['error'] = 'Kode kategori sudah terdaftar!';
+        header("Location: katge_add.php");
         exit;
     }
 
@@ -30,9 +32,12 @@ if (isset($_POST['submit'])) {
     $result = mysqli_query($conn, $query);
 
     if ($result) {
-        echo "<script>alert('Data berhasil disimpan!'); window.location.href='dashboard.php';</script>";
+        $_SESSION['success'] = 'Data berhasil disimpan!';
+        header("Location: dashboard.php");
     } else {
-        echo "<script>alert('Gagal menyimpan data!'); window.history.back();</script>";
+        $_SESSION['error'] = 'Gagal menyimpan data!';
+        header("Location: katge_add.php");
     }
+    exit;
 }
 ?>

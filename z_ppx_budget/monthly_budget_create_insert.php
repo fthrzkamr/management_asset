@@ -47,6 +47,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($period_year) || empty($period_month)) {
             throw new Exception("Periode tahun dan bulan harus diisi");
         }
+
+        // Pengajuan Monthly Budget hanya untuk bulan DEPAN (sesuai aturan admin) - cegah tamper via request manual
+        $allowed_month = (int)date('n') + 1;
+        $allowed_year  = (int)date('Y');
+        if ($allowed_month > 12) {
+            $allowed_month = 1;
+            $allowed_year++;
+        }
+        if ($period_month !== $allowed_month || $period_year !== $allowed_year) {
+            throw new Exception("Pengajuan Monthly Budget hanya bisa untuk periode bulan depan ($allowed_month/$allowed_year).");
+        }
         
         // master_id is optional in the new flow: branches may submit without selecting a Master Anggaran
         if (empty($master_id)) {

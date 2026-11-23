@@ -235,10 +235,10 @@ if ($coa_lawan_q) {
                         </small>
                     </div>
                     <div class="d-flex" style="gap: 16px;">
-                        <span class="badge badge-light border p-2 text-success" style="font-size: 13px;">
+                        <span class="badge-masuk" style="font-size: 13px; padding: 7px 12px;">
                             <i class="fas fa-arrow-down mr-1"></i> Masuk: Rp <?= number_format($total_masuk_periode, 0, ',', '.') ?>
                         </span>
-                        <span class="badge badge-light border p-2 text-danger" style="font-size: 13px;">
+                        <span class="badge-keluar" style="font-size: 13px; padding: 7px 12px;">
                             <i class="fas fa-arrow-up mr-1"></i> Keluar: Rp <?= number_format($total_keluar_periode, 0, ',', '.') ?>
                         </span>
                     </div>
@@ -336,7 +336,7 @@ if ($coa_lawan_q) {
 <!-- Modal Catat Mutasi Baru -->
 <div class="modal fade" id="modalMutasi" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <form action="action.php" method="POST" enctype="multipart/form-data" class="modal-content" style="border-radius:10px; overflow:hidden;">
+        <form action="action.php" method="POST" enctype="multipart/form-data" id="formMutasi" class="modal-content" style="border-radius:10px; overflow:hidden;">
             <input type="hidden" name="action" value="save_mutasi">
             <div class="modal-header bg-primary text-white" style="background: linear-gradient(135deg, #18aefa 0%, #0d8abc 100%) !important; color: #fff !important;">
                 <h5 class="modal-title font-weight-bold">
@@ -393,15 +393,16 @@ if ($coa_lawan_q) {
                 </div>
 
                 <div class="form-group">
-                    <label class="small font-weight-bold">Akun Lawan COA (Untuk Jurnal Otomatis)</label>
-                    <select name="id_coa_lawan" id="selCoaLawan" class="form-control select2-mutasi" style="width: 100%;">
-                        <option value="">-- Pilih Akun Lawan (Opsional) --</option>
+                    <label class="small font-weight-bold">Akun Lawan COA (Untuk Jurnal Otomatis) <span class="text-danger">*</span></label>
+                    <select name="id_coa_lawan" id="selCoaLawan" class="form-control select2-mutasi" style="width: 100%;" required>
+                        <option value="">-- Pilih Akun Lawan --</option>
                         <?php foreach ($coa_lawan_list as $cl): ?>
                             <option value="<?= $cl['id_coa'] ?>">
                                 [<?= htmlspecialchars($cl['kode_akun']) ?>] <?= htmlspecialchars($cl['nama_akun']) ?> (<?= htmlspecialchars($cl['kategori_akun']) ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>
+                    <small class="text-muted">Wajib diisi, supaya setiap mutasi otomatis tercatat ke Jurnal Umum (double-entry).</small>
                     <small class="text-muted">Jika diisi, sistem akan otomatis membukukan transaksi ini ke dalam Jurnal Umum (Double-Entry).</small>
                 </div>
 
@@ -499,6 +500,15 @@ $(document).ready(function() {
             allowClear: true
         });
     }
+
+    // Validasi manual Akun Lawan - select2 bisa menyembunyikan validasi "required" bawaan browser
+    $('#formMutasi').on('submit', function(e) {
+        if (!$('#selCoaLawan').val()) {
+            e.preventDefault();
+            alert('Akun Lawan COA wajib dipilih, supaya mutasi ini otomatis tercatat ke Jurnal Umum.');
+            $('#selCoaLawan').select2('open');
+        }
+    });
 });
 
 function openModalMutasi() {

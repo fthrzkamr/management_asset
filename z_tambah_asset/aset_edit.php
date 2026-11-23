@@ -12,7 +12,8 @@ $auth->requirePermission('management_asset', 'update', 'dashboard.php');
 
 // Cek parameter ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {
-    echo "<script>alert('ID asset tidak ditemukan!'); window.location.href='dashboard.php';</script>";
+    $_SESSION['error'] = 'ID asset tidak ditemukan!';
+    header("Location: dashboard.php");
     exit;
 }
 
@@ -26,14 +27,16 @@ $query = mysqli_query($conn, "
 ");
 
 if (!$query) {
-    echo "<script>alert('Error: " . mysqli_error($conn) . "'); window.location.href='dashboard.php';</script>";
+    $_SESSION['error'] = 'Error: ' . mysqli_error($conn);
+    header("Location: dashboard.php");
     exit;
 }
 
 $asset = mysqli_fetch_assoc($query);
 
 if (!$asset) {
-    echo "<script>alert('Asset tidak ditemukan!'); window.location.href='dashboard.php';</script>";
+    $_SESSION['error'] = 'Asset tidak ditemukan!';
+    header("Location: dashboard.php");
     exit;
 }
 
@@ -419,7 +422,7 @@ if (!empty($asset['foto_asset'])) {
         if (file) {
             // Validasi ukuran file
             if (file.size > 5 * 1024 * 1024) {
-                alert('Ukuran file terlalu besar. Maksimal 5MB.');
+                showAlert('Ukuran file terlalu besar. Maksimal 5MB.', 'error');
                 this.value = '';
                 previewDiv.style.display = 'none';
                 return;
@@ -428,7 +431,7 @@ if (!empty($asset['foto_asset'])) {
             // Validasi tipe file
             const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
             if (!allowedTypes.includes(file.type)) {
-                alert('Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP');
+                showAlert('Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP', 'error');
                 this.value = '';
                 previewDiv.style.display = 'none';
                 return;

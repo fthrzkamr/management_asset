@@ -7,7 +7,7 @@ date_default_timezone_set('Asia/Jakarta');
 
 // Cek session login
 if (!isset($_SESSION['id_user'])) {
-    echo "<script>alert('Session expired. Silakan login kembali.'); window.location.href='login.php';</script>";
+    header("Location: ../login.php");
     exit;
 }
 
@@ -52,7 +52,7 @@ $updated_at     = $created_at;
 
 // Validasi user_info tidak boleh kosong
 if (empty($user_info)) {
-    echo "<script>alert('Error: User info tidak valid. Silakan login kembali.'); window.location.href='login.php';</script>";
+    header("Location: ../login.php");
     exit;
 }
 
@@ -64,8 +64,8 @@ if (isset($_FILES['foto_asset']) && $_FILES['foto_asset']['error'] == UPLOAD_ERR
     if ($uploadResult['success']) {
         $foto_asset = $uploadResult['filename'];
     } else {
-        $errMsg = addslashes($uploadResult['error'] ?: 'Gagal upload foto aset.');
-        echo "<script>alert('{$errMsg}'); history.back();</script>";
+        $_SESSION['error'] = $uploadResult['error'] ?: 'Gagal upload foto aset.';
+        header("Location: aset_add.php");
         exit;
     }
 }
@@ -75,7 +75,8 @@ $qKat = mysqli_query($conn, "SELECT kode_kategori, kategori_asset FROM kategori_
 $qLok = mysqli_query($conn, "SELECT kode_lokasi, lokasi_asset FROM lokasi_asset WHERE id_lokasi='$lokasi_id' LIMIT 1");
 
 if (!$qKat || !$qLok || mysqli_num_rows($qKat) == 0 || mysqli_num_rows($qLok) == 0) {
-    echo "<script>alert('Kategori atau lokasi tidak valid!'); history.back();</script>";
+    $_SESSION['error'] = 'Kategori atau lokasi tidak valid!';
+    header("Location: aset_add.php");
     exit;
 }
 
@@ -141,14 +142,18 @@ if ($insert) {
     // blocks or alters this success response even if it fails.
     sentineldesk_sync_asset($kode_aset, $kondisi, $status_barang, $user_pemakai, $lokasi_nama, $nama_aset, $merk, $spesifikasi, $lokasi_detail);
 
-    echo "<script>alert('Data aset berhasil disimpan dengan kode $kode_aset\\nFoto: $foto_asset'); window.location.href='dashboard.php';</script>";
+    $_SESSION['success'] = "Data aset berhasil disimpan dengan kode $kode_aset" . ($foto_asset ? " (Foto: $foto_asset)" : '');
+    header("Location: dashboard.php");
+    exit;
 } else {
     // Jika gagal dan ada foto yang sudah diupload, hapus foto
     if ($foto_asset && file_exists($upload_dir . $foto_asset)) {
         unlink($upload_dir . $foto_asset);
     }
-    
+
     $error = mysqli_error($conn);
-    echo "<script>alert('Gagal simpan data: $error'); history.back();</script>";
+    $_SESSION['error'] = "Gagal simpan data: $error";
+    header("Location: aset_add.php");
+    exit;
 }
 ?>

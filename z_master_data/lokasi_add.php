@@ -66,6 +66,7 @@ $auth->requirePermission('master_lokasi_asset', 'create');
                     </div>
                 </div>
                 <?php include '../layouts/footer.php'; ?>
+                <?php include '../layouts/flash_modal.php'; ?>
             </div>
         </div>
     </div>

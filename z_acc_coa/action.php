@@ -158,6 +158,22 @@ if ($action === 'delete') {
         exit();
     }
 
+    // Cek apakah akun masih dipakai sebagai akun rekening bank (Mutasi Bank)
+    $chk_rek = mysqli_query($conn, "SELECT id_rekening, nama_bank FROM acc_master_rekening WHERE id_coa = $id_coa LIMIT 1");
+    if ($chk_rek && $rrek = mysqli_fetch_assoc($chk_rek)) {
+        $_SESSION['error'] = "Akun [$kode] tidak dapat dihapus karena masih dipakai sebagai akun rekening bank \"{$rrek['nama_bank']}\" di Mutasi Bank. Lepaskan/ubah rekening itu terlebih dahulu.";
+        header("Location: index.php");
+        exit();
+    }
+
+    // Cek apakah akun masih dipakai sebagai akun kas di Cash Opname
+    $chk_co = mysqli_query($conn, "SELECT id_opname FROM acc_cash_opname WHERE id_coa_kas = $id_coa LIMIT 1");
+    if ($chk_co && mysqli_num_rows($chk_co) > 0) {
+        $_SESSION['error'] = "Akun [$kode] tidak dapat dihapus karena masih dipakai sebagai akun kas di riwayat Cash Opname.";
+        header("Location: index.php");
+        exit();
+    }
+
     if (mysqli_query($conn, "DELETE FROM acc_coa WHERE id_coa = $id_coa")) {
         $_SESSION['success'] = "Akun COA [$kode] {$acc['nama_akun']} berhasil dihapus.";
     } else {

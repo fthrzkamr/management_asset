@@ -48,17 +48,29 @@ if ($action === 'save_opname') {
         'koin_100'    => (int)($_POST['c_100'] ?? 0),
     ];
 
-    $saldo_fisik = ($pecahan['kertas_100k'] * 100000)
-                 + ($pecahan['kertas_50k']  * 50000)
-                 + ($pecahan['kertas_20k']  * 20000)
-                 + ($pecahan['kertas_10k']  * 10000)
-                 + ($pecahan['kertas_5k']   * 5000)
-                 + ($pecahan['kertas_2k']   * 2000)
-                 + ($pecahan['kertas_1k']   * 1000)
-                 + ($pecahan['koin_1000']   * 1000)
-                 + ($pecahan['koin_500']    * 500)
-                 + ($pecahan['koin_200']    * 200)
-                 + ($pecahan['koin_100']    * 100);
+    // Kalau akun yang diperiksa adalah rekening bank (ada di Mutasi Bank), tidak ada uang fisik untuk dihitung -
+    // pakai saldo riil rekening yang diinput manual (hasil cek rekening koran/e-banking), bukan jumlah pecahan uang.
+    $is_bank_account = false;
+    if ($id_coa_kas > 0) {
+        $q_bank_chk = mysqli_query($conn, "SELECT id_rekening FROM acc_master_rekening WHERE id_coa = $id_coa_kas LIMIT 1");
+        $is_bank_account = $q_bank_chk && mysqli_num_rows($q_bank_chk) > 0;
+    }
+
+    if ($is_bank_account) {
+        $saldo_fisik = (float)str_replace('.', '', $_POST['saldo_fisik_bank'] ?? '0');
+    } else {
+        $saldo_fisik = ($pecahan['kertas_100k'] * 100000)
+                     + ($pecahan['kertas_50k']  * 50000)
+                     + ($pecahan['kertas_20k']  * 20000)
+                     + ($pecahan['kertas_10k']  * 10000)
+                     + ($pecahan['kertas_5k']   * 5000)
+                     + ($pecahan['kertas_2k']   * 2000)
+                     + ($pecahan['kertas_1k']   * 1000)
+                     + ($pecahan['koin_1000']   * 1000)
+                     + ($pecahan['koin_500']    * 500)
+                     + ($pecahan['koin_200']    * 200)
+                     + ($pecahan['koin_100']    * 100);
+    }
 
     $selisih = $saldo_fisik - $saldo_buku;
     $pecahan_json = json_encode($pecahan);

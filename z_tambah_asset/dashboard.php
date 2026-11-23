@@ -596,6 +596,7 @@ $excel_url = 'aset_excel.php' . (!empty($excel_params) ? '?' . http_build_query(
             </div>
 
             <?php include '../layouts/footer.php'; ?>
+<?php include '../layouts/flash_modal.php'; ?>
 
             <!-- Floating Action Button removed as requested -->
          </div>

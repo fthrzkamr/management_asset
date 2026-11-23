@@ -902,7 +902,7 @@ function is_active($patterns) {
 
                     <!-- 5. Kelola Anggaran & Routing -->
                     <?php if ($hasMasterBudgetMenu): 
-                        $b_mgmt_patterns = ['z_ppx_budget/dashboard.php', 'z_ppx_budget/category_manage.php', 'z_master_cabang_ppx', 'z_master_budget', 'z_master_ppx_routing', 'z_master_budget_routing'];
+                        $b_mgmt_patterns = ['z_ppx_budget/dashboard.php', 'z_ppx_budget/category_manage.php', 'z_master_budget', 'z_master_ppx_routing', 'z_master_budget_routing'];
                         $isBMgmtActive = is_active($b_mgmt_patterns);
                     ?>
                         <li class="submenu <?= $isBMgmtActive ? 'active' : '' ?>">
@@ -925,9 +925,6 @@ function is_active($patterns) {
                                 <?php if ($auth->hasPermission('ppx_budget', 'manage_category') || $auth->isSuperAdmin() || $auth->hasPermission('master_budget', 'read') || $auth->hasPermission('realisasi_ppx', 'read')): ?>
                                     <li class="<?= is_active('z_ppx_budget/category_manage.php') ? 'active' : '' ?>">
                                         <a href="<?= BASE_URL ?>/z_ppx_budget/category_manage.php">Kategori Budget</a>
-                                    </li>
-                                    <li class="<?= is_active('z_master_cabang_ppx') ? 'active' : '' ?>">
-                                        <a href="<?= BASE_URL ?>/z_master_cabang_ppx/index.php">Master Lokasi & Cabang PPX</a>
                                     </li>
                                 <?php endif; ?>
                                 <?php if ($auth->hasPermission('ppx_routing', 'read')): ?>

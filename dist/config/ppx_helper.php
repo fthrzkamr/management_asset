@@ -60,6 +60,7 @@ if (!function_exists('init_ppx_fase2_db')) {
             'delete_approved_by'  => "ALTER TABLE ppx_realisasi_detail2 ADD COLUMN delete_approved_by INT(11) NULL AFTER delete_requested_at",
             'delete_approved_at'  => "ALTER TABLE ppx_realisasi_detail2 ADD COLUMN delete_approved_at DATETIME NULL AFTER delete_approved_by",
             'nota_susulan_files'  => "ALTER TABLE ppx_realisasi_detail2 ADD COLUMN nota_susulan_files TEXT NULL AFTER bukti_files",
+            'id_jurnal'           => "ALTER TABLE ppx_realisasi_detail2 ADD COLUMN id_jurnal INT(11) NULL AFTER bukti_files",
         ];
         foreach ($cols as $col => $alt_sql) {
             $c_res = @mysqli_query($conn, "SHOW COLUMNS FROM ppx_realisasi_detail2 LIKE '$col'");

@@ -190,6 +190,13 @@ if ($action === 'upload_nota_susulan') {
     exit();
 }
 
+// Input transaksi baru/edit hanya boleh setelah budget sampai tahap "Finance (Realisasi)" (atau sudah "Active")
+if (!in_array($budget['status'], ['Finance (Realisasi)', 'Active'])) {
+    $_SESSION['error'] = "Belum bisa input transaksi. Status anggaran masih \"{$budget['status']}\", realisasi baru bisa diinput setelah sampai tahap \"Finance (Realisasi)\".";
+    header("Location: $redirect");
+    exit();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 4. Parameter Form Transaksi BKK / BKM Baru & Edit
 // ─────────────────────────────────────────────────────────────────────────────

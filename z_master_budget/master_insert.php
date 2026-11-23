@@ -126,11 +126,11 @@ if ($result['success']) {
             $in_ids = implode(',', $safe_ids);
             
             // Lock and get pending budgets for selected IDs
-            $sql = "SELECT id_budget, period_year, period_month, total_allocation, budget_name 
-                    FROM ppx_monthly_budget 
-                    WHERE id_budget IN ($in_ids) 
-                    AND master_allocated = 0 
-                    AND (master_id IS NULL OR master_id = '') 
+            $sql = "SELECT id_budget, period_year, period_month, total_allocation, approved_allocation, budget_name
+                    FROM ppx_monthly_budget
+                    WHERE id_budget IN ($in_ids)
+                    AND master_allocated = 0
+                    AND (master_id IS NULL OR master_id = '')
                     AND status NOT IN ('Draft', 'Rejected', 'Closed')
                     FOR UPDATE";
             $res = mysqli_query($conn, $sql);
@@ -141,8 +141,10 @@ if ($result['success']) {
                 $pending = [];
                 $totalPending = 0;
                 while ($r = mysqli_fetch_assoc($res)) {
+                    // Pakai nominal yang sudah direview (approved_allocation) kalau ada, kalau belum direview pakai nominal pengajuan asli
+                    $r['effective_amount'] = $r['approved_allocation'] !== null ? floatval($r['approved_allocation']) : floatval($r['total_allocation']);
                     $pending[] = $r;
-                    $totalPending += floatval($r['total_allocation']);
+                    $totalPending += $r['effective_amount'];
                 }
 
                 if (count($pending) === 0) {

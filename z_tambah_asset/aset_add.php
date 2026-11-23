@@ -310,6 +310,7 @@ $qLokasi = mysqli_query($conn, "SELECT id_lokasi, lokasi_asset FROM lokasi_asset
                 </div>
 
                 <?php include '../layouts/footer.php'; ?>
+<?php include '../layouts/flash_modal.php'; ?>
             </div>
         </div>
     </div>

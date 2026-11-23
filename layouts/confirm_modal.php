@@ -52,6 +52,30 @@
     </div>
 </div>
 
+<!-- Modal Alert Universal (pengganti alert() bawaan browser) -->
+<div class="modal fade" id="alertModal" tabindex="-1" role="dialog" aria-labelledby="alertModalLabel">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header" id="alertModalHeader">
+                <h5 class="modal-title" id="alertModalLabel">
+                    <i class="fas fa-info-circle" id="alertModalIcon"></i> <span id="alertModalTitleText">Informasi</span>
+                </h5>
+                <button type="button" class="close" id="alertModalCloseX" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p id="alertModalMessage" class="mb-0"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="alertModalOk" data-dismiss="modal">
+                    <i class="fas fa-check"></i> OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Wait for jQuery to load before defining showConfirm
 (function() {
@@ -156,6 +180,73 @@
     };
 })();
 
+// Modal Alert Universal - pengganti alert() bawaan browser
+(function() {
+    var pendingAlerts = [];
+
+    function checkJQueryAlert() {
+        if (typeof jQuery !== 'undefined') {
+            while (pendingAlerts.length > 0) {
+                var p = pendingAlerts.shift();
+                showAlertInternal(p.message, p.type, p.onOk);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    var ALERT_PRESETS = {
+        success: { icon: 'fa-check-circle',        title: 'Berhasil',   headerClass: 'bg-success text-white' },
+        error:   { icon: 'fa-times-circle',         title: 'Error',      headerClass: 'bg-danger text-white' },
+        warning: { icon: 'fa-exclamation-triangle', title: 'Peringatan', headerClass: 'bg-warning text-white' },
+        info:    { icon: 'fa-info-circle',          title: 'Informasi',  headerClass: 'bg-info text-white' }
+    };
+
+    function showAlertInternal(message, type, onOk) {
+        type = ALERT_PRESETS[type] ? type : 'info';
+        var preset = ALERT_PRESETS[type];
+
+        jQuery('#alertModalHeader').attr('class', 'modal-header ' + preset.headerClass);
+        jQuery('#alertModalIcon').attr('class', 'fas ' + preset.icon);
+        jQuery('#alertModalTitleText').text(preset.title);
+        jQuery('#alertModalMessage').html(String(message).replace(/\n/g, '<br>'));
+
+        var previousActive = document.activeElement;
+        try { if (previousActive && typeof previousActive.blur === 'function') previousActive.blur(); } catch (e) {}
+
+        try {
+            jQuery('#alertModal').modal({ show: true, focus: false });
+        } catch (e) {
+            jQuery('#alertModal').modal('show');
+        }
+
+        jQuery('#alertModal').off('shown.bs.modal').on('shown.bs.modal', function() {
+            jQuery(this).removeAttr('aria-hidden');
+            try { jQuery('#alertModalOk').focus(); } catch (e) {}
+        });
+
+        jQuery('#alertModal').off('hidden.bs.modal').on('hidden.bs.modal', function() {
+            try {
+                if (previousActive && typeof previousActive.focus === 'function') previousActive.focus();
+            } catch (e) {}
+        });
+
+        jQuery('#alertModalOk, #alertModalCloseX').off('click').on('click', function() {
+            if (onOk) onOk();
+        });
+    }
+
+    // Public API: showAlert(message, type, onOk) - type: 'success'|'error'|'warning'|'info' (default 'info')
+    window.showAlert = function(message, type, onOk) {
+        if (!checkJQueryAlert()) {
+            pendingAlerts.push({ message: message, type: type, onOk: onOk });
+            setTimeout(checkJQueryAlert, 50);
+            return;
+        }
+        showAlertInternal(message, type, onOk);
+    };
+})();
+
 // MutationObserver to forcibly remove aria-hidden from modals
 (function() {
     function removeAriaHidden(el) {
@@ -165,7 +256,7 @@
     }
 
     try {
-        var modalIds = ['confirmModal', 'deleteModal'];
+        var modalIds = ['confirmModal', 'deleteModal', 'alertModal'];
         modalIds.forEach(function(id) {
             var el = document.getElementById(id);
             if (!el) return;
