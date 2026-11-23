@@ -143,12 +143,64 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
         }
 
         .card-stats {
-            transition: all 0.2s ease;
+            border: none !important;
+            border-radius: 12px !important;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            color: #ffffff !important;
         }
 
         .card-stats:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .card-stats.stat-budget {
+            background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+        }
+
+        .card-stats.stat-used {
+            background: linear-gradient(135deg, #e11d48 0%, #be123c 100%) !important;
+        }
+
+        .card-stats.stat-remaining {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+        }
+
+        .card-stats.stat-pending {
+            background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
+        }
+
+        .card-stats .stat-label {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+
+        .card-stats .stat-value {
+            color: #ffffff !important;
+            font-size: 1.35rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 0;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-stats .stats-icon-wrap {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.18);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: #ffffff !important;
+            flex-shrink: 0;
+            margin-left: 12px;
         }
 
         .stats-icon {
@@ -249,62 +301,62 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                 <?php endif; ?>
 
                 <!-- Stats Cards -->
-                <div class="row">
+                <div class="row mb-4">
                     <div class="col-xl-3 col-sm-6 col-12 d-flex">
-                        <div class="card bg-two flex-fill card-stats">
-                            <div class="card-body">
+                        <div class="card stat-budget flex-fill card-stats">
+                            <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <h6 class="text-white mb-0">Total Anggaran Aktif</h6>
-                                        <h4 class="text-white mb-0">Rp <?= number_format($stats['total_budget'] ?? 0, 0, ',', '.') ?></h4>
+                                        <div class="stat-label">Total Anggaran Aktif</div>
+                                        <div class="stat-value">Rp <?= number_format($stats['total_budget'] ?? 0, 0, ',', '.') ?></div>
                                     </div>
-                                    <div class="stats-icon">
-                                        <i class="fas fa-money-bill-wave text-white"></i>
+                                    <div class="stats-icon-wrap">
+                                        <i class="fas fa-money-bill-wave"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-xl-3 col-sm-6 col-12 d-flex">
-                        <div class="card bg-three flex-fill card-stats">
-                            <div class="card-body">
+                        <div class="card stat-used flex-fill card-stats">
+                            <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <h6 class="text-white mb-0">Total Terpakai</h6>
-                                        <h4 class="text-white mb-0">Rp <?= number_format($stats['total_used'] ?? 0, 0, ',', '.') ?></h4>
+                                        <div class="stat-label">Total Terpakai</div>
+                                        <div class="stat-value">Rp <?= number_format($stats['total_used'] ?? 0, 0, ',', '.') ?></div>
                                     </div>
-                                    <div class="stats-icon">
-                                        <i class="fas fa-hand-holding-usd text-white"></i>
+                                    <div class="stats-icon-wrap">
+                                        <i class="fas fa-hand-holding-usd"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-xl-3 col-sm-6 col-12 d-flex">
-                        <div class="card bg-four flex-fill card-stats">
-                            <div class="card-body">
+                        <div class="card stat-remaining flex-fill card-stats">
+                            <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <h6 class="text-white mb-0">Total Sisa Anggaran</h6>
-                                        <h4 class="text-white mb-0">Rp <?= number_format($stats['total_remaining'] ?? 0, 0, ',', '.') ?></h4>
+                                        <div class="stat-label">Total Sisa Anggaran</div>
+                                        <div class="stat-value">Rp <?= number_format($stats['total_remaining'] ?? 0, 0, ',', '.') ?></div>
                                     </div>
-                                    <div class="stats-icon">
-                                        <i class="fas fa-wallet text-white"></i>
+                                    <div class="stats-icon-wrap">
+                                        <i class="fas fa-wallet"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="col-xl-3 col-sm-6 col-12 d-flex">
-                        <div class="card bg-one flex-fill card-stats">
-                            <div class="card-body">
+                        <div class="card stat-pending flex-fill card-stats">
+                            <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <div>
-                                        <h6 class="text-white mb-0">Menunggu Realisasi</h6>
-                                        <h4 class="text-white mb-0"><?= $stats['pending_realisasi_count'] ?? 0 ?> Budget</h4>
+                                        <div class="stat-label">Menunggu Realisasi</div>
+                                        <div class="stat-value"><?= $stats['pending_realisasi_count'] ?? 0 ?> Budget</div>
                                     </div>
-                                    <div class="stats-icon">
-                                        <i class="fas fa-hourglass-half text-white"></i>
+                                    <div class="stats-icon-wrap">
+                                        <i class="fas fa-hourglass-half"></i>
                                     </div>
                                 </div>
                             </div>
