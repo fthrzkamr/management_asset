@@ -508,10 +508,11 @@ $(document).ready(function() {
         });
         
         $('.remove-category-btn').off('click').on('click', function() {
-            if (confirm('Hapus kategori ini beserta semua itemnya?')) {
-                $(this).closest('.category-block').remove();
+            var _btn = this;
+            showConfirm('Hapus kategori ini beserta semua itemnya?', function() {
+                $(_btn).closest('.category-block').remove();
                 updateTotals();
-            }
+            }, 'delete');
         });
         
         $('.category-select').off('change').on('change', function() {
@@ -731,7 +732,7 @@ $(document).ready(function() {
         
         if (hasErrors) {
             e.preventDefault();
-            alert('Form tidak valid:\n\n' + errorMessages.join('\n'));
+            showAlert('Form tidak valid:\n\n' + errorMessages.join('\n'), 'error');
             return false;
         }
     });

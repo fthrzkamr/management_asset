@@ -220,7 +220,7 @@ $month_names = ['','Januari','Februari','Maret','April','Mei','Juni',
                                 <i class="fas fa-check"></i> Setujui
                             </button>
                             <button type="submit" name="action" value="reject" class="btn btn-danger"
-                                    onclick="return confirm('Anda yakin menolak anggaran ini?')">
+                                    data-confirm="Anda yakin menolak anggaran ini?" data-confirm-type="delete">
                                 <i class="fas fa-times"></i> Tolak
                             </button>
                             <a href="dashboard.php" class="btn btn-secondary ml-auto">

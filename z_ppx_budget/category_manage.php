@@ -109,14 +109,12 @@ $result = mysqli_query($conn, $query);
                                                 </button>
                                                 <?php if ($row['is_active']): ?>
                                                     <a href="category_toggle.php?id=<?= $row['id_category'] ?>&action=deactivate" 
-                                                       class="btn btn-sm btn-warning" 
-                                                       onclick="return confirm('Nonaktifkan kategori ini?')">
+                                                       class="btn btn-sm btn-warning" data-confirm="Nonaktifkan kategori ini?">
                                                         <i class="fas fa-ban"></i>
                                                     </a>
                                                 <?php else: ?>
                                                     <a href="category_toggle.php?id=<?= $row['id_category'] ?>&action=activate" 
-                                                       class="btn btn-sm btn-success" 
-                                                       onclick="return confirm('Aktifkan kategori ini?')">
+                                                       class="btn btn-sm btn-success" data-confirm="Aktifkan kategori ini?">
                                                         <i class="fas fa-check"></i>
                                                     </a>
                                                 <?php endif; ?>

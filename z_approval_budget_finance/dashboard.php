@@ -226,15 +226,9 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                     function confirmClosePastBudgets() {
                         const msg = 'Apakah Anda yakin ingin melakukan TUTUP BUKU (Closed) untuk semua anggaran aktif dari bulan-bulan sebelumnya?\n\nAksi ini akan mencegah input realisasi baru pada anggaran tersebut.';
                         
-                        if (typeof showConfirm === 'function') {
-                            showConfirm('Konfirmasi Tutup Buku', msg, function() {
-                                window.location.href = 'close_past_budgets.php';
-                            });
-                        } else {
-                            if (confirm(msg)) {
-                                window.location.href = 'close_past_budgets.php';
-                            }
-                        }
+                        showConfirm('Konfirmasi Tutup Buku', msg, function() {
+                            window.location.href = 'close_past_budgets.php';
+                        });
                     }
                     </script>
                 <?php endif; ?>
@@ -533,11 +527,11 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
 
                         $('#realisasiModal').modal('show');
                     } else {
-                        alert('Gagal memuat data budget: ' + response.message);
+                        showAlert('Gagal memuat data budget: ' + response.message, 'error');
                     }
                 },
                 error: function() {
-                    alert('Terjadi kesalahan saat memuat data');
+                    showAlert('Terjadi kesalahan saat memuat data', 'error');
                 }
             });
         }
@@ -574,7 +568,7 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
             const fileInput = document.getElementById('buktiTF');
             
             if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-                alert('Mohon upload bukti pembayaran/TF terlebih dahulu!');
+                showAlert('Mohon upload bukti pembayaran/TF terlebih dahulu!', 'warning');
                 return false;
             }
 
@@ -582,12 +576,12 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
             const tanggalRealisasi = document.querySelector('input[name="tanggal_realisasi"]');
             
             if (!nominalValue || !nominalValue.value || parseFloat(nominalValue.value) <= 0) {
-                alert('Mohon isi nominal pembayaran!');
+                showAlert('Mohon isi nominal pembayaran!', 'warning');
                 return false;
             }
             
             if (!tanggalRealisasi || !tanggalRealisasi.value) {
-                alert('Mohon isi tanggal pembayaran!');
+                showAlert('Mohon isi tanggal pembayaran!', 'warning');
                 return false;
             }
 

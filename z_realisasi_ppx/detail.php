@@ -755,7 +755,7 @@ $total_over_budget = $total_alokasi_budget > 0 && $net_approved_budget > $total_
 
                                                         <!-- Hapus Draft Langsung -->
                                                         <?php if ($st === 'Draft'): ?>
-                                                        <form action="save_realisasi.php" method="POST" style="display:inline;" onsubmit="return confirm('Hapus draft transaksi ini?');">
+                                                        <form action="save_realisasi.php" method="POST" style="display:inline;" data-confirm="Hapus draft transaksi ini?" data-confirm-type="delete">
                                                             <input type="hidden" name="id_budget" value="<?= $id_budget ?>">
                                                             <input type="hidden" name="id_real_detail" value="<?= $rl['id_real_detail'] ?>">
                                                             <input type="hidden" name="action" value="delete">
@@ -1189,7 +1189,7 @@ function updateAkunInfo($sel) {
 function removeKasRow(btn) {
     const tbody = document.getElementById('tbodyKasRincian');
     if (tbody.children.length <= 1) {
-        alert('Minimal harus ada 1 baris rincian akun biaya!');
+        showAlert('Minimal harus ada 1 baris rincian akun biaya!', 'warning');
         return;
     }
     const tr = btn.closest('tr');
@@ -1217,7 +1217,7 @@ function handleKasFiles(input) {
     if (!input.files || input.files.length === 0) return;
 
     if (input.files.length > 10) {
-        alert('Maksimal 10 file!');
+        showAlert('Maksimal 10 file!', 'warning');
         input.value = '';
         return;
     }

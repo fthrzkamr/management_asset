@@ -583,8 +583,9 @@ document.getElementById('formPengambilan').addEventListener('submit', function(e
     document.querySelectorAll('.qty-input').forEach(inp => {
         if (!inp.value || parseInt(inp.value) < 1) { valid = false; msg = 'Masukkan jumlah yang valid.'; }
     });
-    if (!valid) { e.preventDefault(); alert(msg); }
+    if (!valid) { e.preventDefault(); showAlert(msg, 'warning'); }
 });
 </script>
+<?php include __DIR__ . '/../layouts/confirm_modal.php'; ?>
 </body>
 </html>

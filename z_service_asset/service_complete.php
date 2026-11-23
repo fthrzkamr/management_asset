@@ -261,7 +261,7 @@ $service = mysqli_fetch_assoc($query);
                 if (file) {
                     // Validasi ukuran file
                     if (file.size > 5 * 1024 * 1024) {
-                        alert('Ukuran file terlalu besar. Maksimal 5MB.');
+                        showAlert('Ukuran file terlalu besar. Maksimal 5MB.', 'error');
                         this.value = '';
                         previewDiv.hide();
                         return;
@@ -270,7 +270,7 @@ $service = mysqli_fetch_assoc($query);
                     // Validasi tipe file
                     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
                     if (!allowedTypes.includes(file.type)) {
-                        alert('Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP');
+                        showAlert('Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP', 'error');
                         this.value = '';
                         previewDiv.hide();
                         return;
@@ -294,14 +294,14 @@ $service = mysqli_fetch_assoc($query);
 
                 if (!biaya || parseInt(biaya) <= 0) {
                     e.preventDefault();
-                    alert('Harap masukkan biaya service yang valid!');
+                    showAlert('Harap masukkan biaya service yang valid!', 'warning');
                     $('#biaya_service').focus();
                     return false;
                 }
 
                 if (!tindakan.trim()) {
                     e.preventDefault();
-                    alert('Harap jelaskan tindakan yang dilakukan!');
+                    showAlert('Harap jelaskan tindakan yang dilakukan!', 'warning');
                     $('#tindakan').focus();
                     return false;
                 }
@@ -309,10 +309,12 @@ $service = mysqli_fetch_assoc($query);
                 // Konfirmasi
                 const confirmMsg = `Apakah Anda yakin ingin menyelesaikan service ini?\n\n`;
 
-                if (!confirm(confirmMsg + detailMsg + biayaMsg + 'Status tidak dapat diubah setelah diselesaikan.')) {
-                    e.preventDefault();
-                    return false;
-                }
+                e.preventDefault();
+                const formEl = this;
+                showConfirm(confirmMsg + 'Status tidak dapat diubah setelah diselesaikan.', function() {
+                    HTMLFormElement.prototype.submit.call(formEl);
+                }, 'confirm');
+                return false;
             });
 
             // Set minimum date

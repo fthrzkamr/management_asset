@@ -193,7 +193,7 @@ while($b = mysqli_fetch_assoc($q_brg)){
             });
 
             if (isDuplicate) {
-                alert('Barang ini sudah dimasukkan di baris lain! Silakan pilih barang lain.');
+                showAlert('Barang ini sudah dimasukkan di baris lain! Silakan pilih barang lain.', 'warning');
                 $(this).val('').trigger('change.select2'); // Reset value melalui select2
                 currentRow.find('.row-satuan').val('');
                 return;
@@ -262,7 +262,7 @@ while($b = mysqli_fetch_assoc($q_brg)){
         $('#formPO').submit(function(e) {
             if ($('#item-container tr').length === 0) {
                 e.preventDefault();
-                alert('Pilih minimal satu barang untuk dibeli!');
+                showAlert('Pilih minimal satu barang untuk dibeli!', 'warning');
                 return false;
             }
             

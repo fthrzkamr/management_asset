@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../dist/config/flash_helper.php';
 require __DIR__ . '/../../dist/config/config.php';
 require __DIR__ . '/../../dist/config/auth_helper.php';
 
@@ -58,13 +59,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_po'])) {
             }
 
             mysqli_commit($conn);
-            echo "<script>alert('Berhasil! PO $nomor_po kepada $nama_supplier telah diajukan.'); window.location.href='dashboard.php';</script>";
+            flashModalPage("Berhasil! PO $nomor_po kepada $nama_supplier telah diajukan.", "success", "dashboard.php");
         } catch (Exception $e) {
             mysqli_rollback($conn);
-            echo "<script>alert('Terjadi kesalahan database: " . addslashes($e->getMessage()) . "');</script>";
+            flashModalPage("Terjadi kesalahan database: " . $e->getMessage(), "error", "back");
         }
     } else {
-        echo "<script>alert('Nama Supplier harus diisi dan minimal 1 barang harus dipilih!');</script>";
+        flashModalPage("Nama Supplier harus diisi dan minimal 1 barang harus dipilih!", "warning", "back");
     }
 }
 ?>
@@ -216,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_po'])) {
             const selectedOption = select.find('option:selected');
             
             if(!selectedOption.val()) {
-                alert("Pilih barang terlebih dahulu!");
+                showAlert("Pilih barang terlebih dahulu!", "warning");
                 return;
             }
 
@@ -226,7 +227,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_po'])) {
             const satuan = selectedOption.data('satuan');
 
             if($('#row_' + id).length > 0) {
-                alert("Barang ini sudah ada di keranjang. Silakan sesuaikan kuantitas di tabel.");
+                showAlert("Barang ini sudah ada di keranjang. Silakan sesuaikan kuantitas di tabel.", "warning");
                 return;
             }
 

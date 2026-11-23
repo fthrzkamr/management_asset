@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../dist/config/flash_helper.php';
 session_start();
 require_once __DIR__ . '/../dist/config/config.php';
 require_once __DIR__ . '/../dist/config/auth_helper.php';
@@ -14,7 +15,7 @@ $id_user = $_SESSION['id_user'];
 
 // Pastikan ID barang tersedia
 if (!isset($_GET['id']) || empty($_GET['id'])) {
-    echo "<script>alert('ID Barang tidak valid!'); window.location.href='stok_gudang.php';</script>";
+    flashModalPage("ID Barang tidak valid!", "error", "stok_gudang.php");
     exit;
 }
 
@@ -26,7 +27,7 @@ $q_barang = mysqli_query($conn, "SELECT a.*, COALESCE(s.quantity, 0) as sisa_sto
                                 LEFT JOIN inventory_stok s ON a.id_barang = s.id_barang 
                                 WHERE a.id_barang = $id_barang");
 if (!$q_barang || mysqli_num_rows($q_barang) == 0) {
-    echo "<script>alert('Barang tidak ditemukan dalam master ATK!'); window.location.href='stok_gudang.php';</script>";
+    flashModalPage("Barang tidak ditemukan dalam master ATK!", "error", "stok_gudang.php");
     exit;
 }
 $barang = mysqli_fetch_assoc($q_barang);

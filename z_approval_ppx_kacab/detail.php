@@ -204,7 +204,7 @@ $result_detail = mysqli_query($conn, $query_detail);
                     <div class="card">
                         <div class="card-body text-center">
                             <form method="POST" action="process_approve.php" style="display: inline;" 
-                                  onsubmit="return confirm('Apakah Anda yakin ingin menyetujui PPX ini?')">
+                                  data-confirm="Apakah Anda yakin ingin menyetujui PPX ini?">
                                 <input type="hidden" name="no_pengajuan" value="<?= htmlspecialchars($no_ppx) ?>">
                                 <button type="submit" class="btn btn-success">
                                     <i class="fas fa-check-circle"></i> Setujui
@@ -212,7 +212,7 @@ $result_detail = mysqli_query($conn, $query_detail);
                             </form>
 
                             <form method="POST" action="process_reject.php" style="display: inline;" 
-                                  onsubmit="return confirm('Apakah Anda yakin ingin menolak PPX ini? PPX akan dikembalikan untuk revisi.')">
+                                  data-confirm="Apakah Anda yakin ingin menolak PPX ini? PPX akan dikembalikan untuk revisi.">
                                 <input type="hidden" name="no_pengajuan" value="<?= htmlspecialchars($no_ppx) ?>">
                                 <button type="submit" class="btn btn-danger">
                                     <i class="fas fa-times-circle"></i> Tolak (Revisi)

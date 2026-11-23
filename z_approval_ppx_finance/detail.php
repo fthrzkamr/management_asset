@@ -771,14 +771,13 @@ unset($_SESSION['success'], $_SESSION['error']);
             })
             .then(data => {
                 if (data.success) {
-                    alert('Berhasil! ' + data.message);
-                    window.location.href = 'dashboard.php';
+                    showAlert('Berhasil! ' + data.message, 'success', function(){ window.location.href = 'dashboard.php'; });
                 } else {
-                    alert('Gagal! ' + data.message);
+                    showAlert('Gagal! ' + data.message, 'error');
                 }
             })
             .catch(error => {
-                alert('Error! Terjadi kesalahan saat memproses approval: ' + error.message);
+                showAlert('Error! Terjadi kesalahan saat memproses approval: ' + error.message, 'error');
                 console.error('Error:', error);
             });
         });
@@ -805,20 +804,19 @@ unset($_SESSION['success'], $_SESSION['error']);
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Berhasil! ' + data.message);
-                    // Enable approve button
+                                        // Enable approve button
                     const btnApprove = document.getElementById('btnApproveSelesai');
                     if (btnApprove) {
                         btnApprove.disabled = false;
                     }
                     // Reload page to update UI
-                    location.reload();
+                    showAlert('Berhasil! ' + data.message, 'success', function(){ location.reload(); });
                 } else {
-                    alert('Gagal! ' + data.message);
+                    showAlert('Gagal! ' + data.message, 'error');
                 }
             })
             .catch(error => {
-                alert('Error! Terjadi kesalahan saat memproses reimbursement');
+                showAlert('Error! Terjadi kesalahan saat memproses reimbursement', 'error');
                 console.error('Error:', error);
             });
         });

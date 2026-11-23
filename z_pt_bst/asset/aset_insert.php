@@ -1,11 +1,12 @@
 <?php
 // filepath: c:\xampp\htdocs\asset_bst\aset_insert.php
 include '../../dist/config/config.php';
+require_once __DIR__ . '/../../dist/config/flash_helper.php';
 date_default_timezone_set('Asia/Jakarta');
 
 // Cek session login
 if (!isset($_SESSION['id_user'])) {
-    echo "<script>alert('Session expired. Silakan login kembali.'); window.location.href='../../login.php';</script>";
+    flashModalPage("Session expired. Silakan login kembali.", 'warning', '../../login.php');
     exit;
 }
 
@@ -49,7 +50,7 @@ $updated_at     = $created_at;
 
 // Validasi user_info tidak boleh kosong
 if (empty($user_info)) {
-    echo "<script>alert('Error: User info tidak valid. Silakan login kembali.'); window.location.href='../../login.php';</script>";
+    flashModalPage("Error: User info tidak valid. Silakan login kembali.", 'error', '../../login.php');
     exit;
 }
 
@@ -71,13 +72,13 @@ if (isset($_FILES['foto_asset']) && $_FILES['foto_asset']['error'] == UPLOAD_ERR
     // Validasi ekstensi file
     $allowed_ext = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
     if (!in_array($file_ext, $allowed_ext)) {
-        echo "<script>alert('Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP'); history.back();</script>";
+        flashModalPage("Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP", 'error', 'back');
         exit;
     }
     
     // Validasi ukuran file (max 5MB)
     if ($file_size > 5 * 1024 * 1024) {
-        echo "<script>alert('Ukuran file terlalu besar. Maksimal 5MB'); history.back();</script>";
+        flashModalPage("Ukuran file terlalu besar. Maksimal 5MB", 'error', 'back');
         exit;
     }
     
@@ -99,7 +100,7 @@ if (isset($_FILES['foto_asset']) && $_FILES['foto_asset']['error'] == UPLOAD_ERR
             // Anda disarankan mengaktifkan ekstensi GD di php.ini (XAMPP: C:\\xampp\\php\\php.ini)
         }
     } else {
-        echo "<script>alert('Gagal upload foto'); history.back();</script>";
+        flashModalPage("Gagal upload foto", 'error', 'back');
         exit;
     }
 }
@@ -109,7 +110,7 @@ $qKat = mysqli_query($conn, "SELECT kode_kategori, kategori_asset FROM kategori_
 $qLok = mysqli_query($conn, "SELECT kode_lokasi, lokasi_asset FROM lokasi_asset WHERE id_lokasi='$lokasi_id' LIMIT 1");
 
 if (!$qKat || !$qLok || mysqli_num_rows($qKat) == 0 || mysqli_num_rows($qLok) == 0) {
-    echo "<script>alert('Kategori atau lokasi tidak valid!'); history.back();</script>";
+    flashModalPage("Kategori atau lokasi tidak valid!", 'error', 'back');
     exit;
 }
 
@@ -171,7 +172,7 @@ $sql = "INSERT INTO asset_bst (
 $insert = mysqli_query($conn, $sql);
 
 if ($insert) {
-    echo "<script>alert('Data aset berhasil disimpan dengan kode $kode_aset\\nFoto: $foto_asset'); window.location.href='dashboard.php';</script>";
+    flashModalPage("Data aset berhasil disimpan dengan kode $kode_aset - Foto: $foto_asset", 'success', 'dashboard.php');
 } else {
     // Jika gagal dan ada foto yang sudah diupload, hapus foto
     if ($foto_asset && file_exists($upload_dir . $foto_asset)) {
@@ -179,7 +180,7 @@ if ($insert) {
     }
     
     $error = mysqli_error($conn);
-    echo "<script>alert('Gagal simpan data: $error'); history.back();</script>";
+    flashModalPage("Gagal simpan data: $error", 'error', 'back');
 }
 
 // Function untuk resize gambar

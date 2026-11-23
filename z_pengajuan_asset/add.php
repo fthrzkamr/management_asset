@@ -445,7 +445,7 @@ $jabatan_user = $userData['jabatan'] ?? '-';
             // PERBAIKAN: Validate date - boleh hari ini atau setelahnya
             if (tanggal < today) {
                 e.preventDefault();
-                alert('Tanggal dibutuhkan tidak boleh kurang dari hari ini!');
+                showAlert('Tanggal dibutuhkan tidak boleh kurang dari hari ini!', 'error');
                 return false;
             }
         });

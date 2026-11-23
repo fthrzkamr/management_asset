@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__.'/../dist/config/flash_helper.php';
 include '../dist/config/config.php';
 include '../dist/config/auth_helper.php';
 require_once '../dist/config/image_helper.php';
@@ -9,7 +10,7 @@ date_default_timezone_set('Asia/Jakarta');
 $auth = new AuthHelper($conn);
 
 if (!$auth->isLoggedIn()) {
-    echo "<script>alert('Session expired. Silakan login kembali.'); window.location.href='../login.php';</script>";
+    flashModalPage("Session expired. Silakan login kembali.", 'warning', '../login.php');
     exit;
 }
 
@@ -53,7 +54,7 @@ $updated_at     = $created_at;
 
 // Validasi user_info tidak boleh kosong
 if (empty($user_info)) {
-    echo "<script>alert('Error: User info tidak valid. Silakan login kembali.'); window.location.href='login.php';</script>";
+    flashModalPage("Error: User info tidak valid. Silakan login kembali.", 'error', 'login.php');
     exit;
 }
 
@@ -66,7 +67,7 @@ if (isset($_FILES['foto_asset']) && $_FILES['foto_asset']['error'] == UPLOAD_ERR
         $foto_asset = $uploadResult['filename'];
     } else {
         $errMsg = addslashes($uploadResult['error'] ?: 'Gagal upload foto aset.');
-        echo "<script>alert('{$errMsg}'); history.back();</script>";
+        flashModalPage("{$errMsg}", 'error', 'back');
         exit;
     }
 }
@@ -76,7 +77,7 @@ $qKat = mysqli_query($conn, "SELECT kode_kategori, kategori_asset FROM kategori_
 $qLok = mysqli_query($conn, "SELECT kode_lokasi, lokasi_asset FROM lokasi_asset WHERE id_lokasi='$lokasi_id' LIMIT 1");
 
 if (!$qKat || !$qLok || mysqli_num_rows($qKat) == 0 || mysqli_num_rows($qLok) == 0) {
-    echo "<script>alert('Kategori atau lokasi tidak valid!'); history.back();</script>";
+    flashModalPage("Kategori atau lokasi tidak valid!", 'error', 'back');
     exit;
 }
 
@@ -139,7 +140,7 @@ $sql = "INSERT INTO asset_ga (
 $insert = mysqli_query($conn, $sql);
 
 if ($insert) {
-    echo "<script>alert('Data aset berhasil disimpan dengan kode $kode_aset\\nFoto: $foto_asset'); window.location.href='dashboard.php';</script>";
+    flashModalPage("Data aset berhasil disimpan dengan kode $kode_aset - Foto: $foto_asset", 'success', 'dashboard.php');
 } else {
     // Jika gagal dan ada foto yang sudah diupload, hapus foto
     if ($foto_asset && file_exists($upload_dir . $foto_asset)) {
@@ -147,6 +148,6 @@ if ($insert) {
     }
     
     $error = mysqli_error($conn);
-    echo "<script>alert('Gagal simpan data: $error'); history.back();</script>";
+    flashModalPage("Gagal simpan data: $error", 'error', 'back');
 }
 ?>

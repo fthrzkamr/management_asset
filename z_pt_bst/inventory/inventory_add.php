@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../../dist/config/config.php';
+require_once __DIR__ . '/../../dist/config/flash_helper.php';
 require __DIR__ . '/../../dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
@@ -23,10 +24,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         mysqli_query($conn, $q_stok);
         
         mysqli_commit($conn);
-        echo "<script>alert('Barang BST berhasil ditambahkan!'); window.location.href='dashboard.php';</script>";
+        flashModalPage("Barang BST berhasil ditambahkan!", 'success', 'dashboard.php');
     } catch (Exception $e) {
         mysqli_rollback($conn);
-        echo "<script>alert('Gagal: " . $e->getMessage() . "'); history.back();</script>";
+        flashModalPage("Gagal: " . $e->getMessage() , 'error', 'back');
     }
     exit;
 }

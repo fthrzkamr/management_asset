@@ -291,7 +291,7 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
                                     </td>
                                     <td class="text-center">
                                         <div class="d-flex justify-content-center" style="gap:4px;">
-                                            <form action="action.php" method="POST" style="display:inline;" onsubmit="return confirm('Setujui pembatalan transaksi ini? Saldo anggaran akan dikembalikan.');">
+                                            <form action="action.php" method="POST" style="display:inline;" data-confirm="Setujui pembatalan transaksi ini? Saldo anggaran akan dikembalikan.">
                                                 <input type="hidden" name="id_real_detail" value="<?= $dr['id_real_detail'] ?>">
                                                 <input type="hidden" name="action" value="ApproveDelete">
                                                 <button type="submit" class="btn btn-sm btn-success p-1 px-2" title="Setujui Pembatalan (Kembalikan Anggaran)">
@@ -444,7 +444,7 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
                                 <i class="fas fa-list-check text-primary mr-1"></i> Rincian Realisasi Per Detail Item
                             </h6>
                             <?php if ($c_pend > 0): ?>
-                            <form action="action.php" method="POST" style="display:inline;" onsubmit="return confirm('Setujui SEMUA (<?= $c_pend ?>) realisasi item yang menunggu pada budget ini?');">
+                            <form action="action.php" method="POST" style="display:inline;" data-confirm="Setujui SEMUA (<?= $c_pend ?>) realisasi item yang menunggu pada budget ini?">
                                 <input type="hidden" name="id_budget" value="<?= $mid ?>">
                                 <input type="hidden" name="action" value="Disetujui">
                                 <input type="hidden" name="redirect_to" value="dashboard.php">
@@ -588,7 +588,7 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
                                                                 Alasan: <?= htmlspecialchars($rl['delete_reason'] ?? '-') ?>
                                                             </div>
                                                             <div class="d-flex align-items-center" style="gap:5px;">
-                                                                <form action="action.php" method="POST" style="display:inline;" onsubmit="return confirm('Setujui pembatalan/hapus transaksi ini? Saldo anggaran akan dikembalikan.');">
+                                                                <form action="action.php" method="POST" style="display:inline;" data-confirm="Setujui pembatalan/hapus transaksi ini? Saldo anggaran akan dikembalikan.">
                                                                     <input type="hidden" name="id_real_detail" value="<?= $rd_id ?>">
                                                                     <input type="hidden" name="action" value="ApproveDelete">
                                                                     <button type="submit" class="btn btn-sm btn-danger py-0 px-2 font-weight-bold" title="Setujui Hapus">
@@ -605,7 +605,7 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
                                                         <?php elseif ($st === 'Menunggu Approval'): ?>
                                                             <div class="d-flex align-items-center" style="gap:5px;">
                                                                 <!-- Form Setujui -->
-                                                                <form action="action.php" method="POST" style="display:inline;" onsubmit="return confirm('Setujui transaksi <?= $jenis ?> ini?');">
+                                                                <form action="action.php" method="POST" style="display:inline;" data-confirm="Setujui transaksi <?= $jenis ?> ini?">
                                                                     <input type="hidden" name="id_real_detail" value="<?= $rd_id ?>">
                                                                     <input type="hidden" name="action" value="Disetujui">
                                                                     <input type="hidden" name="redirect_to" value="dashboard.php">
@@ -655,6 +655,30 @@ $cnt_no_real  = count(array_filter($budgets, fn($r) => (int)$r['total_entries'] 
     </div>
 </div>
 
+
+<!-- Modal Reject Pembatalan dengan Catatan -->
+<div class="modal fade" id="modalRejectDelete" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white py-2">
+                <h6 class="modal-title"><i class="fas fa-times-circle mr-1"></i> Tolak Permintaan Pembatalan</h6>
+                <button class="close text-white" data-dismiss="modal"><span>&times;</span></button>
+            </div>
+            <form action="action.php" method="POST" id="formRejectDelete">
+                <input type="hidden" name="id_real_detail" id="rejectDeleteIdRealDetail" value="">
+                <input type="hidden" name="action" value="RejectDelete">
+                <div class="modal-body py-2">
+                    <p class="small text-muted mb-2">Tolak permohonan pembatalan <strong id="rejectDeleteLabel"></strong>. Masukkan alasan penolakan:</p>
+                    <textarea name="catatan_approval" id="rejectDeleteCatatan" class="form-control form-control-sm" rows="3" placeholder="Alasan penolakan (wajib diisi)..." required></textarea>
+                </div>
+                <div class="modal-footer py-1">
+                    <button type="button" class="btn btn-secondary btn-sm" data-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-paper-plane mr-1"></i> Tolak Pembatalan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 <!-- Modal Reject dengan Catatan -->
 <div class="modal fade" id="modalReject" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -735,21 +759,10 @@ function promptReject(idRealDetail, noReal) {
 }
 
 function promptRejectDelete(idRealDetail, noReal) {
-    var reason = prompt("Masukkan alasan penolakan pembatalan transaksi " + (noReal ? "(" + noReal + ")" : "") + ":");
-    if (reason === null) return;
-    reason = reason.trim();
-    if (!reason) {
-        alert("Alasan penolakan wajib diisi!");
-        return;
-    }
-    var form = document.createElement('form');
-    form.method = 'POST';
-    form.action = 'action.php';
-    form.innerHTML = '<input type="hidden" name="id_real_detail" value="' + idRealDetail + '">' +
-                     '<input type="hidden" name="action" value="RejectDelete">' +
-                     '<input type="hidden" name="catatan_approval" value="' + reason.replace(/"/g, '&quot;') + '">';
-    document.body.appendChild(form);
-    form.submit();
+    document.getElementById('rejectDeleteIdRealDetail').value = idRealDetail;
+    document.getElementById('rejectDeleteLabel').textContent = noReal ? '#' + noReal : '';
+    document.getElementById('rejectDeleteCatatan').value = '';
+    $('#modalRejectDelete').modal('show');
 }
 
 function previewImg(url, name) {

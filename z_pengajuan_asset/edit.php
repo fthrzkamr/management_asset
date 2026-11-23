@@ -439,7 +439,7 @@ unset($_SESSION['success'], $_SESSION['error']);
 
                 if (tanggalDibutuhkan <= today) {
                     e.preventDefault();
-                    alert('Tanggal dibutuhkan harus lebih dari hari ini!');
+                    showAlert('Tanggal dibutuhkan harus lebih dari hari ini!', 'error');
                     return false;
                 }
 
@@ -462,13 +462,13 @@ unset($_SESSION['success'], $_SESSION['error']);
 
             if (file) {
                 if (file.size > maxSize) {
-                    alert('Ukuran file terlalu besar! Maksimal 5MB.');
+                    showAlert('Ukuran file terlalu besar! Maksimal 5MB.', 'error');
                     this.value = '';
                     return;
                 }
 
                 if (!allowedTypes.includes(file.type)) {
-                    alert('Format file tidak didukung!');
+                    showAlert('Format file tidak didukung!', 'error');
                     this.value = '';
                     return;
                 }

@@ -48,7 +48,7 @@ if (!empty($no_pengajuan)) {
     $result = mysqli_query($conn, $query);
 
     if (!$result || mysqli_num_rows($result) === 0) {
-        echo "<script>alert('Data pengajuan asset tidak ditemukan!'); window.close();</script>";
+        echo "<script>window.onload=function(){document.body.innerHTML='<div style=\"font-family:sans-serif;text-align:center;margin-top:40px\"><h3>Data pengajuan asset tidak ditemukan!</h3><button onclick=\"window.close()\">Tutup</button></div>';};</script>";
         exit();
     }
 

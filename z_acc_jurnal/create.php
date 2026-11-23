@@ -241,7 +241,7 @@ function addJurnalRow(posisiDefault, presetCoaId) {
 function removeJurnalRow(btn) {
     const tbody = document.getElementById('tbodyJurnal');
     if (tbody.children.length <= 2) {
-        alert('Minimal harus ada 2 baris akun (Debit dan Kredit)!');
+        showAlert('Minimal harus ada 2 baris akun (Debit dan Kredit)!', 'warning');
         return;
     }
     btn.closest('tr').remove();

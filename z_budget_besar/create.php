@@ -292,7 +292,7 @@ $(document).ready(function() {
     function bindEvents() {
         $('.add-item-btn').off('click').on('click', function() { addItem($(this).data('category-id')); });
         $('.remove-category-btn').off('click').on('click', function() {
-            if (confirm('Hapus kategori ini?')) { $(this).closest('.category-block').remove(); updateTotal(); }
+            var _btn = this; showConfirm('Hapus kategori ini?', function() { $(_btn).closest('.category-block').remove(); updateTotal(); }, 'delete');
         });
         $('.category-select').off('change').on('change', function() {
             updateCategoryItems($(this).data('category-id'));
@@ -329,7 +329,7 @@ $(document).ready(function() {
         $('.items-body tr').each(function() {
             total += (parseInt($(this).find('.item-qty').val())||0) * (parseRupiah($(this).find('.item-price').val())||0);
         });
-        if (total <= 0) { e.preventDefault(); alert('Total alokasi harus lebih dari 0!'); }
+        if (total <= 0) { e.preventDefault(); showAlert('Total alokasi harus lebih dari 0!', 'warning'); }
     });
 });
 </script>

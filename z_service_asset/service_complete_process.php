@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__.'/../dist/config/flash_helper.php';
 // filepath: c:\xampp\htdocs\asset_dfm\service_asset\service_complete_process.php
 include('../dist/config/config.php');
 include_once(__DIR__ . '/../dist/config/auth_helper.php');
@@ -12,7 +13,7 @@ date_default_timezone_set('Asia/Jakarta');
 
 // Cek session login
 if (!isset($_SESSION['id_user'])) {
-    echo "<script>alert('Session expired. Silakan login kembali.'); window.location.href='../login.php';</script>";
+    flashModalPage("Session expired. Silakan login kembali.", 'warning', '../login.php');
     exit;
 }
 
@@ -32,7 +33,7 @@ $updated_at = date("Y-m-d H:i:s");
 
 // Validasi required fields
 if (empty($id_service) || empty($tanggal_selesai) || $biaya_service <= 0) {
-    echo "<script>alert('Data yang wajib diisi belum lengkap!'); history.back();</script>";
+    flashModalPage("Data yang wajib diisi belum lengkap!", 'warning', 'back');
     exit;
 }
 
@@ -45,7 +46,7 @@ $check_service = mysqli_query($conn, "
 ");
 
 if (!$check_service || mysqli_num_rows($check_service) == 0) {
-    echo "<script>alert('Service tidak ditemukan atau sudah selesai!'); window.location.href='service_list.php';</script>";
+    flashModalPage("Service tidak ditemukan atau sudah selesai!", 'error', 'service_list.php');
     exit;
 }
 
@@ -69,13 +70,13 @@ if (isset($_FILES['foto_nota']) && $_FILES['foto_nota']['error'] == UPLOAD_ERR_O
     // Validasi ekstensi file
     $allowed_ext = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
     if (!in_array($file_ext, $allowed_ext)) {
-        echo "<script>alert('Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP'); history.back();</script>";
+        flashModalPage("Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP", 'error', 'back');
         exit;
     }
     
     // Validasi ukuran file (max 5MB)
     if ($file_size > 5 * 1024 * 1024) {
-        echo "<script>alert('Ukuran file terlalu besar. Maksimal 5MB'); history.back();</script>";
+        flashModalPage("Ukuran file terlalu besar. Maksimal 5MB", 'error', 'back');
         exit;
     }
     
@@ -92,7 +93,7 @@ if (isset($_FILES['foto_nota']) && $_FILES['foto_nota']['error'] == UPLOAD_ERR_O
         // Resize gambar jika terlalu besar
         resizeImage($upload_path, $upload_path, 1200, 800);
     } else {
-        echo "<script>alert('Gagal upload foto nota'); history.back();</script>";
+        flashModalPage("Gagal upload foto nota", 'error', 'back');
         exit;
     }
 }
@@ -116,7 +117,7 @@ if ($update) {
         $success_message .= "\\nFoto nota: $foto_nota";
     }
     
-    echo "<script>alert('$success_message'); window.location.href='dashboard.php?status=completed';</script>";
+    flashModalPage("$success_message", 'success', 'dashboard.php?status=completed');
 } else {
     // Jika gagal update dan ada foto nota yang sudah diupload, hapus foto
     if ($foto_nota && file_exists($upload_dir . $foto_nota)) {
@@ -124,7 +125,7 @@ if ($update) {
     }
     
     $error = mysqli_error($conn);
-    echo "<script>alert('Gagal menyelesaikan service: $error'); history.back();</script>";
+    flashModalPage("Gagal menyelesaikan service: $error", 'error', 'back');
 }
 
 // Function untuk resize gambar (sama seperti sebelumnya)

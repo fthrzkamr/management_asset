@@ -915,7 +915,7 @@ $(document).ready(function() {
         var description = $(this).data('description');
         
         if (!masterId) {
-            alert('Error: Master ID tidak ditemukan!');
+            showAlert('Error: Master ID tidak ditemukan!', 'error');
             return;
         }
         
@@ -934,7 +934,7 @@ $(document).ready(function() {
         e.stopPropagation();
         
         if (!deleteMasterId) {
-            alert('Error: Master ID tidak valid!');
+            showAlert('Error: Master ID tidak valid!', 'error');
             return;
         }
         
@@ -964,7 +964,7 @@ $(document).ready(function() {
             var description = $(this).data('description');
             
             if (!masterId) {
-                alert('Error: Master ID tidak ditemukan!');
+                showAlert('Error: Master ID tidak ditemukan!', 'error');
                 return;
             }
             
@@ -1022,7 +1022,7 @@ $('#formReviewPengajuan').on('submit', function(e) {
     });
     if (!ok) {
         e.preventDefault();
-        alert('Untuk pengajuan yang dipilih "Tidak", isi nominal yang disetujui (harus lebih dari 0).');
+        showAlert('Untuk pengajuan yang dipilih "Tidak", isi nominal yang disetujui (harus lebih dari 0).', 'warning');
     }
 });
 
@@ -1278,7 +1278,7 @@ $(document).ready(function() {
 
 function openDeleteModal(masterId, description) {
     if (!masterId) {
-        alert('Error: Master ID tidak valid!');
+        showAlert('Error: Master ID tidak valid!', 'error');
         return;
     }
     
@@ -1291,7 +1291,7 @@ function openDeleteModal(masterId, description) {
 
 function confirmDelete() {
     if (!deleteMasterId || deleteMasterId === '' || deleteMasterId === 'undefined') {
-        alert('Error: Master ID tidak valid! Nilai: "' + deleteMasterId + '"');
+        showAlert('Error: Master ID tidak valid! Nilai: "' + deleteMasterId + '"', 'error');
         return false;
     }
     

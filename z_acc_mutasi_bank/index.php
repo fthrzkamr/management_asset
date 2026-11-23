@@ -314,7 +314,7 @@ if ($coa_lawan_q) {
                                                     </a>
                                                 <?php endif; ?>
                                                 <?php if ($is_admin): ?>
-                                                    <a href="action.php?action=delete_mutasi&id=<?= $m['id_mutasi'] ?>" class="btn btn-sm btn-light border text-danger" title="Batalkan Mutasi" onclick="return confirm('Apakah Anda yakin ingin membatalkan mutasi ini? Saldo bank akan dikembalikan.');">
+                                                    <a href="action.php?action=delete_mutasi&id=<?= $m['id_mutasi'] ?>" class="btn btn-sm btn-light border text-danger" title="Batalkan Mutasi" data-confirm="Apakah Anda yakin ingin membatalkan mutasi ini? Saldo bank akan dikembalikan." data-confirm-type="delete">
                                                         <i class="fas fa-trash-alt"></i>
                                                     </a>
                                                 <?php endif; ?>
@@ -505,7 +505,7 @@ $(document).ready(function() {
     $('#formMutasi').on('submit', function(e) {
         if (!$('#selCoaLawan').val()) {
             e.preventDefault();
-            alert('Akun Lawan COA wajib dipilih, supaya mutasi ini otomatis tercatat ke Jurnal Umum.');
+            showAlert('Akun Lawan COA wajib dipilih, supaya mutasi ini otomatis tercatat ke Jurnal Umum.', 'warning');
             $('#selCoaLawan').select2('open');
         }
     });

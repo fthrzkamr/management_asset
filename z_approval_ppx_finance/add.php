@@ -635,7 +635,7 @@ if (!isset($_SESSION['id_user'])) {
 
             if (tanggal < today) {
                 e.preventDefault();
-                alert('Tanggal dibutuhkan tidak boleh kurang dari hari ini!');
+                showAlert('Tanggal dibutuhkan tidak boleh kurang dari hari ini!', 'warning');
                 return false;
             }
 
@@ -643,7 +643,7 @@ if (!isset($_SESSION['id_user'])) {
             const detailItems = document.querySelectorAll('.detail-item');
             if (detailItems.length === 0) {
                 e.preventDefault();
-                alert('Minimal harus ada satu item detail!');
+                showAlert('Minimal harus ada satu item detail!', 'warning');
                 return false;
             }
         });

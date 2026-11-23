@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../../dist/config/config.php';
+require_once __DIR__ . '/../../dist/config/flash_helper.php';
 require __DIR__ . '/../../dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
@@ -7,7 +8,7 @@ $auth->requirePermission('pt_bst_inventory', 'update');
 
 $id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 if ($id == 0) {
-    echo "<script>alert('Akses ilegal!'); window.location.href='dashboard.php';</script>";
+    flashModalPage("Akses ilegal!", 'error', 'dashboard.php');
     exit;
 }
 
@@ -22,9 +23,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                  WHERE id_barang_bst=$id";
                  
     if (mysqli_query($conn, $q_update)) {
-        echo "<script>alert('Barang BST berhasil diperbarui!'); window.location.href='dashboard.php';</script>";
+        flashModalPage("Barang BST berhasil diperbarui!", 'success', 'dashboard.php');
     } else {
-        echo "<script>alert('Gagal: " . mysqli_error($conn) . "'); history.back();</script>";
+        flashModalPage("Gagal: " . mysqli_error($conn) , 'error', 'back');
     }
     exit;
 }
@@ -32,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 $q_data = mysqli_query($conn, "SELECT * FROM bst_inventory WHERE id_barang_bst = $id");
 $data = mysqli_fetch_assoc($q_data);
 if(!$data) {
-    echo "<script>alert('Data tidak ditemukan!'); window.location.href='dashboard.php';</script>";
+    flashModalPage("Data tidak ditemukan!", 'error', 'dashboard.php');
     exit;
 }
 ?>

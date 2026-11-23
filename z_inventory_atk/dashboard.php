@@ -344,15 +344,15 @@ $stats = mysqli_fetch_assoc($stats_result);
                     if (j.success) {
                         window.location.reload();
                     } else {
-                        alert('Gagal: ' + (j.message || text));
+                        showAlert('Gagal: ' + (j.message || text), 'error');
                     }
                 } catch (e) {
                     if (res.ok) window.location.reload();
-                    else alert('Terjadi kesalahan. Cek console.');
+                    else showAlert('Terjadi kesalahan. Cek console.', 'error');
                 }
             })
             .catch(err => {
-                alert('Gagal menghubungi server.');
+                showAlert('Gagal menghubungi server.', 'error');
             });
         }
 
@@ -386,10 +386,7 @@ $stats = mysqli_fetch_assoc($stats_result);
             const data = new URLSearchParams(new FormData(form));
             const status = $('#modal_status').val();
             
-            if (!confirm(`Apakah Anda yakin ingin ${status === 'Approved' ? 'menyetujui' : 'menolak'} pengajuan ini?`)) {
-                return;
-            }
-
+            showConfirm(`Apakah Anda yakin ingin ${status === 'Approved' ? 'menyetujui' : 'menolak'} pengajuan ini?`, function() {
             fetch('process_approve.php', {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -403,16 +400,17 @@ $stats = mysqli_fetch_assoc($stats_result);
                     if (j.success) {
                         window.location.reload();
                     } else {
-                        alert('Gagal: ' + (j.message || text));
+                        showAlert('Gagal: ' + (j.message || text), 'error');
                     }
                 } catch (e) {
                     if (res.ok) window.location.reload();
-                    else alert('Terjadi kesalahan. Cek console.');
+                    else showAlert('Terjadi kesalahan. Cek console.', 'error');
                 }
             })
             .catch(err => {
-                alert('Gagal menghubungi server.');
+                showAlert('Gagal menghubungi server.', 'error');
             });
+            }, 'confirm');
         }
     </script>
 </body>

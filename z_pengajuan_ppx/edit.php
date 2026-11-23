@@ -453,7 +453,7 @@ if (in_array($ppx['status'], $nonEditableStatuses) && $ppx['status'] !== 'Revisi
             tanggal.setHours(0,0,0,0);
             if (tanggal < today) {
                 e.preventDefault();
-                alert('Tanggal dibutuhkan harus hari ini atau lebih.');
+                showAlert('Tanggal dibutuhkan harus hari ini atau lebih.', 'warning');
                 return false;
             }
         });

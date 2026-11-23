@@ -541,7 +541,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                     })
                     .done(function(res) {
                         if (!res.success) {
-                            alert(res.message || 'Gagal memuat data.');
+                            showAlert(res.message || 'Gagal memuat data.', 'error');
                             return;
                         }
 
@@ -590,7 +590,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                         $('#confirmApproveModal').modal('show');
                     })
                     .fail(function() {
-                        alert('Gagal memuat data detail.');
+                        showAlert('Gagal memuat data detail.', 'error');
                     });
             };
 
@@ -598,7 +598,7 @@ unset($_SESSION['success'], $_SESSION['error']);
             $(document).on('click', '#confirmApproveYes', function() {
                 var no = $('#confirmApproveModal').data('no_ppx') || $('#no_pengajuan_input').val();
                 if (!no) {
-                    alert('Nomor pengajuan tidak ditemukan.');
+                    showAlert('Nomor pengajuan tidak ditemukan.', 'error');
                     return;
                 }
 
@@ -613,7 +613,7 @@ unset($_SESSION['success'], $_SESSION['error']);
 
             // Function baru untuk approve realisasi dari dashboard
             window.approveRealisasiFromDashboard = function(no_ppx) {
-                if (confirm('Apakah Anda yakin ingin meng-approve realisasi PPX ini?\n\nStatus akan berubah menjadi "Selesai".')) {
+                showConfirm('Apakah Anda yakin ingin meng-approve realisasi PPX ini?\n\nStatus akan berubah menjadi "Selesai".', function() {
                     var formData = new FormData();
                     formData.append('action', 'approve_realisasi');
                     formData.append('no_ppx', no_ppx);
@@ -629,22 +629,21 @@ unset($_SESSION['success'], $_SESSION['error']);
                             try {
                                 var result = JSON.parse(response);
                                 if (result.success) {
-                                    alert(result.message || 'Realisasi berhasil di-approve!');
-                                    location.reload();
+                                    showAlert(result.message || 'Realisasi berhasil di-approve!', 'success', function(){ location.reload(); });
                                 } else {
-                                    alert('Error: ' + (result.message || 'Terjadi kesalahan'));
+                                    showAlert('Error: ' + (result.message || 'Terjadi kesalahan'), 'error');
                                 }
                             } catch (e) {
                                 console.log('Response:', response);
-                                alert('Error parsing response');
+                                showAlert('Error parsing response', 'error');
                             }
                         },
                         error: function(xhr, status, error) {
                             console.log('AJAX Error:', error);
-                            alert('Error: Gagal melakukan approve realisasi');
+                            showAlert('Error: Gagal melakukan approve realisasi', 'error');
                         }
                     });
-                }
+                }, 'confirm');
             };
         });
     </script>
@@ -774,15 +773,14 @@ unset($_SESSION['success'], $_SESSION['error']);
                     })
                     .then(data => {
                         if (data.success) {
-                            alert(data.message || 'Berhasil!');
-                            window.location.href = 'dashboard.php';
+                            showAlert(data.message || 'Berhasil!', 'success', function(){ window.location.href = 'dashboard.php'; });
                         } else {
-                            alert('Error: ' + (data.message || 'Terjadi kesalahan'));
+                            showAlert('Error: ' + (data.message || 'Terjadi kesalahan'), 'error');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Terjadi kesalahan saat memproses approval');
+                        showAlert('Terjadi kesalahan saat memproses approval', 'error');
                     });
                 },
                 function() {
@@ -795,7 +793,7 @@ unset($_SESSION['success'], $_SESSION['error']);
     <script>
         // Verifikasi realisasi opsional (status Realisasi → Selesai)
         function verifikasiRealisasi(no_ppx) {
-            if (confirm('Verifikasi Realisasi PPX: ' + no_ppx + '\n\nStatus akan berubah menjadi "Selesai".\nIni adalah verifikasi opsional.\n\nLanjutkan?')) {
+            showConfirm('Verifikasi Realisasi PPX: ' + no_ppx + '\n\nStatus akan berubah menjadi "Selesai".\nIni adalah verifikasi opsional.\n\nLanjutkan?', function() {
                 var fd = new FormData();
                 fd.append('no_pengajuan', no_ppx);
                 fd.append('action', 'approve');
@@ -806,11 +804,11 @@ unset($_SESSION['success'], $_SESSION['error']);
                 })
                 .then(r => r.json())
                 .then(data => {
-                    if (data.success) { alert(data.message || 'Verifikasi berhasil!'); location.reload(); }
-                    else { alert('Error: ' + (data.message || 'Terjadi kesalahan')); }
+                    if (data.success) { showAlert(data.message || 'Verifikasi berhasil!', 'success', function(){ location.reload(); }); }
+                    else { showAlert('Error: ' + (data.message || 'Terjadi kesalahan'), 'error'); }
                 })
-                .catch(() => alert('Terjadi kesalahan saat verifikasi realisasi.'));
-            }
+                .catch(() => showAlert('Terjadi kesalahan saat verifikasi realisasi.', 'error'));
+            }, 'confirm');
         }
     </script>
 

@@ -391,7 +391,7 @@ mysqli_data_seek($users_result, 0);
                     $('#viewModal').modal('show');
                 },
                 error: function() {
-                    alert('Gagal memuat detail pengguna');
+                    showAlert('Gagal memuat detail pengguna', 'error');
                 }
             });
         }

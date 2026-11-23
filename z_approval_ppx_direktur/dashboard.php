@@ -444,9 +444,9 @@ unset($_SESSION['success'], $_SESSION['error']);
         }
 
         function deleteRequest(no_ppx) {
-            if (confirm('Apakah Anda yakin ingin menghapus pengajuan PPX ini?\n\nPeringatan: Data yang sudah dihapus tidak dapat dikembalikan!')) {
+            showConfirm('Apakah Anda yakin ingin menghapus pengajuan PPX ini? Peringatan: Data yang sudah dihapus tidak dapat dikembalikan!', function() {
                 window.location.href = 'delete.php?id=' + no_ppx;
-            }
+            }, 'delete');
         }
 
         // Saat tombol YA di modal diklik, submit form hidden ke process_approve.php

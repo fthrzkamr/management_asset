@@ -960,10 +960,11 @@ $preselected_asset = $_GET['asset'] ?? '';
             });
             
             $('.remove-category-btn').off('click').on('click', function() {
-                if (confirm('Hapus kategori ini beserta semua itemnya?')) {
-                    $(this).closest('.category-block').remove();
-                    updateTotals();
-                }
+                var _btn = this;
+            showConfirm('Hapus kategori ini beserta semua itemnya?', function() {
+                $(_btn).closest('.category-block').remove();
+                updateTotals();
+            }, 'delete');
             });
             
             $('.category-select').off('change').on('change', function() {
@@ -1112,7 +1113,7 @@ $preselected_asset = $_GET['asset'] ?? '';
                         
                         // Tampilkan notifikasi sukses
                         const itemCount = mapped.length;
-                        alert(`✓ Berhasil mengisi ${itemCount} item dari pengajuan asset ke Detail PPX`);
+                        showAlert(`✓ Berhasil mengisi ${itemCount} item dari pengajuan asset ke Detail PPX`, 'success');
                     })
                     .catch(err => {
                         console.error('Error fetch items:', err);
@@ -1254,14 +1255,14 @@ $preselected_asset = $_GET['asset'] ?? '';
 
             if (tanggal < today) {
                 e.preventDefault();
-                alert('Tanggal dibutuhkan tidak boleh kurang dari hari ini!');
+                showAlert('Tanggal dibutuhkan tidak boleh kurang dari hari ini!', 'warning');
                 return false;
             }
 
             const detailItems = document.querySelectorAll('.items-body tr');
             if (detailItems.length === 0) {
                 e.preventDefault();
-                alert('Minimal harus ada satu item detail!');
+                showAlert('Minimal harus ada satu item detail!', 'warning');
                 return false;
             }
         });
@@ -1409,7 +1410,7 @@ $preselected_asset = $_GET['asset'] ?? '';
                 
                 if (!categorySelect.value) {
                     e.preventDefault();
-                    alert('Silakan pilih kategori anggaran untuk tipe Monthly Budget PPX!');
+                    showAlert('Silakan pilih kategori anggaran untuk tipe Monthly Budget PPX!', 'warning');
                     categorySelect.focus();
                     return false;
                 }
@@ -1438,7 +1439,7 @@ $preselected_asset = $_GET['asset'] ?? '';
                           `📞 Kontak: Manager Finance\n` +
                           `   Ext: 101 / WA: 0812-xxxx-xxxx`;
                     
-                    alert(confirmMsg);
+                    showAlert(confirmMsg, 'warning');
                     
                     // Scroll to warning
                     const warningDiv = document.getElementById('budget_warning');
@@ -1458,14 +1459,14 @@ $preselected_asset = $_GET['asset'] ?? '';
 
             if (tanggal < today) {
                 e.preventDefault();
-                alert('Tanggal dibutuhkan tidak boleh kurang dari hari ini!');
+                showAlert('Tanggal dibutuhkan tidak boleh kurang dari hari ini!', 'warning');
                 return false;
             }
 
             const detailItems = document.querySelectorAll('.items-body tr');
             if (detailItems.length === 0) {
                 e.preventDefault();
-                alert('Minimal harus ada satu item detail!');
+                showAlert('Minimal harus ada satu item detail!', 'warning');
                 return false;
             }
         });

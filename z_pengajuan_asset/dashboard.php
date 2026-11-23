@@ -985,7 +985,7 @@ function handleDelete() {
             window.location.href = 'delete.php?id=' + encodeURIComponent(no_pengajuan);
         }, 300);
     } else {
-        alert('Error: No pengajuan ID found!');
+        showAlert('Error: No pengajuan ID found!', 'error');
         console.error('no_pengajuan is empty!');
     }
 }
@@ -1003,7 +1003,7 @@ function handleDelete() {
                     }).modal('show');
                 },
                 error: function() {
-                    alert('Gagal memuat detail pengajuan');
+                    showAlert('Gagal memuat detail pengajuan', 'error');
                 }
             });
         }

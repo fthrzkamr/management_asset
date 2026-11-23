@@ -57,7 +57,7 @@ if (!empty($no_ppx)) {
     $result_ppx = mysqli_query($conn, $query_ppx);
 
     if (!$result_ppx || mysqli_num_rows($result_ppx) === 0) {
-        echo "<script>alert('Data PPX tidak ditemukan!'); window.close();</script>";
+        echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Data tidak ditemukan</title><link rel="stylesheet" href="../dist/css/bootstrap.min.css"></head><body class="p-5"><div class="alert alert-danger">Data PPX tidak ditemukan!</div><button class="btn btn-secondary" onclick="window.close()">Tutup</button></body></html>';
         exit();
     }
 

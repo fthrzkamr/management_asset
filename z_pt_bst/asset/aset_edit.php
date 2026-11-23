@@ -1,6 +1,7 @@
 <?php
 // filepath: c:\xampp\htdocs\asset_bst\aset_edit.php
 include('../../dist/config/config.php');
+require_once __DIR__ . '/../../dist/config/flash_helper.php';
 include_once(__DIR__ . '/../../dist/config/auth_helper.php');
 $auth = new AuthHelper($conn);
 if (!$auth->isLoggedIn()) {
@@ -12,7 +13,7 @@ $auth->requirePermission('pt_bst_asset', 'update', 'dashboard.php');
 
 // Cek parameter ID
 if (!isset($_GET['id']) || empty($_GET['id'])) {
-    echo "<script>alert('ID asset tidak ditemukan!'); window.location.href='dashboard.php';</script>";
+    flashModalPage("ID asset tidak ditemukan!", 'error', 'dashboard.php');
     exit;
 }
 
@@ -26,14 +27,14 @@ $query = mysqli_query($conn, "
 ");
 
 if (!$query) {
-    echo "<script>alert('Error: " . mysqli_error($conn) . "'); window.location.href='dashboard.php';</script>";
+    flashModalPage("Error: " . mysqli_error($conn) , 'error', 'dashboard.php');
     exit;
 }
 
 $asset = mysqli_fetch_assoc($query);
 
 if (!$asset) {
-    echo "<script>alert('Asset tidak ditemukan!'); window.location.href='dashboard.php';</script>";
+    flashModalPage("Asset tidak ditemukan!", 'error', 'dashboard.php');
     exit;
 }
 
@@ -406,7 +407,7 @@ if (!empty($asset['foto_asset'])) {
         if (file) {
             // Validasi ukuran file
             if (file.size > 5 * 1024 * 1024) {
-                alert('Ukuran file terlalu besar. Maksimal 5MB.');
+                showAlert('Ukuran file terlalu besar. Maksimal 5MB.', 'error');
                 this.value = '';
                 previewDiv.style.display = 'none';
                 return;
@@ -415,7 +416,7 @@ if (!empty($asset['foto_asset'])) {
             // Validasi tipe file
             const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
             if (!allowedTypes.includes(file.type)) {
-                alert('Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP');
+                showAlert('Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP', 'error');
                 this.value = '';
                 previewDiv.style.display = 'none';
                 return;

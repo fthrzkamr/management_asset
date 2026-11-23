@@ -370,9 +370,11 @@ $(function() {
 
     // Konfirmasi reset
     $('.btn-reset-confirm').on('click', function(e) {
-        if (!confirm('Reset permission user ini ke default role?\nSemua kustomisasi akan hilang.')) {
-            e.preventDefault();
-        }
+        e.preventDefault();
+        var href = $(this).attr('href');
+        showConfirm('Reset permission user ini ke default role? Semua kustomisasi akan hilang.', function() {
+            window.location.href = href;
+        }, 'delete');
     });
 });
 </script>

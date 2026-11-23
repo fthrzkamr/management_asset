@@ -1,6 +1,7 @@
 <?php
 require '../dist/config/config.php';
 require '../dist/config/auth_helper.php';
+require_once __DIR__ . '/../dist/config/flash_helper.php';
 
 $auth = new AuthHelper($conn);
 if (!$auth->hasPermission('inventory_atk_stok', 'read') && !$auth->hasPermission('inventory_atk_master', 'read')) {
@@ -19,7 +20,7 @@ $q_barang = mysqli_query($conn, "
 $barang = mysqli_fetch_assoc($q_barang);
 
 if (!$barang) {
-    echo "<script>alert('Barang tidak ditemukan!'); window.location.href='stok_dashboard.php';</script>";
+    flashModalPage("Barang tidak ditemukan!", 'error', 'stok_dashboard.php');
     exit;
 }
 

@@ -310,8 +310,7 @@ function getRoleMeta($role, $meta) {
                             </button>
                             <?php endif; ?>
                             <?php if ($auth->hasPermission('budget_routing', 'delete')): ?>
-                            <a href="process.php?action=delete&id=<?= $step['id'] ?>" class="btn btn-sm btn-outline-danger"
-                               onclick="return confirm('Hapus step ini? Override per-cabang yang terkait juga akan dihapus.')">
+                            <a href="process.php?action=delete&id=<?= $step['id'] ?>" class="btn btn-sm btn-outline-danger" data-confirm="Hapus step ini? Override per-cabang yang terkait juga akan dihapus." data-confirm-type="delete">
                                 <i class="fas fa-trash"></i>
                             </a>
                             <?php endif; ?>
@@ -703,7 +702,7 @@ $(document).ready(function() {
 
         // Validasi sebelum kirim
         if (!id_cabang) {
-            alert('Error: id_cabang tidak valid. Coba refresh halaman.');
+            showAlert('Error: id_cabang tidak valid. Coba refresh halaman.', 'error');
             return;
         }
 
@@ -751,12 +750,12 @@ $(document).ready(function() {
                     }, 3000);
                 } else {
                     btn.prop('disabled', false).html('<i class="fas fa-save"></i> Simpan');
-                    alert('Gagal: ' + (data.msg || 'Terjadi kesalahan'));
+                    showAlert('Gagal: ' + (data.msg || 'Terjadi kesalahan'), 'error');
                 }
             })
             .catch(function(err) {
                 btn.prop('disabled', false).html('<i class="fas fa-save"></i> Simpan');
-                alert('Gagal menyimpan: ' + err);
+                showAlert('Gagal menyimpan: ' + err, 'error');
             });
     });
 
@@ -793,7 +792,7 @@ $(document).ready(function() {
         const row       = btn.closest('tr');
 
         if (!id_divisi) {
-            alert('Error: id_divisi tidak valid. Coba refresh halaman.');
+            showAlert('Error: id_divisi tidak valid. Coba refresh halaman.', 'error');
             return;
         }
 
@@ -831,12 +830,12 @@ $(document).ready(function() {
                     }, 3000);
                 } else {
                     btn.prop('disabled', false).html('<i class="fas fa-save"></i> Simpan');
-                    alert('Gagal: ' + (data.msg || 'Terjadi kesalahan'));
+                    showAlert('Gagal: ' + (data.msg || 'Terjadi kesalahan'), 'error');
                 }
             })
             .catch(function(err) {
                 btn.prop('disabled', false).html('<i class="fas fa-save"></i> Simpan');
-                alert('Gagal menyimpan: ' + err);
+                showAlert('Gagal menyimpan: ' + err, 'error');
             });
     });
 

@@ -276,16 +276,9 @@ $cnt_rejected = count(array_filter($peminjaman, fn($r) => $r['status_approval'] 
             var $form = $btn.closest('form');
 
             // showConfirm is defined in layouts/confirm_modal.php (included via footer)
-            if (typeof showConfirm === 'function') {
-                showConfirm(message, function() {
-                    $form.submit();
-                });
-            } else {
-                // Fallback in case modal script didn't load
-                if (confirm(message)) {
-                    $form.submit();
-                }
-            }
+            showConfirm(message, function() {
+                $form.submit();
+            });
         });
     });
     </script>

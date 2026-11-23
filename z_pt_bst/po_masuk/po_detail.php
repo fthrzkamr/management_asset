@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../../dist/config/config.php';
+require_once __DIR__ . '/../../dist/config/flash_helper.php';
 require __DIR__ . '/../../dist/config/auth_helper.php';
 
 $auth = new AuthHelper($conn);
@@ -11,7 +12,7 @@ $q_po = mysqli_query($conn, "SELECT * FROM bst_po WHERE id_po = $id_po");
 $po = mysqli_fetch_assoc($q_po);
 
 if (!$po) {
-    echo "<script>alert('Data PO tidak ditemukan!'); window.location.href='dashboard.php';</script>";
+    flashModalPage("Data PO tidak ditemukan!", 'error', 'dashboard.php');
     exit;
 }
 
@@ -69,10 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
             }
             
             mysqli_commit($conn);
-            echo "<script>alert('PO Berhasil di-Kirim. Stok BST telah dipotong!'); window.location.href='dashboard.php';</script>";
+            flashModalPage("PO Berhasil di-Kirim. Stok BST telah dipotong!", 'success', 'dashboard.php');
         } catch (Exception $e) {
             mysqli_rollback($conn);
-            echo "<script>alert('Gagal memproses PO: " . $e->getMessage() . "');</script>";
+            flashModalPage("Gagal memproses PO: " . $e->getMessage() , 'error', 'back');
         }
     } 
     elseif ($action == 'tolak' && $po['status'] == 'Pending') {
@@ -80,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         if (!$q_upd) {
             mysqli_query($conn, "UPDATE bst_po SET status = 'Rejected', keterangan = '$keterangan_admin' WHERE id_po = $id_po");
         }
-        echo "<script>alert('Pesanan PO Ditolak.'); window.location.href='dashboard.php';</script>";
+        flashModalPage("Pesanan PO Ditolak.", 'error', 'dashboard.php');
     }
 }
 ?>
@@ -238,38 +239,25 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
 
     <script>
     function setujuiPO() {
-        if(typeof showConfirm === 'function') {
-            showConfirm('Konfirmasi Persetujuan', 'Kirimkan barang ke Gudang ATK?\n\nStok internal Anda akan otomatis dikurangi sejumlah pesanan ini sekalipun akan menjadi minus.', function() {
-                $('#actionValue').val('proses_kirim');
-                $('#formProsesPO').submit();
-            });
-        } else {
-            if(confirm('Kirimkan barang ke Gudang ATK? Stok internal Anda akan otomatis dikurangi sejumlah pesanan ini sekalipun akan menjadi minus.')) {
-                $('#actionValue').val('proses_kirim');
-                $('#formProsesPO').submit();
-            }
-        }
+        showConfirm('Konfirmasi Persetujuan', 'Kirimkan barang ke Gudang ATK?\\n\\nStok internal Anda akan otomatis dikurangi sejumlah pesanan ini sekalipun akan menjadi minus.', function() {
+            $('#actionValue').val('proses_kirim');
+            $('#formProsesPO').submit();
+        });
     }
 
     function tolakPO() {
         var catatan = $('#keteranganValue').val();
         if(catatan.trim() === '') {
-            alert('Mohon isi kolom keterangan/catatan kenapa pesanan ini ditolak.');
-            $('#keteranganValue').focus();
+            showAlert('Mohon isi kolom keterangan/catatan kenapa pesanan ini ditolak.', 'warning', function() {
+                $('#keteranganValue').focus();
+            });
             return;
         }
-        
-        if(typeof showConfirm === 'function') {
-            showConfirm('Konfirmasi Penolakan', 'Yakin ingin menolak pesanan PO ini?', function() {
-                $('#actionValue').val('tolak');
-                $('#formProsesPO').submit();
-            });
-        } else {
-             if(confirm('Yakin ingin menolak pesanan PO ini?')) {
-                $('#actionValue').val('tolak');
-                $('#formProsesPO').submit();
-             }
-        }
+
+        showConfirm('Konfirmasi Penolakan', 'Yakin ingin menolak pesanan PO ini?', function() {
+            $('#actionValue').val('tolak');
+            $('#formProsesPO').submit();
+        });
     }
     </script>
 </body>

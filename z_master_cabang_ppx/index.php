@@ -149,7 +149,7 @@ if ($q_ppx) {
                                             onclick='editCabang(<?= json_encode($c) ?>)' title="Edit Cabang">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <form action="action.php" method="POST" style="display:inline;" onsubmit="return confirm('Ubah status cabang ini?');">
+                                    <form action="action.php" method="POST" style="display:inline;" data-confirm="Ubah status cabang ini?">
                                         <input type="hidden" name="action" value="toggle_status">
                                         <input type="hidden" name="id_cabang_ppx" value="<?= $c['id_cabang_ppx'] ?>">
                                         <button type="submit" class="btn btn-sm <?= $c['status'] === 'Aktif' ? 'btn-outline-warning' : 'btn-outline-success' ?> p-1 px-2"

@@ -250,7 +250,7 @@ if (!empty($jurnal_ids)) {
                                 <span class="badge badge-danger px-2 py-1" style="font-size: 11px;"><i class="fas fa-exclamation-triangle mr-1"></i> Unbalanced</span>
                             <?php endif; ?>
                             <?php if ($auth->isSuperAdmin() && in_array($j['tipe_jurnal'], ['Umum', 'Penyesuaian'])): ?>
-                                <a href="action.php?action=delete_jurnal&id=<?= $j['id_jurnal'] ?>" class="btn btn-sm btn-link text-danger p-0" title="Hapus Jurnal" onclick="return confirm('Apakah Anda yakin ingin menghapus entri jurnal ini?');">
+                                <a href="action.php?action=delete_jurnal&id=<?= $j['id_jurnal'] ?>" class="btn btn-sm btn-link text-danger p-0" title="Hapus Jurnal" data-confirm="Apakah Anda yakin ingin menghapus entri jurnal ini?" data-confirm-type="delete">
                                     <i class="fas fa-trash-alt"></i>
                                 </a>
                             <?php endif; ?>

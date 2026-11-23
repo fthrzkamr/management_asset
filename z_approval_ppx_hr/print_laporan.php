@@ -49,7 +49,8 @@ if (!empty($no_ppx)) {
     $result_ppx = mysqli_query($conn, $query_ppx);
 
     if (!$result_ppx || mysqli_num_rows($result_ppx) === 0) {
-        echo "<script>alert('Data PPX tidak ditemukan!'); window.close();</script>";
+        require_once __DIR__ . '/../dist/config/flash_helper.php';
+        flashModalPage("Data PPX tidak ditemukan!", 'error', 'dashboard.php');
         exit();
     }
 

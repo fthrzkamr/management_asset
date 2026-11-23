@@ -345,9 +345,9 @@ $(function() {
         e.preventDefault();
         var href = $(this).attr('href');
         var name = $(this).data('name');
-        if (confirm('Reset permission "' + name + '" ke default role?\nPermission kustom akan dihapus.')) {
+        showConfirm('Reset permission "' + name + '" ke default role? Permission kustom akan dihapus.', function() {
             window.location.href = href;
-        }
+        }, 'delete');
     });
 
     updateCount();

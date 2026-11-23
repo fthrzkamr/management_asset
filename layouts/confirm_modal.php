@@ -271,6 +271,32 @@
     } catch (e) {}
 })();
 
+// Konfirmasi deklaratif: <a|button data-confirm="Pesan" [data-confirm-type="delete"]> dan <form data-confirm="Pesan">
+// Pengganti onclick="return confirm(..)" / onsubmit="return confirm(..)"
+if (typeof jQuery !== 'undefined') {
+    jQuery(document).ready(function($) {
+        $(document).on('click', 'a[data-confirm], button[data-confirm], input[type=submit][data-confirm], input[type=button][data-confirm]', function(e) {
+            var el = this;
+            if (el.getAttribute('data-confirmed') === '1') { el.removeAttribute('data-confirmed'); return; }
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            showConfirm(el.getAttribute('data-confirm'), function() {
+                el.setAttribute('data-confirmed', '1');
+                el.click();
+            }, el.getAttribute('data-confirm-type') || 'confirm');
+        });
+        $(document).on('submit', 'form[data-confirm]', function(e) {
+            var f = this;
+            if (f.getAttribute('data-confirmed') === '1') { f.removeAttribute('data-confirmed'); return; }
+            e.preventDefault();
+            showConfirm(f.getAttribute('data-confirm'), function() {
+                f.setAttribute('data-confirmed', '1');
+                HTMLFormElement.prototype.submit.call(f);
+            }, f.getAttribute('data-confirm-type') || 'confirm');
+        });
+    });
+}
+
 // Event delegation untuk button dengan class btn-delete-confirm
 if (typeof jQuery !== 'undefined') {
     jQuery(document).ready(function($) {

@@ -263,7 +263,7 @@ $error_message = $_SESSION['error'] ?? ''; unset($_SESSION['error']);
 function doAction(action) {
     const notes = document.getElementById('approval_notes').value.trim();
     if (action === 'reject' && !notes) {
-        alert('Catatan wajib diisi untuk menolak budget!');
+        showAlert('Catatan wajib diisi untuk menolak budget!', 'warning');
         return;
     }
     document.getElementById('action_field').value = action;

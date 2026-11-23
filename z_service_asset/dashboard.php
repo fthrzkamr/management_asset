@@ -550,15 +550,14 @@ if (isset($_GET['error'])) {
                         })
                         .then(function(data) {
                             if (data.success) {
-                                alert(data.message || 'Berhasil membatalkan service');
-                                location.reload();
+                                showAlert(data.message || 'Berhasil membatalkan service', 'success', function() { location.reload(); });
                             } else {
-                                alert('Error: ' + (data.message || 'Gagal'));
+                                showAlert('Error: ' + (data.message || 'Gagal'), 'error');
                             }
                         })
                         .catch(function(err) {
                             console.error('Revert error', err);
-                            alert('Terjadi kesalahan saat membatalkan service');
+                            showAlert('Terjadi kesalahan saat membatalkan service', 'error');
                         });
                     }, function() {
                         // canceled

@@ -256,7 +256,7 @@ $user = mysqli_fetch_assoc($result);
 
                 if (newPassword !== confirmPassword) {
                     e.preventDefault();
-                    alert('Password baru dan konfirmasi password tidak cocok!');
+                    showAlert('Password baru dan konfirmasi password tidak cocok!', 'error');
                     $('#confirm_password').focus();
                     return false;
                 }

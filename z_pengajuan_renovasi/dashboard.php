@@ -543,13 +543,13 @@ unset($_SESSION['success'], $_SESSION['error']);
             
             if (!decision) {
                 e.preventDefault();
-                alert('Silakan pilih keputusan terlebih dahulu!');
+                showAlert('Silakan pilih keputusan terlebih dahulu!', 'warning');
                 return false;
             }
             
             if (decision === 'reject' && catatan === '') {
                 e.preventDefault();
-                alert('Alasan penolakan wajib diisi!');
+                showAlert('Alasan penolakan wajib diisi!', 'warning');
                 $('#catatan_approval').focus();
                 return false;
             }
@@ -568,16 +568,17 @@ unset($_SESSION['success'], $_SESSION['error']);
                 confirmMessage = 'Pengajuan ini sudah DITOLAK. Yakin ingin menghapus?\n\nTindakan ini tidak dapat dibatalkan!';
             }
 
-            if (confirm(confirmMessage)) {
+            const evBtn = (typeof event !== 'undefined' && event) ? event.target.closest('button') : null;
+            showConfirm(confirmMessage, function() {
                 // Tampilkan loading
-                const btn = event.target.closest('button');
-                const originalHtml = btn.innerHTML;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
-                btn.disabled = true;
+                const btn = evBtn;
+                
+                if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin fa-xs"></i>';
+                if (btn) btn.disabled = true;
 
                 // Redirect ke delete.php
                 window.location.href = 'delete.php?id=' + no_pengajuan;
-            }
+            }, 'delete');
         }
 
         // Validasi sebelum submit - GUNAKAN MODAL KONFIRMASI
@@ -589,12 +590,12 @@ unset($_SESSION['success'], $_SESSION['error']);
             const form = $(this);
 
             if (!decision) {
-                alert('Silakan pilih keputusan terlebih dahulu!');
+                showAlert('Silakan pilih keputusan terlebih dahulu!', 'warning');
                 return false;
             }
 
             if (decision === 'reject' && catatan === '') {
-                alert('Alasan penolakan wajib diisi!');
+                showAlert('Alasan penolakan wajib diisi!', 'warning');
                 $('#catatan_approval').focus();
                 return false;
             }

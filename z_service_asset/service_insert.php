@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__.'/../dist/config/flash_helper.php';
 // filepath: c:\xampp\htdocs\asset_dfm\service_asset\service_insert.php
 include('../dist/config/config.php');
 include_once(__DIR__ . '/../dist/config/auth_helper.php');
@@ -12,7 +13,7 @@ date_default_timezone_set('Asia/Jakarta');
 
 // Cek session login
 if (!isset($_SESSION['id_user'])) {
-    echo "<script>alert('Session expired. Silakan login kembali.'); window.location.href='../login.php';</script>";
+    flashModalPage("Session expired. Silakan login kembali.", 'warning', '../login.php');
     exit;
 }
 
@@ -36,13 +37,13 @@ $created_at = date("Y-m-d H:i:s");
 
 // PERBAIKAN: Validasi array assets
 if (!isset($_POST['assets']) || !is_array($_POST['assets']) || count($_POST['assets']) == 0) {
-    echo "<script>alert('Pilih minimal 1 asset untuk service!'); history.back();</script>";
+    flashModalPage("Pilih minimal 1 asset untuk service!", 'warning', 'back');
     exit;
 }
 
 // Validasi required fields
 if (empty($tanggal_service) || empty($jenis_service) || empty($keluhan)) {
-    echo "<script>alert('Data yang wajib diisi belum lengkap!'); history.back();</script>";
+    flashModalPage("Data yang wajib diisi belum lengkap!", 'warning', 'back');
     exit;
 }
 
@@ -62,13 +63,13 @@ foreach ($_POST['assets'] as $index => $asset) {
             LIMIT 1
         ");
         if (!$check_asset || mysqli_num_rows($check_asset) == 0) {
-            echo "<script>alert('Asset dengan kode $kode_aset tidak ditemukan!'); history.back();</script>";
+            flashModalPage("Asset dengan kode $kode_aset tidak ditemukan!", 'error', 'back');
             exit;
         }
         
         // Cek duplikasi dalam array
         if (in_array($kode_aset, $assets)) {
-            echo "<script>alert('Asset $kode_aset dipilih lebih dari sekali!'); history.back();</script>";
+            flashModalPage("Asset $kode_aset dipilih lebih dari sekali!", 'error', 'back');
             exit;
         }
         
@@ -77,7 +78,7 @@ foreach ($_POST['assets'] as $index => $asset) {
 }
 
 if (count($assets) == 0) {
-    echo "<script>alert('Tidak ada asset yang dipilih!'); history.back();</script>";
+    flashModalPage("Tidak ada asset yang dipilih!", 'error', 'back');
     exit;
 }
 
@@ -117,13 +118,13 @@ if (isset($_FILES['dokumentasi']) && $_FILES['dokumentasi']['error'] == UPLOAD_E
     // Validasi ekstensi file
     $allowed_ext = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
     if (!in_array($file_ext, $allowed_ext)) {
-        echo "<script>alert('Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP'); history.back();</script>";
+        flashModalPage("Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP", 'error', 'back');
         exit;
     }
 
     // Validasi ukuran file (max 5MB)
     if ($file_size > 5 * 1024 * 1024) {
-        echo "<script>alert('Ukuran file terlalu besar. Maksimal 5MB'); history.back();</script>";
+        flashModalPage("Ukuran file terlalu besar. Maksimal 5MB", 'error', 'back');
         exit;
     }
 
@@ -143,7 +144,7 @@ if (isset($_FILES['dokumentasi']) && $_FILES['dokumentasi']['error'] == UPLOAD_E
                     } else {
                     }
     } else {
-                echo "<script>alert('Gagal upload dokumentasi'); history.back();</script>";
+                flashModalPage("Gagal upload dokumentasi", 'error', 'back');
         exit;
     }
 } else {
@@ -212,13 +213,13 @@ if ($inserted_count > 0 && count($failed_assets) == 0) {
     if ($dokumentasi_service) {
         $success_msg .= "\\nDokumentasi: $dokumentasi_service";
     }
-    echo "<script>alert('$success_msg'); window.location.href='dashboard.php';</script>";
+    flashModalPage("$success_msg", 'success', 'dashboard.php');
 } else if ($inserted_count > 0 && count($failed_assets) > 0) {
     // Sebagian berhasil
     $error_msg = "Berhasil: $inserted_count asset\\nGagal: " . count($failed_assets) . " asset";
     $error_msg .= "\\nNomor Service: $no_service";
     $error_msg .= "\\n\\nDetail error:\\n" . implode("\\n", $failed_assets);
-    echo "<script>alert('$error_msg'); window.location.href='dashboard.php';</script>";
+    flashModalPage("$error_msg", 'error', 'dashboard.php');
 } else {
     // Semua gagal
     // Jika gagal dan ada dokumentasi yang sudah diupload, hapus file
@@ -227,7 +228,7 @@ if ($inserted_count > 0 && count($failed_assets) == 0) {
             }
     
     $error_msg = "Gagal menyimpan semua asset:\\n\\n" . implode("\\n", $failed_assets);
-    echo "<script>alert('$error_msg'); history.back();</script>";
+    flashModalPage("$error_msg", 'error', 'back');
 }
 
 // Function untuk resize gambar - sama seperti sebelumnya

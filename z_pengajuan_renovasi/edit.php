@@ -504,7 +504,7 @@ unset($_SESSION['success'], $_SESSION['error']);
             const previewContainer = document.getElementById('photoPreview');
 
             if (files.length > maxFiles) {
-                alert(`Maksimal ${maxFiles} foto yang dapat diupload!`);
+                showAlert(`Maksimal ${maxFiles} foto yang dapat diupload!`, 'error');
                 this.value = '';
                 return;
             }
@@ -515,7 +515,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                 const file = files[i];
 
                 if (file.size > maxSize) {
-                    alert(`Foto "${file.name}" terlalu besar! Maksimal 2MB per foto.`);
+                    showAlert(`Foto "${file.name}" terlalu besar! Maksimal 2MB per foto.`, 'error');
                     this.value = '';
                     previewContainer.innerHTML = '';
                     return;
@@ -561,7 +561,7 @@ unset($_SESSION['success'], $_SESSION['error']);
             const files = document.querySelector('input[name="foto_area[]"]').files;
             if (files.length > 5) {
                 e.preventDefault();
-                alert('Maksimal 5 foto yang dapat diupload!');
+                showAlert('Maksimal 5 foto yang dapat diupload!', 'error');
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-save fa-xs"></i> Update Pengajuan';
                 return false;
@@ -575,7 +575,7 @@ unset($_SESSION['success'], $_SESSION['error']);
 
             for (let i = 0; i < files.length; i++) {
                 if (!allowedTypes.includes(files[i].type)) {
-                    alert('Format file tidak didukung! Gunakan JPG, JPEG, atau PNG.');
+                    showAlert('Format file tidak didukung! Gunakan JPG, JPEG, atau PNG.', 'error');
                     this.value = '';
                     document.getElementById('photoPreview').innerHTML = '';
                     return;

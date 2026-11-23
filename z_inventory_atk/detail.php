@@ -242,7 +242,7 @@ $items = mysqli_stmt_get_result($stmt_detail);
     function approveItem(id, status) {
         const action = status === 'Approved' ? 'menyetujui' : 'menolak';
         
-        if (confirm(`Apakah Anda yakin ingin ${action} pengajuan ini?`)) {
+        showConfirm(`Apakah Anda yakin ingin ${action} pengajuan ini?`, function() {
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = 'process_approve.php';
@@ -272,7 +272,7 @@ $items = mysqli_stmt_get_result($stmt_detail);
             
             document.body.appendChild(form);
             form.submit();
-        }
+        }, 'confirm');
     }
     </script>
 </body>

@@ -587,7 +587,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                 const maxSize = 5 * 1024 * 1024; // 5MB
                 
                 if (files.length > maxFiles) {
-                    alert('Maksimal ' + maxFiles + ' file yang dapat diupload!');
+                    showAlert('Maksimal ' + maxFiles + ' file yang dapat diupload!', 'warning');
                     this.value = '';
                     return;
                 }
@@ -598,7 +598,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                     
                     // Cek ukuran file
                     if (file.size > maxSize) {
-                        alert('File "' + file.name + '" terlalu besar! Maksimal 5MB per file.');
+                        showAlert('File "' + file.name + '" terlalu besar! Maksimal 5MB per file.', 'error');
                         this.value = '';
                         preview.innerHTML = '';
                         return;
@@ -636,7 +636,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                 
                 if (buktiRealisasi.length === 0 || buktiNota.length === 0) {
                     e.preventDefault();
-                    alert('Bukti Realisasi dan Bukti Nota wajib diupload!');
+                    showAlert('Bukti Realisasi dan Bukti Nota wajib diupload!', 'warning');
                     return false;
                 }
                 

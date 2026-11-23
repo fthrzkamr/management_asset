@@ -361,10 +361,9 @@ if(!in_array(date('Y'), $list_tahun)){
                 // If there are picked items, we submit them.
                 var checkedCount = $('.pick-checkbox:checked').length;
                 if (checkedCount === 0) {
-                    var confirmAll = confirm("Anda belum memilih (Pick) satupun data. Ingin mengekspor SEMUA data pada Bulan/Cabang ini?");
-                    if(confirmAll) {
+                    showConfirm("Anda belum memilih (Pick) satupun data. Ingin mengekspor SEMUA data pada Bulan/Cabang ini?", function() {
                         $('#exportForm').submit();
-                    }
+                    }, 'confirm');
                 } else {
                     $('#exportForm').submit();
                 }

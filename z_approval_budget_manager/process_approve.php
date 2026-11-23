@@ -396,7 +396,7 @@ unset($_SESSION['error']);
         const notes = document.getElementById('approval_notes').value.trim();
         
         if (action === 'reject' && notes === '') {
-            alert('Catatan wajib diisi untuk menolak budget!');
+            showAlert('Catatan wajib diisi untuk menolak budget!', 'warning');
             return;
         }
         

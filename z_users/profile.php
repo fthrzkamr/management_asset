@@ -17,8 +17,8 @@ $user_id = $_SESSION['id_user'];
 // Ambil data user dari database
 $query = mysqli_query($conn, "SELECT * FROM user_dfm WHERE id_user = '$user_id' LIMIT 1");
 if (!$query || mysqli_num_rows($query) == 0) {
-    echo "<script>alert('User tidak ditemukan!'); window.location.href='logout.php';</script>";
-    exit;
+    require_once __DIR__.'/../dist/config/flash_helper.php';
+    flashModalPage("User tidak ditemukan!", 'error', 'logout.php');
 }
 
 $user = mysqli_fetch_assoc($query);
@@ -371,7 +371,7 @@ $recent_assets = mysqli_query($conn, "
 
             if (newPassword && confirmPassword && newPassword !== confirmPassword) {
                 e.preventDefault();
-                alert('Password konfirmasi tidak cocok!');
+                showAlert('Password konfirmasi tidak cocok!', 'error');
                 return false;
             }
         });

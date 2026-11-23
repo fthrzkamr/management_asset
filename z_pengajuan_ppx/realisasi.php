@@ -370,7 +370,7 @@ $all_select_items = array_merge($js_ppx_items, $js_master_akun);
                         </button>
                         
                         <?php if (count($realisasi_list) > 0 && $ppx_data['status'] === 'Uang Muka'): ?>
-                        <form action="realisasi_submit.php" method="POST" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menyelesaikan realisasi PPX ini dan meneruskannya ke Finance?');">
+                        <form action="realisasi_submit.php" method="POST" style="display:inline;" data-confirm="Apakah Anda yakin ingin menyelesaikan realisasi PPX ini dan meneruskannya ke Finance?">
                             <input type="hidden" name="no_ppx" value="<?= htmlspecialchars($no_ppx) ?>">
                             <input type="hidden" name="action" value="finalize_ppx">
                             <button type="submit" class="btn btn-success font-weight-bold">
@@ -641,7 +641,7 @@ $all_select_items = array_merge($js_ppx_items, $js_master_akun);
                                             <?php endif; ?>
                                         </td>
                                         <td class="text-center">
-                                            <form action="realisasi_submit.php" method="POST" style="display:inline;" onsubmit="return confirm('Hapus transaksi ini?');">
+                                            <form action="realisasi_submit.php" method="POST" style="display:inline;" data-confirm="Hapus transaksi ini?">
                                                 <input type="hidden" name="no_ppx" value="<?= htmlspecialchars($no_ppx) ?>">
                                                 <input type="hidden" name="id_realisasi" value="<?= $rl['id_realisasi'] ?>">
                                                 <input type="hidden" name="action" value="delete_kas">
@@ -943,7 +943,7 @@ function addKasRow(selectedId, keteranganVal, jumlahVal) {
 function removeKasRow(btn) {
     const tbody = document.getElementById('tbodyKasRincian');
     if (tbody.children.length <= 1) {
-        alert('Minimal harus ada 1 baris rincian akun biaya!');
+        showAlert('Minimal harus ada 1 baris rincian akun biaya!', 'warning');
         return;
     }
     const tr = btn.closest('tr');
@@ -971,7 +971,7 @@ function handleKasFiles(input) {
     if (!input.files || input.files.length === 0) return;
 
     if (input.files.length > 10) {
-        alert('Maksimal 10 file!');
+        showAlert('Maksimal 10 file!', 'warning');
         input.value = '';
         return;
     }

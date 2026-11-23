@@ -279,7 +279,7 @@ while ($c = mysqli_fetch_assoc($cabang_list_q)) $cabang_options[] = $c;
                                                     <i class="fas fa-print"></i>
                                                 </a>
                                                 <?php if ($is_admin): ?>
-                                                    <a href="action.php?action=delete_opname&id=<?= $co['id_opname'] ?>" class="btn btn-sm btn-light border text-danger" title="Hapus Opname" onclick="return confirm('Apakah Anda yakin ingin menghapus laporan Cash Opname ini?');">
+                                                    <a href="action.php?action=delete_opname&id=<?= $co['id_opname'] ?>" class="btn btn-sm btn-light border text-danger" title="Hapus Opname" data-confirm="Apakah Anda yakin ingin menghapus laporan Cash Opname ini?" data-confirm-type="delete">
                                                         <i class="fas fa-trash-alt"></i>
                                                     </a>
                                                 <?php endif; ?>

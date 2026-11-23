@@ -111,7 +111,7 @@ $result = mysqli_query($conn, "SELECT * FROM inventory_atk ORDER BY kategori, na
                                 <?php if ($canDeleteMaster): ?>
                                     <a href="inventory_delete.php?id=<?= $row['id_barang'] ?><?= $refAmp ?>"
                                        class="btn btn-sm btn-danger" title="Hapus"
-                                       onclick="return confirm('Yakin hapus barang ini?')">
+                                       data-confirm="Yakin hapus barang ini?" data-confirm-type="delete">
                                         <i class="fas fa-trash"></i>
                                     </a>
                                 <?php endif; ?>

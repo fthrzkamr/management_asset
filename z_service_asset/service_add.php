@@ -496,7 +496,7 @@ while ($asset = mysqli_fetch_assoc($qAsset)) {
 
                 if (file) {
                     if (file.size > 5 * 1024 * 1024) {
-                        alert('Ukuran file terlalu besar. Maksimal 5MB.');
+                        showAlert('Ukuran file terlalu besar. Maksimal 5MB.', 'error');
                         this.value = '';
                         previewDiv.hide();
                         return;
@@ -504,7 +504,7 @@ while ($asset = mysqli_fetch_assoc($qAsset)) {
 
                     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
                     if (!allowedTypes.includes(file.type)) {
-                        alert('Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP');
+                        showAlert('Format file tidak didukung. Gunakan: JPG, JPEG, PNG, GIF, atau WEBP', 'error');
                         this.value = '';
                         previewDiv.hide();
                         return;
@@ -570,19 +570,19 @@ while ($asset = mysqli_fetch_assoc($qAsset)) {
 
                 if (hasDuplicate) {
                     e.preventDefault();
-                    alert('Asset yang sama tidak boleh dipilih lebih dari sekali!');
+                    showAlert('Asset yang sama tidak boleh dipilih lebih dari sekali!', 'error');
                     return false;
                 }
 
                 if (hasServiceAsset) {
                     e.preventDefault();
-                    alert('Asset yang sedang service tidak dapat dipilih!');
+                    showAlert('Asset yang sedang service tidak dapat dipilih!', 'error');
                     return false;
                 }
 
                 if (selectedAssets.length === 0) {
                     e.preventDefault();
-                    alert('Pilih minimal 1 asset untuk service!');
+                    showAlert('Pilih minimal 1 asset untuk service!', 'error');
                     return false;
                 }
             });
@@ -604,7 +604,7 @@ while ($asset = mysqli_fetch_assoc($qAsset)) {
             if (selectedOption.val()) {
                 // Cek apakah asset sedang service
                 if (selectedOption.data('service') === 'true' || selectedOption.data('service') === true) {
-                    alert('Asset ini sedang dalam status service dan tidak dapat dipilih!');
+                    showAlert('Asset ini sedang dalam status service dan tidak dapat dipilih!', 'error');
                     selectElement.val('').trigger('change');
                     return;
                 }
@@ -622,7 +622,7 @@ while ($asset = mysqli_fetch_assoc($qAsset)) {
                 });
 
                 if (isDuplicate) {
-                    alert('Asset ini sudah dipilih! Pilih asset yang berbeda.');
+                    showAlert('Asset ini sudah dipilih! Pilih asset yang berbeda.', 'error');
                     selectElement.val('').trigger('change');
                     return;
                 }
@@ -703,7 +703,7 @@ while ($asset = mysqli_fetch_assoc($qAsset)) {
         function removeAssetItem(index) {
             const item = $(`.asset-item-row[data-index="${index}"]`);
             if ($('.asset-item-row').length <= 1) {
-                alert('Minimal harus ada 1 asset!');
+                showAlert('Minimal harus ada 1 asset!', 'error');
                 return;
             }
             

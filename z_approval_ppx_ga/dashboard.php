@@ -436,7 +436,7 @@ unset($_SESSION['success'], $_SESSION['error']);
 
                                                                 <?php if ($canShowProcess): ?>
                                                                     <button type="button" class="btn btn-outline-success btn-action"
-                                                                        onclick="if(confirm('Apakah Anda yakin ingin meng-approve PPX ini?')) location.href='process_approve.php?no_ppx=<?= urlencode($row['no_ppx']) ?>&action=approve'" 
+                                                                        onclick="showConfirm('Apakah Anda yakin ingin meng-approve PPX ini?', function(){ location.href='process_approve.php?no_ppx=<?= urlencode($row['no_ppx']) ?>&action=approve'; });" 
                                                                         title="Approve PPX">
                                                                         <i class="fas fa-check fa-xs"></i>
                                                                     </button>
@@ -607,7 +607,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                     })
                     .done(function(res) {
                         if (!res.success) {
-                            alert(res.message || 'Gagal memuat data.');
+                            showAlert(res.message || 'Gagal memuat data.', 'error');
                             return;
                         }
 
@@ -688,7 +688,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                         $('#confirmApproveModal').modal('show');
                     })
                     .fail(function() {
-                        alert('Gagal memuat data detail.');
+                        showAlert('Gagal memuat data detail.', 'error');
                     });
             };
 
@@ -697,18 +697,18 @@ unset($_SESSION['success'], $_SESSION['error']);
                 var checkedCount = $('#modal_items tbody input[type="checkbox"]:checked:not(:disabled)').length;
 
                 if (checkedCount === 0) {
-                    alert('Silakan pilih minimal 1 item yang akan dibayar!');
+                    showAlert('Silakan pilih minimal 1 item yang akan dibayar!', 'warning');
                     return;
                 }
 
                 if (!$('#modal_upload_tf')[0].files.length) {
-                    alert('Silakan upload bukti transfer!');
+                    showAlert('Silakan upload bukti transfer!', 'warning');
                     return;
                 }
 
                 var no = $('#confirmApproveModal').data('no_ppx') || $('#no_pengajuan_input').val();
                 if (!no) {
-                    alert('Nomor pengajuan tidak ditemukan.');
+                    showAlert('Nomor pengajuan tidak ditemukan.', 'error');
                     return;
                 }
 
@@ -734,7 +734,7 @@ unset($_SESSION['success'], $_SESSION['error']);
 
             // Function baru untuk approve realisasi dari dashboard
             window.approveRealisasiFromDashboard = function(no_ppx) {
-                if (confirm('Apakah Anda yakin ingin meng-approve realisasi PPX ini?\n\nStatus akan berubah menjadi "Selesai".')) {
+                showConfirm('Apakah Anda yakin ingin meng-approve realisasi PPX ini?\n\nStatus akan berubah menjadi "Selesai".', function() {
                     var formData = new FormData();
                     formData.append('action', 'approve_realisasi');
                     formData.append('no_ppx', no_ppx);
@@ -750,20 +750,19 @@ unset($_SESSION['success'], $_SESSION['error']);
                             try {
                                 var result = JSON.parse(response);
                                 if (result.success) {
-                                    alert(result.message || 'Realisasi berhasil di-approve!');
-                                    location.reload();
+                                    showAlert(result.message || 'Realisasi berhasil di-approve!', 'success', function(){ location.reload(); });
                                 } else {
-                                    alert('Error: ' + (result.message || 'Terjadi kesalahan'));
+                                    showAlert('Error: ' + (result.message || 'Terjadi kesalahan'), 'error');
                                 }
                             } catch (e) {
-                                alert('Error: ' + response.message);
+                                showAlert('Error: ' + response.message, 'error');
                             }
                         },
                         error: function(xhr, status, error) {
-                            alert('Error: Gagal melakukan approve realisasi');
+                            showAlert('Error: Gagal melakukan approve realisasi', 'error');
                         }
                     });
-                }
+                }, 'confirm');
             };
         });
     </script>
@@ -934,15 +933,14 @@ unset($_SESSION['success'], $_SESSION['error']);
                     })
                     .then(data => {
                         if (data.success) {
-                            alert(data.message || 'Berhasil!');
-                            window.location.href = 'dashboard.php';
+                            showAlert(data.message || 'Berhasil!', 'success', function(){ window.location.href = 'dashboard.php'; });
                         } else {
-                            alert('Error: ' + (data.message || 'Terjadi kesalahan'));
+                            showAlert('Error: ' + (data.message || 'Terjadi kesalahan'), 'error');
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        alert('Terjadi kesalahan saat memproses approval');
+                        showAlert('Terjadi kesalahan saat memproses approval', 'error');
                     });
                 },
                 function() {

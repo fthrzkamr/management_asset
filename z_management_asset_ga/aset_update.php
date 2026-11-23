@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__.'/../dist/config/flash_helper.php';
 include('../dist/config/config.php');
 include('../dist/config/auth_helper.php');
 require_once('../dist/config/image_helper.php');
@@ -9,7 +10,7 @@ date_default_timezone_set('Asia/Jakarta');
 $auth = new AuthHelper($conn);
 
 if (!$auth->isLoggedIn()) {
-    echo "<script>alert('Session expired. Silakan login kembali.'); window.location.href='../login.php';</script>";
+    flashModalPage("Session expired. Silakan login kembali.", 'warning', '../login.php');
     exit;
 }
 
@@ -57,14 +58,14 @@ $updated_at     = date("Y-m-d H:i:s");
 
 // Validasi data required
 if (empty($kategori_aset) || empty($lokasi) || empty($nama_aset) || empty($satuan) || empty($kondisi)) {
-    echo "<script>alert('Data yang wajib diisi belum lengkap!'); history.back();</script>";
+    flashModalPage("Data yang wajib diisi belum lengkap!", 'warning', 'back');
     exit;
 }
 
 // Cek apakah asset dengan kode lama ada
 $check_query = mysqli_query($conn, "SELECT kode_aset FROM asset_ga WHERE kode_aset = '$kode_aset_lama' LIMIT 1");
 if (!$check_query || mysqli_num_rows($check_query) == 0) {
-    echo "<script>alert('Asset tidak ditemukan!'); window.location.href='dashboard.php';</script>";
+    flashModalPage("Asset tidak ditemukan!", 'error', 'dashboard.php');
     exit;
 }
 
@@ -80,7 +81,7 @@ if (isset($_FILES['foto_asset']) && $_FILES['foto_asset']['error'] == UPLOAD_ERR
         $foto_baru_diupload = true;
     } else {
         $errMsg = addslashes($uploadResult['error'] ?: 'Gagal upload foto baru.');
-        echo "<script>alert('{$errMsg}'); history.back();</script>";
+        flashModalPage("{$errMsg}", 'error', 'back');
         exit;
     }
 }
@@ -127,7 +128,7 @@ if ($update) {
         $success_message .= "\\nFoto baru: $foto_asset";
     }
     
-    echo "<script>alert('$success_message'); window.location.href='dashboard.php?status=updated';</script>";
+    flashModalPage("$success_message", 'success', 'dashboard.php?status=updated');
 } else {
     // Jika gagal update dan ada foto baru yang sudah diupload, hapus foto baru
     if ($foto_baru_diupload && !empty($foto_asset)) {
@@ -139,6 +140,6 @@ if ($update) {
     
     // Tampilkan error detail untuk debugging
     $error = mysqli_error($conn);
-    echo "<script>alert('Gagal update data: $error'); history.back();</script>";
+    flashModalPage("Gagal update data: $error", 'error', 'back');
 }
 ?>

@@ -144,7 +144,7 @@ $month_names = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
                                         <textarea name="approval_notes" class="form-control" rows="3"></textarea>
                                     </div>
                                     <button type="submit" name="action" value="approve" class="btn btn-success">Setujui</button>
-                                    <button type="submit" name="action" value="reject" class="btn btn-danger" onclick="return confirm('Tolak anggaran ini?')">Tolak</button>
+                                    <button type="submit" name="action" value="reject" class="btn btn-danger" data-confirm="Tolak anggaran ini?" data-confirm-type="delete">Tolak</button>
                                 </form>
                             </div>
                         </div>
