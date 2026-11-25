@@ -207,8 +207,8 @@ Version      : 1.0
 			$('.subdrop + ul').slideUp();
 		}
 		setTimeout(function(){ 
-			mA.redraw();
-			mL.redraw();
+			if (typeof mA !== 'undefined' && typeof mA.redraw === 'function') mA.redraw();
+			if (typeof mL !== 'undefined' && typeof mL.redraw === 'function') mL.redraw();
 		}, 300);
 		return false;
 	});

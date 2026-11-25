@@ -245,14 +245,32 @@ function is_active($patterns) {
             .page-wrapper {
                 margin-left: var(--sidebar-width) !important;
             }
-            .mini-sidebar.expand-menu .sidebar {
-                width: var(--sidebar-width) !important;
-            }
+            /* Aturan saat sidebar di-minimize (mini-sidebar) */
             .mini-sidebar .header .header-left {
+                width: 78px !important;
+            }
+            .mini-sidebar .sidebar {
                 width: 78px !important;
             }
             .mini-sidebar .page-wrapper {
                 margin-left: 78px !important;
+            }
+            /* Ikon presisi di tengah saat mini-sidebar tidak di-hover */
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu {
+                padding: 15px 0 !important;
+            }
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu ul > li > a {
+                padding: 0 !important;
+                text-align: center !important;
+                margin: 0 !important;
+            }
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu ul > li > a i {
+                margin: 0 auto !important;
+            }
+            /* Saat kursor diarahkan ke mini-sidebar (expand on hover) */
+            .mini-sidebar.expand-menu .sidebar {
+                width: var(--sidebar-width) !important;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
             }
         }
 
