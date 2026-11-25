@@ -245,6 +245,7 @@ function is_active($patterns) {
             .page-wrapper {
                 margin-left: var(--sidebar-width) !important;
             }
+
             /* Aturan saat sidebar di-minimize (mini-sidebar) */
             .mini-sidebar .header .header-left {
                 width: 78px !important;
@@ -255,22 +256,90 @@ function is_active($patterns) {
             .mini-sidebar .page-wrapper {
                 margin-left: 78px !important;
             }
-            /* Ikon presisi di tengah saat mini-sidebar tidak di-hover */
+
+            /* Hilangkan gap menu-title saat mini-sidebar tidak di-hover agar tidak ada celah kosong */
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu .menu-title {
+                display: none !important;
+            }
+
+            /* Sembunyikan semua teks, panah submenu, dan badge saat mini-sidebar agar tidak mendorong ikon */
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu ul > li > a span,
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu ul > li > a .menu-arrow,
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu ul > li > a .nav-parent-badge,
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu ul > li > a .nav-badge,
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu ul > li > a .badge {
+                display: none !important;
+            }
+
+            /* Format wadah link dan item menu agar lurus vertikal sempurna di tengah 78px */
             .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu {
-                padding: 15px 0 !important;
+                padding: 10px 0 !important;
             }
-            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu ul > li > a {
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu > ul > li {
+                width: 78px !important;
+                margin: 4px 0 !important;
+                display: flex !important;
+                justify-content: center !important;
+            }
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu > ul > li > a {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 48px !important;
+                height: 48px !important;
                 padding: 0 !important;
-                text-align: center !important;
                 margin: 0 !important;
+                border-radius: 10px !important;
+                text-align: center !important;
+                transition: all 0.2s ease !important;
             }
-            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu ul > li > a i {
-                margin: 0 auto !important;
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu > ul > li > a i {
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 24px !important;
+                height: 24px !important;
+                font-size: 18px !important;
+                line-height: 1 !important;
+                margin: 0 !important;
+                text-align: center !important;
             }
+
+            /* Item aktif pada mini-sidebar: soft blue rounded pill yang elegan dan simetris */
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu > ul > li.active > a,
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu > ul > li > a.active {
+                background-color: rgba(24, 174, 250, 0.12) !important;
+                color: #18aefa !important;
+            }
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu > ul > li.active > a::before,
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu > ul > li > a.active::before {
+                display: none !important;
+            }
+
+            /* Hover effect pada item mini-sidebar */
+            .mini-sidebar:not(.expand-menu) .sidebar .sidebar-menu > ul > li > a:hover {
+                background-color: rgba(24, 174, 250, 0.08) !important;
+                color: #18aefa !important;
+            }
+
             /* Saat kursor diarahkan ke mini-sidebar (expand on hover) */
             .mini-sidebar.expand-menu .sidebar {
                 width: var(--sidebar-width) !important;
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+            }
+            .mini-sidebar.expand-menu .sidebar .sidebar-menu .menu-title {
+                display: flex !important;
+                visibility: visible !important;
+            }
+            .mini-sidebar.expand-menu .sidebar .sidebar-menu ul > li > a span {
+                display: inline-block !important;
+                opacity: 1 !important;
+            }
+            .mini-sidebar.expand-menu .sidebar .sidebar-menu ul > li > a .menu-arrow {
+                display: inline-block !important;
+            }
+            .mini-sidebar.expand-menu .sidebar .sidebar-menu ul > li > a .nav-parent-badge {
+                display: inline-flex !important;
             }
         }
 
